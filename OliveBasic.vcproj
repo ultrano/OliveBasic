@@ -297,22 +297,6 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvAutoPtr"
-				>
-				<File
-					RelativePath=".\include\OvArrayAutoPtr.inl"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvAutoPtr.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvAutoPtr.inl"
-					>
-				</File>
-			</Filter>
-			<Filter
 				Name="OvBitFlags"
 				>
 				<File
@@ -341,30 +325,6 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvMemObject"
-				>
-				<File
-					RelativePath=".\source\OvMemObject.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvMemObject.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="OvMemoryMgr"
-				>
-				<File
-					RelativePath=".\source\OvMemoryMgr.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvMemoryMgr.h"
-					>
-				</File>
-			</Filter>
-			<Filter
 				Name="OvObjectFactory"
 				>
 				<File
@@ -389,22 +349,58 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvRefObject"
-				>
-				<File
-					RelativePath=".\source\OvRefObject.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvRefObject.h"
-					>
-				</File>
-			</Filter>
-			<Filter
 				Name="OvRTTI"
 				>
 				<File
 					RelativePath=".\include\OvRTTI.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvThreadSync"
+				>
+				<File
+					RelativePath=".\include\OvThreadSync.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvTypeDef"
+				>
+				<File
+					RelativePath=".\include\OvTypeDef.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvObjectID"
+				>
+				<File
+					RelativePath=".\source\OvObjectID.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvObjectID.h"
+					>
+				</File>
+			</Filter>
+		</Filter>
+		<Filter
+			Name="Refernce"
+			>
+			<Filter
+				Name="OvAutoPtr"
+				>
+				<File
+					RelativePath=".\include\OvArrayAutoPtr.inl"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvAutoPtr.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvAutoPtr.inl"
 					>
 				</File>
 			</Filter>
@@ -421,77 +417,77 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvThreadSync"
+				Name="OvRefObject"
 				>
 				<File
-					RelativePath=".\include\OvThreadSync.h"
+					RelativePath=".\source\OvRefObject.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvRefObject.h"
+					>
+				</File>
+			</Filter>
+		</Filter>
+		<Filter
+			Name="Utility"
+			>
+			<File
+				RelativePath=".\source\OvUtility.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\OvUtility.h"
+				>
+			</File>
+			<Filter
+				Name="OvUtility_container"
+				>
+				<File
+					RelativePath=".\source\OvUtility_container.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvUtility_container.h"
 					>
 				</File>
 			</Filter>
 			<Filter
-				Name="OvUtility"
+				Name="OvUtility_string"
 				>
 				<File
-					RelativePath=".\source\OvUtility.cpp"
+					RelativePath=".\source\OvUtility_string.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\include\OvUtility.h"
+					RelativePath=".\include\OvUtility_string.h"
 					>
 				</File>
-				<Filter
-					Name="OvUtility_string"
-					>
-					<File
-						RelativePath=".\source\OvUtility_string.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\include\OvUtility_string.h"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="OvUtility_container"
-					>
-					<File
-						RelativePath=".\source\OvUtility_container.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\include\OvUtility_container.h"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="OvUtility_path"
-					>
-					<File
-						RelativePath=".\source\OvUtility_path.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\include\OvUtility_path.h"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="OvUtility_rtti"
-					>
-					<File
-						RelativePath=".\include\OvUtility_rtti.h"
-						>
-					</File>
-				</Filter>
 			</Filter>
 			<Filter
-				Name="OvTypeDef"
+				Name="OvUtility_path"
 				>
 				<File
-					RelativePath=".\include\OvTypeDef.h"
+					RelativePath=".\source\OvUtility_path.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvUtility_path.h"
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvUtility_rtti"
+				>
+				<File
+					RelativePath=".\include\OvUtility_rtti.h"
+					>
+				</File>
+			</Filter>
+		</Filter>
+		<Filter
+			Name="Memory"
+			>
 			<Filter
 				Name="OvMemoryPool"
 				>
@@ -505,14 +501,26 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvObjectID"
+				Name="OvMemObject"
 				>
 				<File
-					RelativePath=".\source\OvObjectID.cpp"
+					RelativePath=".\source\OvMemObject.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\include\OvObjectID.h"
+					RelativePath=".\include\OvMemObject.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvMemoryMgr"
+				>
+				<File
+					RelativePath=".\source\OvMemoryMgr.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvMemoryMgr.h"
 					>
 				</File>
 			</Filter>
