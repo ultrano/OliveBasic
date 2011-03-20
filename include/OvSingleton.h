@@ -25,4 +25,8 @@ protected:
 private:
 	static T* m_single_instance;
 };
+
+template<typename T>
+T* OvSingleton<T>::m_single_instance;
+
 #define OvSINGLETON( classtype ) friend class OvSingleton<classtype>;

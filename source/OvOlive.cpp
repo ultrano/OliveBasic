@@ -3,13 +3,13 @@
 #include "OvMemoryMgr.h"
 #include "OvObjectManager.h"
 
-void OvOlive::StartUp()
+void OvOliveBasic::StartUp()
 {
 	OvMemoryMgr::GetInstance();
 	OvObjectManager::GetInstance();
 }
 
-void OvOlive::ShutDown()
+void OvOliveBasic::ShutDown()
 {
 
 }

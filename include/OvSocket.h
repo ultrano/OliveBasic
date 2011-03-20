@@ -1,4 +1,6 @@
 #pragma once
+#pragma comment(lib,"WS2_32")
+
 #include "OvRefObject.h"
 
 OvREF_POINTER(OvSocket);

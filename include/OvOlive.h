@@ -1,10 +1,8 @@
 #pragma once
 #include "OvTypeDef.h"
 
-abstract_class OvOlive
+namespace OvOliveBasic
 {
-public:
-
-	virtual void StartUp();
-	virtual void ShutDown();
+	void StartUp();
+	void ShutDown();
 };
