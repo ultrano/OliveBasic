@@ -24,7 +24,6 @@ struct OvMemoryPoolList
 OvMemoryMgr::OvMemoryMgr()
 {
 	m_pMemoryPoolList = NULL;
-	InitializeCriticalSection( &m_section );
 }
 OvMemoryMgr::~OvMemoryMgr()
 {
@@ -41,7 +40,6 @@ OvMemoryMgr::~OvMemoryMgr()
 
 	} while (k_list);
 	m_pMemoryPoolList = NULL;
-	DeleteCriticalSection( &m_section );
 
 }
 

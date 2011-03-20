@@ -15,7 +15,8 @@ protected:
 	{
 		if ( m_single_instance == NULL )
 		{
-			memcpy( &m_single_instance, this, sizeof(T*) );
+			void* ptr = (void*)this;
+			memcpy( &m_single_instance, &ptr, sizeof(T*) );
 		}
 		else
 		{

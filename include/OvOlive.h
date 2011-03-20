@@ -3,6 +3,6 @@
 
 namespace OvOliveBasic
 {
-	void StartUp();
-	void ShutDown();
+	void Startup();
+	void Cleanup();
 };
