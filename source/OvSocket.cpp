@@ -12,18 +12,19 @@ OvSocket::~OvSocket()
 	Close();
 }
 
-OvSocketSPtr OvSocket::Connect( const string& ip, OvUInt port )
+OvSocketSPtr OvSocket::Connect( const string& ip, OvShort port )
 {
 	OvSocketSPtr ovsocket = NULL;
 	SOCKET sock = socket( AF_INET, SOCK_STREAM, 0 );
 	if ( INVALID_SOCKET != sock )
 	{
-		SOCKADDR_IN add_in;
-		add_in.sin_family = AF_INET;
-		add_in.sin_port = htons( port );
-		add_in.sin_addr.s_addr = inet_addr( ip.c_str() );
+		SOCKADDR_IN addr_in;
+		ZeroMemory(&addr_in,sizeof(addr_in));
+		addr_in.sin_family = AF_INET;
+		addr_in.sin_port = htons( port );
+		addr_in.sin_addr.s_addr = inet_addr( ip.c_str() );
 
-		if ( SOCKET_ERROR != connect( sock, (SOCKADDR*)&add_in, sizeof(add_in) ) )
+		if ( SOCKET_ERROR != connect( sock, (SOCKADDR*)&addr_in, sizeof(addr_in) ) )
 		{
 			ovsocket = OvNew OvSocket;
 			ovsocket->m_socket = sock;
@@ -41,12 +42,15 @@ void OvSocket::Close()
 	}
 }
 
-OvSocketSPtr OvSocket::Bind( const OvString& ip, OvUInt port )
+OvSocketSPtr OvSocket::Bind( const OvString& ip, OvShort port )
 {
 	SOCKET sock = socket( AF_INET, SOCK_STREAM, 0 );
+	int opt = true;
+	setsockopt( sock, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt) );
 
-	OvUInt addr = ( ip == "*" )? INADDR_ANY : inet_addr( ip.c_str() );
+	OvUInt addr = ( ip == "*" )? htonl(INADDR_ANY) : inet_addr( ip.c_str() );
 	SOCKADDR_IN addr_in;
+	ZeroMemory(&addr_in,sizeof(addr_in));
 	addr_in.sin_family = AF_INET;
 	addr_in.sin_port = htons( port );
 	addr_in.sin_addr.s_addr = addr;
@@ -64,6 +68,22 @@ OvSocketSPtr OvSocket::Bind( const OvString& ip, OvUInt port )
 	OvSocketSPtr ret = OvNew OvSocket;
 	ret->m_socket = sock;
 	return ret;
+}
+
+OvSocketSPtr OvSocket::Accept( OvSocketSPtr listen )
+{
+	SOCKADDR_IN addr_in;
+	OvInt addr_size = sizeof(addr_in);
+	ZeroMemory(&addr_in,addr_size);
+	SOCKET client = accept( listen->GetSock(), (SOCKADDR*)&addr_in, &addr_size );
+	if ( INVALID_SOCKET == client )
+	{
+		return NULL;
+	}
+
+	OvSocketSPtr sock = OvNew OvSocket;
+	sock->m_socket = client;
+	return sock;
 }
 
 OvBool OvSocket::Startup()
@@ -84,6 +104,7 @@ OvBool OvSocket::GetPeerAddr( Address& addr )
 	{
 		SOCKADDR_IN addr_in;
 		int sz = sizeof( addr_in );
+		ZeroMemory(&addr_in,sz);
 		getpeername( m_socket, (SOCKADDR*)&addr_in, &sz );
 		addr.ip = inet_ntoa( addr_in.sin_addr );
 		addr.port = ntohs( addr_in.sin_port );
@@ -98,10 +119,16 @@ OvBool OvSocket::GetSockAddr( Address& addr )
 	{
 		SOCKADDR_IN addr_in;
 		int sz = sizeof( addr_in );
+		ZeroMemory(&addr_in,sz);
 		getsockname( m_socket, (SOCKADDR*)&addr_in, &sz );
 		addr.ip = inet_ntoa( addr_in.sin_addr );
 		addr.port = ntohs( addr_in.sin_port );
 		return true;
 	}
 	return false;
+}
+
+SOCKET OvSocket::GetSock()
+{
+	return m_socket;
 }

@@ -159,22 +159,30 @@
 					RelativePath=".\include\OvBuffer.h"
 					>
 				</File>
-				<File
-					RelativePath=".\source\OvBufferInputStream.cpp"
+				<Filter
+					Name="OvBufferInputStream"
 					>
-				</File>
-				<File
-					RelativePath=".\include\OvBufferInputStream.h"
+					<File
+						RelativePath=".\source\OvBufferInputStream.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\include\OvBufferInputStream.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="OvBufferOutputStream"
 					>
-				</File>
-				<File
-					RelativePath=".\source\OvBufferOutputStream.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvBufferOutputStream.h"
-					>
-				</File>
+					<File
+						RelativePath=".\source\OvBufferOutputStream.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\include\OvBufferOutputStream.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="OvFile"
@@ -187,22 +195,30 @@
 					RelativePath=".\include\OvFile.h"
 					>
 				</File>
-				<File
-					RelativePath=".\source\OvFileInputStream.cpp"
+				<Filter
+					Name="OvFileInputStream"
 					>
-				</File>
-				<File
-					RelativePath=".\include\OvFileInputStream.h"
+					<File
+						RelativePath=".\source\OvFileInputStream.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\include\OvFileInputStream.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="OvFileOutputStream"
 					>
-				</File>
-				<File
-					RelativePath=".\source\OvFileOutputStream.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvFileOutputStream.h"
-					>
-				</File>
+					<File
+						RelativePath=".\source\OvFileOutputStream.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\include\OvFileOutputStream.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="OvSocket"
@@ -215,6 +231,30 @@
 					RelativePath=".\include\OvSocket.h"
 					>
 				</File>
+				<Filter
+					Name="OvSocketInputStream"
+					>
+					<File
+						RelativePath=".\source\OvSocketInputStream.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\include\OvSocketInputStream.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="OvSocketOutputStream"
+					>
+					<File
+						RelativePath=".\source\OvSocketOutputStream.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\include\OvSocketOutputStream.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="OvObject"
@@ -227,22 +267,30 @@
 					RelativePath=".\include\OvObject.h"
 					>
 				</File>
-				<File
-					RelativePath=".\source\OvObjectInputStream.cpp"
+				<Filter
+					Name="OvObjectInputStream"
 					>
-				</File>
-				<File
-					RelativePath=".\include\OvObjectInputStream.h"
+					<File
+						RelativePath=".\source\OvObjectInputStream.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\include\OvObjectInputStream.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="OvObjectOutputStream"
 					>
-				</File>
-				<File
-					RelativePath=".\source\OvObjectOutputStream.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvObjectOutputStream.h"
-					>
-				</File>
+					<File
+						RelativePath=".\source\OvObjectOutputStream.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\include\OvObjectOutputStream.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="Base"

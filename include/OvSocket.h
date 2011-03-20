@@ -20,13 +20,16 @@ public:
 	static OvBool Startup();
 	static OvBool Cleanup();
 
-	static OvSocketSPtr Connect( const string& ip, OvUInt port );
-	static OvSocketSPtr Bind( const OvString& ip, OvUInt port );
+	static OvSocketSPtr Connect( const string& ip, OvShort port );
+	static OvSocketSPtr Bind( const OvString& ip, OvShort port );
+	static OvSocketSPtr Accept( OvSocketSPtr listen );
 
 public:
 
 	OvBool GetPeerAddr( Address& addr );
 	OvBool GetSockAddr( Address& addr );
+
+	SOCKET GetSock();
 
 	void	Close();
 
