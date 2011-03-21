@@ -3,7 +3,6 @@
 #define OvExportDll
 #include "OvMemoryMgr.h"
 #include "OvMemoryPool.h"
-#include "OvThreadSync.h"
 
 struct OvMemoryPoolList 
 {

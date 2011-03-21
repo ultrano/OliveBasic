@@ -405,14 +405,6 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvThreadSync"
-				>
-				<File
-					RelativePath=".\include\OvThreadSync.h"
-					>
-				</File>
-			</Filter>
-			<Filter
 				Name="OvTypeDef"
 				>
 				<File
@@ -529,6 +521,14 @@
 				>
 				<File
 					RelativePath=".\include\OvUtility_rtti.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvUtility_thread"
+				>
+				<File
+					RelativePath=".\include\OvUtility_thread.h"
 					>
 				</File>
 			</Filter>

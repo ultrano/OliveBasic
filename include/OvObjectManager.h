@@ -2,10 +2,11 @@
 #include "OvSingleton.h"
 #include "OvUtility.h"
 #include "OvObjectID.h"
+#include "OvUtility.h"
 #include <map>
 
 
-class OvObjectManager : public OvSingleton< OvObjectManager >
+class OvObjectManager : public OvSingleton< OvObjectManager >, public OvThreadSyncer< OvObjectManager >
 {
 	OvSINGLETON(OvObjectManager);
 	friend class OvObject;

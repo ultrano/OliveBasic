@@ -35,6 +35,7 @@ OvSocketSPtr OvSocket::Connect( const string& ip, OvShort port )
 
 void OvSocket::Close()
 {
+	OvSectionLock lock;
 	if ( m_socket )
 	{
 		closesocket( m_socket );
@@ -100,6 +101,7 @@ OvBool OvSocket::Cleanup()
 
 OvBool OvSocket::GetPeerAddr( Address& addr )
 {
+	OvSectionLock lock;
 	if ( m_socket != INVALID_SOCKET )
 	{
 		SOCKADDR_IN addr_in;
@@ -115,6 +117,7 @@ OvBool OvSocket::GetPeerAddr( Address& addr )
 
 OvBool OvSocket::GetSockAddr( Address& addr )
 {
+	OvSectionLock lock;
 	if ( m_socket != INVALID_SOCKET )
 	{
 		SOCKADDR_IN addr_in;
@@ -130,5 +133,6 @@ OvBool OvSocket::GetSockAddr( Address& addr )
 
 SOCKET OvSocket::GetSock()
 {
+	OvSectionLock lock;
 	return m_socket;
 }

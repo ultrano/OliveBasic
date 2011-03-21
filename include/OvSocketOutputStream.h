@@ -1,6 +1,7 @@
 #pragma once
 #include "OvOutputStream.h"
 
+
 OvREF_POINTER( OvSocket );
 class OvSocketOutputStream : public OvOutputStream
 {

@@ -2,11 +2,12 @@
 #pragma comment(lib,"WS2_32")
 
 #include "OvRefObject.h"
+#include "OvUtility.h"
 #include "OvSocketInputStream.h"
 #include "OvSocketOutputStream.h"
 
 OvREF_POINTER(OvSocket);
-class OvSocket : public OvRefObject
+class OvSocket : public OvRefObject, public OvThreadSyncer< OvSocket >
 {
 	OvRTTI_DECL( OvSocket );
 	struct Address
