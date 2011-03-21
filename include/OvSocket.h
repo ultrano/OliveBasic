@@ -2,6 +2,8 @@
 #pragma comment(lib,"WS2_32")
 
 #include "OvRefObject.h"
+#include "OvSocketInputStream.h"
+#include "OvSocketOutputStream.h"
 
 OvREF_POINTER(OvSocket);
 class OvSocket : public OvRefObject
@@ -35,4 +37,5 @@ public:
 
 private:
 	SOCKET m_socket;
+
 };

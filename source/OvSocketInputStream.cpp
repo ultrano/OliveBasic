@@ -31,8 +31,8 @@ OvSize OvSocketInputStream::ReadBytes( OvByte * dest, OvSize dest_size )
 		else if( ret == 0 )
 			break;
 
-		remain -= ret;
-		dest		+= ret;
+		remain  -= ret;
+		dest	+= ret;
 	}
 	return dest_size - remain;
 }
