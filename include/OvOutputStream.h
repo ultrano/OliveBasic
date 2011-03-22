@@ -10,7 +10,6 @@ interface_class OvOutputStream : public OvRefObject
 
 	//! override method
 	virtual OvSize WriteBytes( OvByte * write_buf, OvSize write_size ) = 0;
-	virtual OvSize	Skip( OvSize offset ) = 0;
 	//
 
 	template<typename T>

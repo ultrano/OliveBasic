@@ -34,13 +34,3 @@ OvSize OvSocketOutputStream::WriteBytes( OvByte * write_buf, OvSize write_size )
 	}
 	return write_size - remain;
 }
-
-OvSize OvSocketOutputStream::Skip( OvSize offset )
-{
-	// 이렇게 해도 되려나... 그냥 안쓰는걸로 한다.
-	if ( !m_socket )
-	{
-		return 0;
-	}
-	return offset;
-}

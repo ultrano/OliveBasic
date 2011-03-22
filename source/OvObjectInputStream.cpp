@@ -21,15 +21,6 @@ OvSize OvObjectInputStream::ReadBytes( OvByte * dest, OvSize dest_size )
 	return 0;
 }
 
-OvSize OvObjectInputStream::Skip( OvSize offset )
-{
-	if ( m_input )
-	{
-		return m_input->Skip( offset );
-	}
-	return 0;
-}
-
 OvObject* OvObjectInputStream::ReadObject()
 {
 	OvObjectID	oldID;

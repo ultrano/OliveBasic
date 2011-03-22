@@ -12,7 +12,8 @@ public:
 	OvFileInputStream( const OvString& file, const OvString& mode = "rb" );
 
 	virtual OvSize ReadBytes( OvByte * dest, OvSize dest_size ) override;
-	virtual OvSize Skip( OvSize offset ) override;
+
+	OvSize Skip( OvSize offset ) ;
 
 	OvBool Open( const OvString& file, const OvString& mode = "r+b" );
 	void Close();

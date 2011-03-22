@@ -12,7 +12,6 @@ public:
 	~OvSocketOutputStream();
 
 	virtual OvSize WriteBytes( OvByte * write_buf, OvSize write_size ) override;
-	virtual OvSize Skip( OvSize offset ) override;
 
 private:
 

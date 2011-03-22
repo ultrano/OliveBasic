@@ -405,6 +405,18 @@
 				</File>
 			</Filter>
 			<Filter
+				Name="OvIOCP"
+				>
+				<File
+					RelativePath=".\source\OvIOCP.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvIOCP.h"
+					>
+				</File>
+			</Filter>
+			<Filter
 				Name="OvTypeDef"
 				>
 				<File

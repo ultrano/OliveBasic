@@ -32,11 +32,18 @@ public:
 	OvBool GetPeerAddr( Address& addr );
 	OvBool GetSockAddr( Address& addr );
 
+	OvInputStreamSPtr	GetInputStream();
+	OvOutputStreamSPtr	GetOutputStream();
+
+
 	SOCKET GetSock();
 
 	void	Close();
 
 private:
 	SOCKET m_socket;
+
+	OvInputStreamSPtr	m_input;
+	OvOutputStreamSPtr	m_output;
 
 };
