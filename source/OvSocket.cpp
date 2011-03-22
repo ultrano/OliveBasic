@@ -136,13 +136,3 @@ SOCKET OvSocket::GetSock()
 	OvSectionLock lock;
 	return m_socket;
 }
-
-OvInputStreamSPtr OvSocket::GetInputStream()
-{
-	return m_input;
-}
-
-OvOutputStreamSPtr OvSocket::GetOutputStream()
-{
-	return m_output;
-}
