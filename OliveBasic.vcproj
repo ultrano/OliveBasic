@@ -320,6 +320,34 @@
 					</File>
 				</Filter>
 			</Filter>
+			<Filter
+				Name="OvByte"
+				>
+				<Filter
+					Name="OvByteInputStream"
+					>
+					<File
+						RelativePath=".\source\OvByteInputStream.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\include\OvByteInputStream.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="OvByteOutputStream"
+					>
+					<File
+						RelativePath=".\source\OvByteOutputStream.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\include\OvByteOutputStream.h"
+						>
+					</File>
+				</Filter>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="OvOlive"

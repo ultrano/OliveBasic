@@ -14,6 +14,7 @@ public:
 	OvSize Skip( OvSize offset ) ;
 
 	OvBufferSPtr GetBuffer();
+	OvByte *	 GetBuffer( OvSize & size );
 
 private:
 	OvBufferSPtr m_buffer;
