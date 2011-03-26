@@ -11,7 +11,8 @@ public:
 
 	virtual OvSize WriteBytes( OvByte * src, OvSize write_size ) override;
 	
-	OvSize Skip( OvSize offset ) ;
+	OvSize	Skip( OvSize offset ) ;
+	void	Reset( OvBufferSPtr buffer );
 
 	OvBufferSPtr GetBuffer();
 	OvByte *	 GetBuffer( OvSize & size );

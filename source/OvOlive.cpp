@@ -5,11 +5,12 @@
 
 void OvOliveBasic::Startup()
 {
-	OvMemoryMgr::GetInstance();
-	OvObjectManager::GetInstance();
+	OvMemoryMgr::Startup();
+	OvObjectManager::Startup();
 }
 
 void OvOliveBasic::Cleanup()
 {
-
+	OvObjectManager::Teardown();
+	OvMemoryMgr::Teardown();
 }

@@ -1,8 +1,9 @@
 #pragma once
 #include "OvTypeDef.h"
 
-namespace OvOliveBasic
+class OvOliveBasic
 {
-	void Startup();
-	void Cleanup();
+public:
+	static void Startup();
+	static void Cleanup();
 };

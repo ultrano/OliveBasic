@@ -55,7 +55,24 @@ OvSize OvBufferOutputStream::Skip( OvSize offset )
 	return offset;
 }
 
+void OvBufferOutputStream::Reset( OvBufferSPtr buffer )
+{
+	m_buffer = buffer;
+	m_write_caret = 0;
+}
+
 OvBufferSPtr OvBufferOutputStream::GetBuffer()
 {
 	return m_buffer;
+}
+
+OvByte * OvBufferOutputStream::GetBuffer( OvSize & size )
+{
+	if ( m_buffer )
+	{
+		size = m_buffer->Size();
+		return m_buffer->Pointer();
+	}
+	size = 0;
+	return NULL;
 }

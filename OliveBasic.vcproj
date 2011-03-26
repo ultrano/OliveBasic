@@ -436,11 +436,23 @@
 				Name="OvIOCP"
 				>
 				<File
+					RelativePath=".\source\_OvIOCPObject.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\_OvIOCPObject.h"
+					>
+				</File>
+				<File
 					RelativePath=".\source\OvIOCP.cpp"
 					>
 				</File>
 				<File
 					RelativePath=".\include\OvIOCP.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvIOCPCallback.h"
 					>
 				</File>
 			</Filter>

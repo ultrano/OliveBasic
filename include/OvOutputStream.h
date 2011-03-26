@@ -17,13 +17,15 @@ interface_class OvOutputStream : public OvRefObject
 	{
 		return (sizeof(T) == WriteBytes( (OvByte*)&data, sizeof(T) ));
 	};
-
+	OvBool Write( const OvChar* data){ return Write( OvString(data) ); };
 	OvBool Write( const OvString& data )
 	{
-		OvSize size = (OvSize)data.size();
-		Write( size );
-		return (size == WriteBytes( (OvByte*)&data[0], size ));
+		OvVector<OvByte> strbuf;
+		OvSize size = data.size();
+		strbuf.resize(sizeof(size) + size );
+		memcpy( &strbuf[ 0 ], &size, sizeof(size));
+		memcpy( &strbuf[sizeof(size)], &data[0], size);
+		return ((sizeof(size) + size ) == WriteBytes( &strbuf[0], strbuf.size() ));
 	};
-	OvBool Write( const OvChar* data){ return Write( OvString(data) ); };
 
 };

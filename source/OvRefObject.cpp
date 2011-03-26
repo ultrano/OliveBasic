@@ -17,17 +17,21 @@ OvRefObject::~OvRefObject()
 };
 OvInt		OvRefObject::IncRefCount()
 {
+	OvAutoSection lock(m_cs);
 	++m_ref_count;
 	return m_ref_count;
 }
 OvInt		OvRefObject::DecRefCount()
 {
-	--m_ref_count;
+	{
+		OvAutoSection lock(m_cs);
+		--m_ref_count;
+	}
 	if (m_ref_count <= 0)
 	{
 		// 요기서 삭제;
 		DeleteThis();
-		m_ref_count = 0;
+		return 0;
 	}
 	return m_ref_count;
 }

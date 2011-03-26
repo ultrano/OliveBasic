@@ -2,64 +2,18 @@
 #include "OvIOCP.h"
 #include "OvBuffer.h"
 #include "OvBitFlags.h"
+#include "OvIOCPCallback.h"
+#include "_OvIOCPObject.h"
 #include <process.h>
 
-
-struct SCompletePort
-{
-	enum CP { CP_Recv, CP_Send };
-	SCompletePort() { ZeroMemory( &overlapped, sizeof( overlapped ) ); };
-	OVERLAPPED	overlapped;
-	CP			port;
-	OvIOCP::IOCPObject* object;
-};
-struct SRecvedPort : SCompletePort
-{
-	enum { MAX_RECV_BUFFER_SIZE = 512 };
-	SRecvedPort() : recved_size( 0 ) { port = CP_Recv; };
-	OvByte		 buffer[MAX_RECV_BUFFER_SIZE];
-	OvSize		 recved_size;
-};
-
-struct SSendedPort : SCompletePort
-{
-	SSendedPort( ) : sened_size( 0 ) { port = CP_Send; };
-	
-	OvBufferSPtr			buffer;
-	OvSize					sened_size;
-};
-
-struct OvIOCP::IOCPObject : OvMemObject
-{
-	enum { MAX_SEND_BUFFER_COUNT = 16 };
-
-	IOCPObject()
-	{
-		recv_port.object = this;
-
-		unsigned count = MAX_SEND_BUFFER_COUNT;
-		while ( count-- ) send_port[count].object = this;
-
-		m_idle_buf.Clear( true );
-	};
-
-	OvSocketSPtr sock;
-
-	SRecvedPort recv_port;
-	SSendedPort send_port[MAX_SEND_BUFFER_COUNT];
-
-	Ov16SetFlags m_idle_buf;
-
-	OvIOCPCallback::CallbackObject cb;
-
-};
 
 //////////////////////////////////////////////////////////////////////////
 
 OvIOCP::OvIOCP()
 : m_callback( NULL )
+, m_iocp( NULL )
 {
-
+	_set_shutdown(false);
 }
 
 OvIOCP::~OvIOCP()
@@ -67,23 +21,58 @@ OvIOCP::~OvIOCP()
 
 }
 
-void OvIOCP::Startup( const OvString & ip, OvShort port, OvIOCPCallback * callback )
+OvBool OvIOCP::Startup( const OvString & ip, OvShort port, OvIOCPCallback * callback )
 {
-	m_callback = callback;
-	m_iocp = CreateIoCompletionPort( INVALID_HANDLE_VALUE, NULL, 0, 0 );
-	m_listener = OvSocket::Bind( ip, port );
-
-	_beginthread( _accept_thread, 0, this );
-	OvUInt count = 4;
-	while ( count-- )
+	m_iocp = NULL;
+	m_callback = NULL;
+	if ( m_listener = OvSocket::Bind( ip, port ) )
 	{
-		_beginthread( _worker_thread, 0, this );
+		m_callback = callback;
+		m_iocp = CreateIoCompletionPort( INVALID_HANDLE_VALUE, NULL, 0, 0 );
+		OvSocket::Address addr;
+		m_listener->GetSockAddr(addr);
+		printf("bind : %s:%d", addr.ip.c_str(), addr.port );
+		HANDLE handle;
+		handle = ( HANDLE )_beginthread( _accept_thread, 0, this );
+		OvUInt count = 4;
+		while ( count-- )
+		{
+			handle = ( HANDLE )_beginthread( _worker_thread, 0, this );
+			m_threads.push_back( handle  );
+		}
+		return true;
 	}
+	return false;
 }
 
 void OvIOCP::Cleanup()
 {
+	m_cs.Lock();
 
+	_set_shutdown(true);
+	m_callback = NULL;
+
+	if ( m_listener )
+	{
+		m_listener->Close();
+	}
+
+	if ( OvUInt count = m_threads.size() )
+	{
+		while ( count-- )
+		{
+			PostQueuedCompletionStatus( m_iocp, 0, 0, 0 );
+		}
+		WaitForMultipleObjects(m_threads.size(), &m_threads[0],true,INFINITE);
+	}
+	if ( m_iocp ) CloseHandle( m_iocp );
+
+	for each ( OvIOCPObject * obj in m_iocp_objects )
+	{
+		OvDelete obj;
+	}
+	m_iocp_objects.clear();
+	m_cs.Unlock();
 }
 
 void OvIOCP::_accept_thread( void * ptr )
@@ -97,52 +86,58 @@ void OvIOCP::_accept()
 	OvSocketSPtr con = NULL;
 	while ( con = OvSocket::Accept( m_listener ) )
 	{
-		IOCPObject * obj = OvNew IOCPObject;
-		obj->sock	= con;
-		obj->cb.sock = con;
-
-		OnConnect( obj );
-
+		_on_connect( con );
 	}
 }
 
 void OvIOCP::_worker_thread( void * ptr )
 {
 	OvIOCP * iocp = (OvIOCP *)ptr;
+	iocp->_worker();
+
+}
+
+void OvIOCP::_worker()
+{
 
 	DWORD num_of_byte	= 0;
 	DWORD completed_key	= 0;
 	while ( true )
 	{
 		LPOVERLAPPED over;
-		GetQueuedCompletionStatus( iocp->m_iocp
+		GetQueuedCompletionStatus( m_iocp
 			, (DWORD*)&num_of_byte
 			, (DWORD*)&completed_key
 			, (LPOVERLAPPED*)&over
 			, INFINITE);
 
+		if ( !completed_key || !over ) return ;
+		if (_is_shutdown()) return ;
+
 		SCompletePort * port = (SCompletePort *)over;
-		IOCPObject * obj = port->object;
+		OvIOCPObject * obj = port->object;
 		if ( 0 == num_of_byte )
 		{
-			iocp->OnDisconnect( obj );
+			_on_disconnect( obj );
 			obj = NULL;
 			continue;
 		}
-
-		printf( "%s : %d byte\n", (port->port==SCompletePort::CP_Recv)? "Recv":"Send", num_of_byte );
 
 		switch ( port->port )
 		{
 		case SCompletePort::CP_Recv :
 			{
-				obj->recv_port.recved_size = num_of_byte;
-				iocp->OnRecv( obj );
+				OvBufferSPtr buf = ((SRecvedPort*)port)->Notify( num_of_byte );
+				if ( m_callback && !_is_shutdown() )
+				{
+					m_callback->OnReceive( &(obj->cb) ,buf );
+				}
 			}
 			break;
 		case SCompletePort::CP_Send :
 			{
-				iocp->OnSend( obj );
+				if (_is_shutdown()) return ;
+				((SSendedPort*)port)->Notify( num_of_byte );
 			}
 			break;
 		}
@@ -150,58 +145,35 @@ void OvIOCP::_worker_thread( void * ptr )
 
 }
 
-void OvIOCP::_worker()
+void OvIOCP::_on_connect( OvSocketSPtr sock )
 {
+	OvAutoSection lock(m_cs);
+	if (_is_shutdown()) return ;
+	OvIOCPObject * obj = OvNew OvIOCPObject( sock );
+	m_iocp_objects.insert( obj );
 
+	m_iocp = CreateIoCompletionPort( (HANDLE)sock->GetSock(), m_iocp, (DWORD)sock->GetSock(), 4 );
+
+	obj->recv_port.Notify( 0 );
 }
 
-void OvIOCP::OnConnect( IOCPObject * obj )
+void OvIOCP::_on_disconnect( OvIOCPObject * obj )
 {
-	SOCKET sock = obj->sock->GetSock();
-	m_iocp = CreateIoCompletionPort( (HANDLE)sock, m_iocp, (DWORD)sock, 4 );
-	m_iocp_table[ obj->sock.GetRear() ] = obj;
-	if( m_callback ) m_callback->OnConnect( &( obj->cb ) );
-
-	DWORD numofbyte = 0;
-	DWORD flag = 0;
-	WSABUF buf;
-	buf.buf = (char*)&obj->recv_port.buffer[0];
-	buf.len = SRecvedPort::MAX_RECV_BUFFER_SIZE;
-	int ret = WSARecv( obj->sock->GetSock(), &buf, 1, &numofbyte, &flag, (LPOVERLAPPED)&obj->recv_port, NULL );
-
+	OvAutoSection lock(m_cs);
+	if (_is_shutdown()) return ;
+	m_iocp_objects.erase(obj);
+	OvDelete obj;
 }
 
-void OvIOCP::OnDisconnect( IOCPObject * obj )
+void OvIOCP::_set_shutdown( OvBool b )
 {
-	OvSocket * sock = obj->sock.GetRear();
-	OvIOCPCallback::CallbackObject cbobj = obj->cb;
-	m_iocp_table.erase( sock );
-	if( m_callback ) m_callback->OnDisconnect( &cbobj );
+	OvAutoSection lock(m_shutdown_cs);
+	m_shutdown = b;
 }
 
-void OvIOCP::OnRecv( IOCPObject * obj )
+OvBool OvIOCP::_is_shutdown()
 {
-	obj->cb.input.Reset( obj->recv_port.buffer, obj->recv_port.recved_size );
-
-	if( m_callback ) m_callback->OnRecv( &( obj->cb ) );
-
-	obj->recv_port.recved_size = 0;
-
-	DWORD numofbyte = 0;
-	DWORD flag = 0;
-	WSABUF buf;
-	buf.buf = (char*)&obj->recv_port.buffer[0];
-	buf.len = SRecvedPort::MAX_RECV_BUFFER_SIZE;
-	int ret = WSARecv( obj->sock->GetSock()
-					 , &buf
-					 , 1
-					 , &numofbyte
-					 , &flag
-					 , (LPOVERLAPPED)&obj->recv_port
-					 , NULL );
-}
-
-void OvIOCP::OnSend( IOCPObject * obj )
-{
-	if( m_callback ) m_callback->OnSend( &( obj->cb ) );
+	OvAutoSection lock(m_shutdown_cs);
+	OvBool ret = m_shutdown;
+	return ret;
 }

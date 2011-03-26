@@ -26,19 +26,22 @@ OvMemoryMgr::OvMemoryMgr()
 }
 OvMemoryMgr::~OvMemoryMgr()
 {
-	OvMemoryPoolList* k_list = m_pMemoryPoolList;
-	OvMemoryPoolList* k_target = NULL;
-	do 
+	if ( m_pMemoryPoolList )
 	{
-		k_target = k_list;
+		OvMemoryPoolList* k_list = m_pMemoryPoolList;
+		OvMemoryPoolList* k_target = NULL;
+		do 
+		{
+			k_target = k_list;
 
-		k_list = k_list->mNext;
+			k_list = k_list->mNext;
 
-		k_target->_destructor();
-		free((void*)k_target);
+			k_target->_destructor();
+			free((void*)k_target);
 
-	} while (k_list);
-	m_pMemoryPoolList = NULL;
+		} while (k_list);
+		m_pMemoryPoolList = NULL;
+	}
 
 }
 

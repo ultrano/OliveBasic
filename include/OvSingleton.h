@@ -5,9 +5,24 @@ template<typename T>
 template_class OvSingleton
 {
 public:
+	static OvBool Startup()
+	{
+		if ( !GetInstance() )
+		{
+			T * instance = new T;
+			return instance;
+		}
+		return false;
+	}
+	static void Teardown()
+	{
+		if ( T * instance = GetInstance() )
+		{
+			delete instance;
+		}
+	}
 	static T* GetInstance()
 	{
-		static T instance;
 		return m_single_instance;
 	}
 protected:

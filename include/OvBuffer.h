@@ -22,6 +22,7 @@ public:
 
 	OvByte *	Pointer();
 	OvSize		Size();
+	OvByte *	GetBuffer( OvSize& size );
 	OvSize		Increment();
 
 	void		Establish( OvUInt times = 1 );

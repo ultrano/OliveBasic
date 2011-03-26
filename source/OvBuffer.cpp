@@ -46,3 +46,9 @@ void OvBuffer::Establish( OvUInt times )
 		m_buf = new_buf;
 	}
 }
+
+OvByte * OvBuffer::GetBuffer( OvSize& size )
+{
+	size = Size();
+	return Pointer();
+}
