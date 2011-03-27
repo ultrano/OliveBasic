@@ -1,7 +1,7 @@
 #pragma once
 #include "OvTypeDef.h"
 
-class OvOliveBasic
+class OliveBasic
 {
 public:
 	static void Startup();

@@ -1,19 +1,30 @@
 #include <WinSock2.h>
+#include <MSWSock.h>
 #include "OvIOCP.h"
 #include "OvBuffer.h"
 #include "OvBitFlags.h"
 #include "OvIOCPCallback.h"
-#include "_OvIOCPObject.h"
 #include <process.h>
-
 
 //////////////////////////////////////////////////////////////////////////
 
-OvIOCP::OvIOCP()
-: m_callback( NULL )
-, m_iocp( NULL )
+struct SOverlapped : OvMemObject
 {
-	_set_shutdown(false);
+	enum IOCP_Signal{ Recv, Send, Accept };
+	OVERLAPPED			overlapped;
+	SOverlapped() : sock(NULL), user_data(NULL){ZeroMemory(&overlapped,sizeof(overlapped));};
+	SOverlapped( IOCP_Signal sg ) : sock(NULL), signal(sg), user_data(NULL) {ZeroMemory(&overlapped,sizeof(overlapped));};
+	IOCP_Signal			signal;
+	SOCKET				sock;
+	OvCriticalSection	cs;
+	void*				user_data;
+};
+//////////////////////////////////////////////////////////////////////////
+
+OvIOCP::OvIOCP()
+: m_iocp_handle( NULL )
+, m_startup_complete( NULL )
+{
 }
 
 OvIOCP::~OvIOCP()
@@ -23,157 +34,108 @@ OvIOCP::~OvIOCP()
 
 OvBool OvIOCP::Startup( const OvString & ip, OvShort port, OvIOCPCallback * callback )
 {
-	m_iocp = NULL;
-	m_callback = NULL;
-	if ( m_listener = OvSocket::Bind( ip, port ) )
+	m_iocp_handle		= CreateIoCompletionPort( INVALID_HANDLE_VALUE, NULL, NULL, NULL );
+	m_startup_complete	= CreateEvent( NULL, true, false, NULL);
+	m_on_cleaningup		= CreateEvent( NULL, true, true, NULL);
+	m_listensock		= OliveNet::Bind(ip,port);
+	m_terminate			= false;
+
+	OvUInt threadcount	= 4;
+	m_iocp_handle		= CreateIoCompletionPort( (HANDLE)m_listensock, m_iocp_handle, (DWORD)m_listensock, threadcount );
+	OvUInt count		= threadcount;
+	while ( count-- )
 	{
-		m_callback = callback;
-		m_iocp = CreateIoCompletionPort( INVALID_HANDLE_VALUE, NULL, 0, 0 );
-		OvSocket::Address addr;
-		m_listener->GetSockAddr(addr);
-		printf("bind : %s:%d", addr.ip.c_str(), addr.port );
-		HANDLE handle;
-		handle = ( HANDLE )_beginthread( _accept_thread, 0, this );
-		OvUInt count = 4;
-		while ( count-- )
+		SOverlapped * overlapped = OvNew SOverlapped(SOverlapped::Accept);
+		overlapped->sock = WSASocket( AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0 , WSA_FLAG_OVERLAPPED );
+		m_iocp_handle = CreateIoCompletionPort( (HANDLE)overlapped->sock, m_iocp_handle, (DWORD)overlapped->sock, threadcount );
+		char dumy;
+		if ( ! AcceptEx( m_listensock, overlapped->sock, &dumy, 0, sizeof(sockaddr_in)+16, sizeof(sockaddr_in)+16, NULL, &overlapped->overlapped ) )
 		{
-			handle = ( HANDLE )_beginthread( _worker_thread, 0, this );
-			m_threads.push_back( handle  );
+			int err = WSAGetLastError();
+			if ( err != WSA_IO_PENDING &&
+				 err != WSAEWOULDBLOCK)
+			{
+				continue;
+			}
 		}
-		return true;
+		HANDLE threadid = (HANDLE)_beginthread( _worker, 0, this );
+		m_threads.push_back( threadid );
 	}
-	return false;
+
+	SetEvent(m_startup_complete);
+	CloseHandle(m_startup_complete);
+	return true;
 }
 
 void OvIOCP::Cleanup()
 {
-	m_cs.Lock();
+	ResetEvent( m_on_cleaningup ); // 일단 종료 상태를 신호한다.
 
-	_set_shutdown(true);
-	m_callback = NULL;
-
-	if ( m_listener )
+	OliveNet::CloseSock(m_listensock);
+	OvUInt threadcount = m_threads.size();
+	while ( threadcount-- )
 	{
-		m_listener->Close();
+		PostQueuedCompletionStatus(m_iocp_handle,0,0,0); // 워커 스레드에 종료 전송.
 	}
 
-	if ( OvUInt count = m_threads.size() )
-	{
-		while ( count-- )
-		{
-			PostQueuedCompletionStatus( m_iocp, 0, 0, 0 );
-		}
-		WaitForMultipleObjects(m_threads.size(), &m_threads[0],true,INFINITE);
-	}
-	if ( m_iocp ) CloseHandle( m_iocp );
+	m_terminate = true; // 종료 플래그를 세운다
+	SetEvent( m_on_cleaningup ); // 다시 워커스레드 진행, 종료 플래그에 의해 종료.
 
-	for each ( OvIOCPObject * obj in m_iocp_objects )
-	{
-		OvDelete obj;
-	}
-	m_iocp_objects.clear();
-	m_cs.Unlock();
+	WaitForMultipleObjects( m_threads.size(), &m_threads[0], true, INFINITE ); // 종료 되는 워크들을 모두 대기.
+	m_threads.clear();
 }
 
-void OvIOCP::_accept_thread( void * ptr )
+HANDLE OvIOCP::GetIOCPHandle()
 {
-	OvIOCP * iocp = (OvIOCP *)ptr;
-	iocp->_accept();
+	return m_iocp_handle;
 }
 
-void OvIOCP::_accept()
+
+//////////////////////////////////////////////////////////////////////////
+void OvIOCP::_worker( void * p )
 {
-	OvSocketSPtr con = NULL;
-	while ( con = OvSocket::Accept( m_listener ) )
-	{
-		_on_connect( con );
-	}
-}
+	OvIOCP* iocp = (OvIOCP*)p;
+	HANDLE cleaningup_handle = iocp->m_on_cleaningup;
+	WaitForSingleObject( iocp->m_startup_complete, INFINITE );
 
-void OvIOCP::_worker_thread( void * ptr )
-{
-	OvIOCP * iocp = (OvIOCP *)ptr;
-	iocp->_worker();
+	HANDLE iocp_handle = iocp->m_iocp_handle;
 
-}
-
-void OvIOCP::_worker()
-{
-
-	DWORD num_of_byte	= 0;
-	DWORD completed_key	= 0;
 	while ( true )
 	{
-		LPOVERLAPPED over;
-		GetQueuedCompletionStatus( m_iocp
-			, (DWORD*)&num_of_byte
-			, (DWORD*)&completed_key
-			, (LPOVERLAPPED*)&over
-			, INFINITE);
+		DWORD nofb = 0;
+		DWORD key  = 0;
+		SOverlapped * overlapped = NULL;
+		GetQueuedCompletionStatus( iocp_handle
+								 , &nofb
+								 , (DWORD*)&key
+								 , (LPOVERLAPPED*)(&overlapped)
+								 , INFINITE );
+		WaitForSingleObject( cleaningup_handle, INFINITE );
+		if ( iocp->m_terminate ) return ;
+		if ( !key || !overlapped ) return ;
 
-		if ( !completed_key || !over ) return ;
-		if (_is_shutdown()) return ;
-
-		SCompletePort * port = (SCompletePort *)over;
-		OvIOCPObject * obj = port->object;
-		if ( 0 == num_of_byte )
 		{
-			_on_disconnect( obj );
-			obj = NULL;
-			continue;
-		}
-
-		switch ( port->port )
-		{
-		case SCompletePort::CP_Recv :
+			overlapped->cs.Lock();
+			if ( 0 == nofb && SOverlapped::Accept != overlapped->signal )
 			{
-				OvBufferSPtr buf = ((SRecvedPort*)port)->Notify( num_of_byte );
-				if ( m_callback && !_is_shutdown() )
+			}
+			switch ( overlapped->signal )
+			{
+			case SOverlapped::Recv :
 				{
-					m_callback->OnReceive( &(obj->cb) ,buf );
 				}
+				break;
+			case SOverlapped::Send :
+				{
+				}
+				break;
+			case SOverlapped::Accept :
+				{
+				}
+				break;
 			}
-			break;
-		case SCompletePort::CP_Send :
-			{
-				if (_is_shutdown()) return ;
-				((SSendedPort*)port)->Notify( num_of_byte );
-			}
-			break;
+			overlapped->cs.Unlock();
 		}
+
 	}
-
-}
-
-void OvIOCP::_on_connect( OvSocketSPtr sock )
-{
-	OvAutoSection lock(m_cs);
-	if (_is_shutdown()) return ;
-	OvIOCPObject * obj = OvNew OvIOCPObject( sock );
-	m_iocp_objects.insert( obj );
-
-	m_iocp = CreateIoCompletionPort( (HANDLE)sock->GetSock(), m_iocp, (DWORD)sock->GetSock(), 4 );
-
-	obj->recv_port.Notify( 0 );
-}
-
-void OvIOCP::_on_disconnect( OvIOCPObject * obj )
-{
-	OvAutoSection lock(m_cs);
-	if (_is_shutdown()) return ;
-	m_iocp_objects.erase(obj);
-	OvDelete obj;
-}
-
-void OvIOCP::_set_shutdown( OvBool b )
-{
-	OvAutoSection lock(m_shutdown_cs);
-	m_shutdown = b;
-}
-
-OvBool OvIOCP::_is_shutdown()
-{
-	OvAutoSection lock(m_shutdown_cs);
-	OvBool ret = m_shutdown;
-	return ret;
-}
+};

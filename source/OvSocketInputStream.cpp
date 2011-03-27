@@ -1,9 +1,9 @@
 #include "OvSocketInputStream.h"
-#include "OvSocket.h"
+#include "OliveNet.h"
 #include "OvBuffer.h"
 OvRTTI_IMPL( OvSocketInputStream );
 
-OvSocketInputStream::OvSocketInputStream( OvSocketSPtr sock )
+OvSocketInputStream::OvSocketInputStream( SOCKET sock )
 : m_socket( sock )
 {
 
@@ -16,7 +16,7 @@ OvSocketInputStream::~OvSocketInputStream()
 
 OvSize OvSocketInputStream::ReadBytes( OvByte * dest, OvSize dest_size )
 {
-	if ( !m_socket )
+	if ( INVALID_SOCKET == m_socket )
 	{
 		return 0;
 	}
@@ -26,7 +26,7 @@ OvSize OvSocketInputStream::ReadBytes( OvByte * dest, OvSize dest_size )
 	while ( remain )
 	{
 		OvSize ret = 0;
-		if ( SOCKET_ERROR == (ret = recv( m_socket->GetSock(), (char*)dest, remain, 0 )) )
+		if ( SOCKET_ERROR == (ret = recv( m_socket, (char*)dest, remain, 0 )) )
 			return 0;
 		else if( ret == 0 )
 			break;

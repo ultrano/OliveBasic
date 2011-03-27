@@ -1,19 +1,18 @@
 #pragma once
 #include "OvInputStream.h"
 
-OvREF_POINTER( OvSocket );
 class OvSocketInputStream : public OvInputStream
 {
 	OvRTTI_DECL( OvSocketInputStream );
 public:
 
-	OvSocketInputStream( OvSocketSPtr sock );
+	OvSocketInputStream( SOCKET sock );
 	~OvSocketInputStream();
 
 	virtual OvSize ReadBytes( OvByte * dest, OvSize dest_size ) override;
 
 private:
 
-	OvSocketSPtr m_socket;
+	SOCKET m_socket;
 
 };

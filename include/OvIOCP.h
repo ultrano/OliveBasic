@@ -1,6 +1,6 @@
 #pragma once
 #include "OvAutoPtr.h"
-#include "OvSocket.h"
+#include "OliveNet.h"
 #include "OvByteInputStream.h"
 #include "OvBufferOutputStream.h"
 
@@ -8,6 +8,7 @@ class OvIOCPCallback;
 class OvIOCPObject;
 struct SCompletePort;
 
+struct SOverlapped;
 class OvIOCP : OvRefObject
 {
 public:
@@ -18,30 +19,23 @@ public:
 	OvBool	Startup( const OvString & ip, OvShort port, OvIOCPCallback * callback );
 	void	Cleanup();
 
+	HANDLE  GetIOCPHandle();
 private:
 
-	void _on_connect( OvSocketSPtr sock );
-	void _on_disconnect( OvIOCPObject * obj );
-
-	static void _accept_thread( void * );
-	void _accept();
-
-	static void _worker_thread( void * );
-	void _worker();
-
-	void	_set_shutdown( OvBool b );
-	OvBool	_is_shutdown();
+	static void _worker( void * p );
 
 private:
 
-	HANDLE					m_iocp;
-	OvVector<HANDLE>		m_threads;
-	OvSet<OvIOCPObject*>	m_iocp_objects;
-	OvSocketSPtr			m_listener;
-	OvIOCPCallback *		m_callback;
-	OvCriticalSection		m_cs;
+	HANDLE m_iocp_handle;
+	SOCKET m_listensock;
+	OvSet<SOverlapped*> m_clients;
 
-	OvCriticalSection		m_shutdown_cs;
-	volatile OvBool			m_shutdown;
+	// 상활별 대기 이벤트
+	HANDLE m_startup_complete;
+	HANDLE m_on_cleaningup;
+	OvBool m_terminate;
+
+	OvVector<HANDLE> m_threads;
+	//
 
 };

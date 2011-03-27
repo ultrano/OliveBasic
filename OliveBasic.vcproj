@@ -224,11 +224,11 @@
 				Name="OvSocket"
 				>
 				<File
-					RelativePath=".\source\OvSocket.cpp"
+					RelativePath=".\source\OliveNet.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\include\OvSocket.h"
+					RelativePath=".\include\OliveNet.h"
 					>
 				</File>
 				<Filter
@@ -350,14 +350,14 @@
 			</Filter>
 		</Filter>
 		<Filter
-			Name="OvOlive"
+			Name="OliveBasic"
 			>
 			<File
-				RelativePath=".\source\OvOlive.cpp"
+				RelativePath=".\source\OliveBasic.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\include\OvOlive.h"
+				RelativePath=".\include\OliveBasic.h"
 				>
 			</File>
 		</Filter>
@@ -435,14 +435,6 @@
 			<Filter
 				Name="OvIOCP"
 				>
-				<File
-					RelativePath=".\source\_OvIOCPObject.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\_OvIOCPObject.h"
-					>
-				</File>
 				<File
 					RelativePath=".\source\OvIOCP.cpp"
 					>

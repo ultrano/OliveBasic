@@ -1,15 +1,15 @@
-#include "OvOlive.h"
+#include "OliveBasic.h"
 
 #include "OvMemoryMgr.h"
 #include "OvObjectManager.h"
 
-void OvOliveBasic::Startup()
+void OliveBasic::Startup()
 {
 	OvMemoryMgr::Startup();
 	OvObjectManager::Startup();
 }
 
-void OvOliveBasic::Cleanup()
+void OliveBasic::Cleanup()
 {
 	OvObjectManager::Teardown();
 	OvMemoryMgr::Teardown();
