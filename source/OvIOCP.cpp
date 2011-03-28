@@ -1,6 +1,7 @@
 #include <WinSock2.h>
 #include <MSWSock.h>
 #include "OvIOCP.h"
+#include "OvIOCPCallback.h"
 #include "OvBuffer.h"
 #include "OvBitFlags.h"
 #include <process.h>

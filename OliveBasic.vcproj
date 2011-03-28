@@ -411,6 +411,10 @@
 					RelativePath=".\include\OvIOCP.h"
 					>
 				</File>
+				<File
+					RelativePath=".\include\OvIOCPCallback.h"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="OvTypeDef"
