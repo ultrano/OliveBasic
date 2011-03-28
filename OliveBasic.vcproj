@@ -443,10 +443,6 @@
 					RelativePath=".\include\OvIOCP.h"
 					>
 				</File>
-				<File
-					RelativePath=".\include\OvIOCPCallback.h"
-					>
-				</File>
 			</Filter>
 			<Filter
 				Name="OvTypeDef"
@@ -465,6 +461,30 @@
 				</File>
 				<File
 					RelativePath=".\include\OvObjectID.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvCriticalSection"
+				>
+				<File
+					RelativePath=".\include\OvCriticalSection.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvAutoSection"
+				>
+				<File
+					RelativePath=".\include\OvAutoSection.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvThreadSyncer"
+				>
+				<File
+					RelativePath=".\include\OvThreadSyncer.h"
 					>
 				</File>
 			</Filter>

@@ -20,6 +20,7 @@ public:
 	void	Cleanup();
 
 	HANDLE  GetIOCPHandle();
+
 private:
 
 	static void _worker( void * p );

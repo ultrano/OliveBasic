@@ -3,7 +3,6 @@
 #include "OvIOCP.h"
 #include "OvBuffer.h"
 #include "OvBitFlags.h"
-#include "OvIOCPCallback.h"
 #include <process.h>
 
 //////////////////////////////////////////////////////////////////////////
@@ -12,8 +11,10 @@ struct SOverlapped : OvMemObject
 {
 	enum IOCP_Signal{ Recv, Send, Accept };
 	OVERLAPPED			overlapped;
-	SOverlapped() : sock(NULL), user_data(NULL){ZeroMemory(&overlapped,sizeof(overlapped));};
-	SOverlapped( IOCP_Signal sg ) : sock(NULL), signal(sg), user_data(NULL) {ZeroMemory(&overlapped,sizeof(overlapped));};
+	SOverlapped() 
+		: sock(NULL), user_data(NULL) { ZeroMemory(&overlapped,sizeof(overlapped)); };
+	SOverlapped( IOCP_Signal sg ) 
+		: sock(NULL), signal(sg), user_data(NULL) { ZeroMemory(&overlapped,sizeof(overlapped)); };
 	IOCP_Signal			signal;
 	SOCKET				sock;
 	OvCriticalSection	cs;
