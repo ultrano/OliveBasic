@@ -27,10 +27,12 @@ struct SOverlapped : OvMemObject
 
 struct OvIOCPObject : public OvMemObject
 {
-	OvIOCPObject()
-		: connected		( this, Connected )
+	OvIOCPObject( SOCKET s )
+		: sock			( s )
+		, connected		( this, Connected )
 		, recved		( this, Recved )
 		, sended		( this, Sended )
+		, user_data		( NULL )
 	{
 	}
 	~OvIOCPObject(){};
@@ -39,6 +41,7 @@ struct OvIOCPObject : public OvMemObject
 	SOverlapped			connected;
 	SOverlapped			recved;
 	SOverlapped			sended;
+	void*				user_data;
 	char				discon_buf[1]; // 초기 한번, disconnect 를 감지 하기 위해 WSARecv 를 호출 할때 쓰는 버퍼.
 };
 
@@ -46,6 +49,7 @@ struct OvIOCPObject : public OvMemObject
 OvIOCP::OvIOCP()
 : m_iocp_handle( NULL )
 , m_startup_complete( NULL )
+, m_callback( NULL )
 {
 }
 
@@ -56,6 +60,7 @@ OvIOCP::~OvIOCP()
 
 OvBool OvIOCP::Startup( const OvString & ip, OvShort port, OvIOCPCallback * callback )
 {
+	m_callback = callback;
 	m_iocp_handle		= CreateIoCompletionPort( INVALID_HANDLE_VALUE, NULL, NULL, NULL );
 	m_startup_complete	= CreateEvent( NULL, true, false, NULL);
 	m_on_cleaningup		= CreateEvent( NULL, true, true, NULL);
@@ -89,6 +94,15 @@ void OvIOCP::Cleanup()
 	SetEvent( m_on_cleaningup ); // 다시 워커스레드 진행, 종료 플래그에 의해 종료.
 
 	WaitForMultipleObjects( m_threads.size(), &m_threads[0], true, INFINITE ); // 종료 되는 워크들을 모두 대기.
+
+	// 모든 워크 스레드가 종료되어 더이상 추가 삭제가 발생 하지 않게 되었을때, 남아 있는 IOCP Object 들을 삭제.
+	OvMTSet<OvIOCPObject*>::value_list objlist;
+	m_overlaps.copy_value_list( objlist );
+	for each ( OvIOCPObject * obj in objlist )
+	{
+		OvDelete obj;
+	}
+
 	m_threads.clear();
 }
 
@@ -114,15 +128,64 @@ void OvIOCP::_accepter( void * p )
 		WaitForSingleObject( cleaningup_handle, INFINITE );
 		if ( iocp->m_terminate ) return ;
 
-		OvIOCPObject * iobj = OvNew OvIOCPObject;
-		iobj->sock = connerted;
+		OvIOCPObject * iobj = OvNew OvIOCPObject(connerted);
 		iocp->m_overlaps.insert( iobj );
-
 		PostQueuedCompletionStatus( iocp_handle, 0, (DWORD)connerted, &iobj->connected.overlapped); // 워커 스레드에 종료 전송.
 	}
 
 }
 
+//////////////////////////////////////////////////////////////////////////
+void OvIOCP::_on_connected( OvIOCPObject * iobj )
+{
+	if ( !iobj ) return ;
+
+	WSABUF buf = {0,0};
+	if ( m_callback )
+	{
+		OvAutoSection callback_lock( m_callback_cs );
+		m_callback->OnConnected( &iobj->user_data, (OvByte**)&buf.buf, (OvSize&)buf.len );
+	}
+
+	printf("connected\n");
+
+	if ( buf.buf && buf.len )
+	{
+		DWORD dumy = 0;
+		CreateIoCompletionPort( (HANDLE)iobj->sock, m_iocp_handle, (DWORD)iobj->sock, WorkerThreadCount );
+		WSARecv( iobj->sock, &buf, 0, &dumy, &dumy, &iobj->recved.overlapped, NULL );
+	}
+	else
+	{
+		_on_disconnected( iobj );
+	}
+}
+void OvIOCP::_on_disconnected( OvIOCPObject * iobj )
+{
+	if ( !iobj ) return ;
+	iobj->cs.Lock();
+	OliveNet::CloseSock( iobj->sock );
+	m_overlaps.erase( iobj );
+	iobj->cs.Unlock();
+	OvAutoSection callback_lock( m_callback_cs );
+	OvDelete iobj;
+	printf("disconnected\n");
+}
+void OvIOCP::_on_sended( OvIOCPObject * iobj )
+{
+	if ( !iobj ) return ;
+	OvAutoSection lock(iobj->cs);
+	OvAutoSection callback_lock( m_callback_cs );
+	printf("send\n");
+}
+void OvIOCP::_on_recved( OvIOCPObject * iobj )
+{
+	if ( !iobj ) return ;
+	OvAutoSection lock(iobj->cs);
+	OvAutoSection callback_lock( m_callback_cs );
+
+	printf("recv\n");
+}
 //////////////////////////////////////////////////////////////////////////
 void OvIOCP::_worker( void * p )
 {
@@ -148,44 +211,71 @@ void OvIOCP::_worker( void * p )
 
 		{
 			OvIOCPObject * iobj = overlapped->iobj;
-			iobj->cs.Lock();
 			if ( 0 == nofb && Connected != overlapped->signal )
 			{
-				// disconnected
-				iocp->m_overlaps.erase( iobj );
-				OliveNet::CloseSock( iobj->sock );
-				iobj->cs.Unlock();
-				OvDelete iobj;
-				printf("disconnected\n");
+				{
+					iocp->_on_disconnected( iobj );
+				}
 				continue;
 			}
 			switch ( overlapped->signal )
 			{
 			case Recved :
 				{
-					// recv
+					{
+						iocp->_on_recved( iobj );
+					}
 				}
 				break;
 			case Sended :
 				{
-					// send
+					{
+						iocp->_on_sended( iobj );
+					}
 				}
 				break;
 			case Connected :
 				{
-					// connected
-					printf("connected\n");
-
-					// 초기 한번, disconnected 를 감지 하기 위해 리슨 상태로 만들어 놓는다.
-					DWORD dumy = 0;
-					WSABUF buf = {1,iobj->discon_buf};
-					CreateIoCompletionPort( (HANDLE)iobj->sock, iocp_handle, (DWORD)iobj->sock, WorkerThreadCount );
-					WSARecv( iobj->sock, &buf, 1, &dumy, &dumy, &iobj->recved.overlapped, NULL );
+					{
+						iocp->_on_connected( iobj );
+					}
 				}
 				break;
 			}
-			iobj->cs.Unlock();
 		}
 
 	}
 };
+
+SOCKET OU::iocp::GetSocket( OvIOCPObject * iobj )
+{
+	if ( iobj )
+	{
+		return iobj->sock;
+	}
+	return INVALID_SOCKET;
+}
+
+void* OU::iocp::GetUserData( OvIOCPObject * iobj )
+{
+	if ( iobj )
+	{
+		return iobj->user_data;
+	}
+	return NULL;
+}
+
+void OU::iocp::SendData( OvIOCPObject * iobj, OvByte * buf, OvSize len )
+{
+	if ( iobj && (buf && len) )
+	{
+		WSABUF wsabuf = {len, (char*)buf};
+		WSASend( iobj->sock
+			, &wsabuf
+			, 1
+			, NULL
+			, 0
+			, &iobj->sended.overlapped
+			, NULL );
+	}
+}
