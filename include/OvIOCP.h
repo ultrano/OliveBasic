@@ -42,8 +42,8 @@ private:
 	static void _worker( void * p );
 	void 		_on_connected( OvIOCPObject * iobj );
 	void 		_on_disconnected( OvIOCPObject * iobj );
-	void 		_on_sended( OvIOCPObject * iobj );
-	void 		_on_recved( OvIOCPObject * iobj );
+	void 		_on_sended( OvIOCPObject * iobj, OvSize completed_byte );
+	void 		_on_recved( OvIOCPObject * iobj, OvSize completed_byte );
 private:
 
 	HANDLE				m_iocp_handle;

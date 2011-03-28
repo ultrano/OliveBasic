@@ -34,6 +34,7 @@ struct OvIOCPObject : public OvMemObject
 		, sended		( this, Sended )
 		, user_data		( NULL )
 	{
+		ZeroMemory( &recv_buf, sizeof(recv_buf) );
 	}
 	~OvIOCPObject(){};
 	OvCriticalSection	cs;
@@ -42,6 +43,7 @@ struct OvIOCPObject : public OvMemObject
 	SOverlapped			recved;
 	SOverlapped			sended;
 	void*				user_data;
+	WSABUF				recv_buf;
 	char				discon_buf[1]; // 초기 한번, disconnect 를 감지 하기 위해 WSARecv 를 호출 할때 쓰는 버퍼.
 };
 
@@ -140,20 +142,19 @@ void OvIOCP::_on_connected( OvIOCPObject * iobj )
 {
 	if ( !iobj ) return ;
 
-	WSABUF buf = {0,0};
 	if ( m_callback )
 	{
 		OvAutoSection callback_lock( m_callback_cs );
-		m_callback->OnConnected( &iobj->user_data, (OvByte**)&buf.buf, (OvSize&)buf.len );
+		m_callback->OnConnected( &iobj->user_data, (OvByte**)&iobj->recv_buf.buf, (OvSize&)iobj->recv_buf.len );
 	}
 
 	printf("connected\n");
 
-	if ( buf.buf && buf.len )
+	if ( iobj->recv_buf.buf && iobj->recv_buf.len )
 	{
 		DWORD dumy = 0;
 		CreateIoCompletionPort( (HANDLE)iobj->sock, m_iocp_handle, (DWORD)iobj->sock, WorkerThreadCount );
-		WSARecv( iobj->sock, &buf, 0, &dumy, &dumy, &iobj->recved.overlapped, NULL );
+		WSARecv( iobj->sock, &iobj->recv_buf, 1, &dumy, &dumy, &iobj->recved.overlapped, NULL );
 	}
 	else
 	{
@@ -171,20 +172,40 @@ void OvIOCP::_on_disconnected( OvIOCPObject * iobj )
 	OvDelete iobj;
 	printf("disconnected\n");
 }
-void OvIOCP::_on_sended( OvIOCPObject * iobj )
+void OvIOCP::_on_sended( OvIOCPObject * iobj, OvSize completed_byte )
 {
 	if ( !iobj ) return ;
 	OvAutoSection lock(iobj->cs);
-	OvAutoSection callback_lock( m_callback_cs );
+	if ( m_callback )
+	{
+		OvAutoSection callback_lock( m_callback_cs );
+		m_callback->OnSended( iobj, completed_byte );
+	}
 	printf("send\n");
 }
-void OvIOCP::_on_recved( OvIOCPObject * iobj )
+void OvIOCP::_on_recved( OvIOCPObject * iobj, OvSize completed_byte )
 {
 	if ( !iobj ) return ;
 	OvAutoSection lock(iobj->cs);
-	OvAutoSection callback_lock( m_callback_cs );
+
+	if ( m_callback )
+	{
+		OvAutoSection callback_lock( m_callback_cs );
+		m_callback->OnRecved( iobj, completed_byte );
+	}
 
 	printf("recv\n");
+
+	if ( iobj->recv_buf.buf && iobj->recv_buf.len )
+	{
+		DWORD dumy = 0;
+		WSARecv( iobj->sock, &iobj->recv_buf, 1, &dumy, &dumy, &iobj->recved.overlapped, NULL );
+	}
+	else
+	{
+		_on_disconnected( iobj );
+	}
+
 }
 //////////////////////////////////////////////////////////////////////////
 void OvIOCP::_worker( void * p )
@@ -213,32 +234,24 @@ void OvIOCP::_worker( void * p )
 			OvIOCPObject * iobj = overlapped->iobj;
 			if ( 0 == nofb && Connected != overlapped->signal )
 			{
-				{
-					iocp->_on_disconnected( iobj );
-				}
+				iocp->_on_disconnected( iobj );
 				continue;
 			}
 			switch ( overlapped->signal )
 			{
 			case Recved :
 				{
-					{
-						iocp->_on_recved( iobj );
-					}
+					iocp->_on_recved( iobj, nofb );
 				}
 				break;
 			case Sended :
 				{
-					{
-						iocp->_on_sended( iobj );
-					}
+					iocp->_on_sended( iobj, nofb );
 				}
 				break;
 			case Connected :
 				{
-					{
-						iocp->_on_connected( iobj );
-					}
+					iocp->_on_connected( iobj );
 				}
 				break;
 			}
