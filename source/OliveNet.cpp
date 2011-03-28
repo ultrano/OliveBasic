@@ -105,3 +105,33 @@ void OliveNet::CloseSock( SOCKET sock )
 {
 	closesocket( sock );
 }
+
+OliveNet::SSockAddress OliveNet::GetSockAddress( SOCKET sock )
+{
+	SSockAddress addr;
+	if ( sock != INVALID_SOCKET )
+	{
+		SOCKADDR_IN addr_in;
+		int sz = sizeof( addr_in );
+		ZeroMemory(&addr_in,sz);
+		getsockname( sock, (SOCKADDR*)&addr_in, &sz );
+		addr.ip = inet_ntoa( addr_in.sin_addr );
+		addr.port = ntohs( addr_in.sin_port );
+	}
+	return addr;
+}
+
+OliveNet::SSockAddress OliveNet::GetPeerAddress( SOCKET sock )
+{
+	SSockAddress addr;
+	if ( sock != INVALID_SOCKET )
+	{
+		SOCKADDR_IN addr_in;
+		int sz = sizeof( addr_in );
+		ZeroMemory(&addr_in,sz);
+		getpeername( sock, (SOCKADDR*)&addr_in, &sz );
+		addr.ip = inet_ntoa( addr_in.sin_addr );
+		addr.port = ntohs( addr_in.sin_port );
+	}
+	return addr;
+}

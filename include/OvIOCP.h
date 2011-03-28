@@ -1,15 +1,12 @@
 #pragma once
 #include "OvAutoPtr.h"
-#include "OvMTQueue.h"
+#include "OvMTSet.h"
 #include "OliveNet.h"
 #include "OvByteInputStream.h"
 #include "OvBufferOutputStream.h"
 
 class OvIOCPCallback;
-class OvIOCPObject;
-struct SCompletePort;
-
-struct SOverlapped;
+struct OvIOCPObject;
 class OvIOCP : OvRefObject
 {
 public:
@@ -24,13 +21,14 @@ public:
 
 private:
 
+	static void _accepter( void * p );
 	static void _worker( void * p );
 
 private:
 
 	HANDLE m_iocp_handle;
 	SOCKET m_listensock;
-	OvMTQueue<SOverlapped*> m_overlaps;
+	OvMTSet<OvIOCPObject*> m_overlaps;
 
 	// 상활별 대기 이벤트
 	HANDLE m_startup_complete;

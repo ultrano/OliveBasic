@@ -500,6 +500,14 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvMTSet"
+				>
+				<File
+					RelativePath=".\include\OvMTSet.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Refernce"

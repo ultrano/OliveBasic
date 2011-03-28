@@ -4,24 +4,45 @@
 #include "OvBuffer.h"
 #include "OvBitFlags.h"
 #include <process.h>
+#define WorkerThreadCount 4
 
 //////////////////////////////////////////////////////////////////////////
+
+enum IOCP_Signal{ Connected, Recved, Sended, };
+
+//////////////////////////////////////////////////////////////////////////
+
+struct OvIOCPObject;
 
 struct SOverlapped : OvMemObject
 {
-	enum IOCP_Signal{ Recv, Send, Accept };
 	OVERLAPPED			overlapped;
-	SOverlapped() 
-		: sock(NULL), user_data(NULL) { ZeroMemory(&overlapped,sizeof(overlapped)); };
-	SOverlapped( IOCP_Signal sg ) 
-		: sock(NULL), signal(sg), user_data(NULL) { ZeroMemory(&overlapped,sizeof(overlapped)); };
+	SOverlapped(OvIOCPObject* obj, IOCP_Signal sig) 
+		: iobj( obj ), signal( sig ) 
+	{ ZeroMemory(&overlapped,sizeof(overlapped)); };
+	OvIOCPObject*		iobj;
 	IOCP_Signal			signal;
-	SOCKET				sock;
-	OvCriticalSection	cs;
-	void*				user_data;
 };
 //////////////////////////////////////////////////////////////////////////
 
+struct OvIOCPObject : public OvMemObject
+{
+	OvIOCPObject()
+		: connected		( this, Connected )
+		, recved		( this, Recved )
+		, sended		( this, Sended )
+	{
+	}
+	~OvIOCPObject(){};
+	OvCriticalSection	cs;
+	SOCKET				sock;
+	SOverlapped			connected;
+	SOverlapped			recved;
+	SOverlapped			sended;
+	char				discon_buf[1]; // 초기 한번, disconnect 를 감지 하기 위해 WSARecv 를 호출 할때 쓰는 버퍼.
+};
+
+//////////////////////////////////////////////////////////////////////////
 OvIOCP::OvIOCP()
 : m_iocp_handle( NULL )
 , m_startup_complete( NULL )
@@ -41,26 +62,11 @@ OvBool OvIOCP::Startup( const OvString & ip, OvShort port, OvIOCPCallback * call
 	m_listensock		= OliveNet::Bind(ip,port);
 	m_terminate			= false;
 
-	OvUInt threadcount	= 4;
-	m_iocp_handle		= CreateIoCompletionPort( (HANDLE)m_listensock, m_iocp_handle, (DWORD)m_listensock, threadcount );
-	OvUInt count		= threadcount;
+	OvUInt count		= WorkerThreadCount;
 	while ( count-- )
 	{
-		SOverlapped * overlapped = OvNew SOverlapped(SOverlapped::Accept);
-		overlapped->sock = WSASocket( AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0 , WSA_FLAG_OVERLAPPED );
-		m_iocp_handle = CreateIoCompletionPort( (HANDLE)overlapped->sock, m_iocp_handle, (DWORD)overlapped->sock, threadcount );
-		char dumy;
-		if ( ! AcceptEx( m_listensock, overlapped->sock, &dumy, 0, sizeof(sockaddr_in)+16, sizeof(sockaddr_in)+16, NULL, &overlapped->overlapped ) )
-		{
-			int err = WSAGetLastError();
-			if ( err != WSA_IO_PENDING &&
-				 err != WSAEWOULDBLOCK)
-			{
-				continue;
-			}
-		}
-		HANDLE threadid = (HANDLE)_beginthread( _worker, 0, this );
-		m_threads.push_back( threadid );
+		m_threads.push_back( (HANDLE)_beginthread( _worker, 0, this ) );
+		m_threads.push_back( (HANDLE)_beginthread( _accepter, 0, this ) );
 	}
 
 	SetEvent(m_startup_complete);
@@ -91,6 +97,31 @@ HANDLE OvIOCP::GetIOCPHandle()
 	return m_iocp_handle;
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+void OvIOCP::_accepter( void * p )
+{
+	OvIOCP* iocp = (OvIOCP*)p;
+	SOCKET listensock = iocp->m_listensock;
+	HANDLE cleaningup_handle = iocp->m_on_cleaningup;
+	WaitForSingleObject( iocp->m_startup_complete, INFINITE );
+
+	HANDLE iocp_handle = iocp->m_iocp_handle;
+
+	SOCKET connerted = INVALID_SOCKET;
+	while ( INVALID_SOCKET != (connerted = OliveNet::Accept( listensock )) )
+	{
+		WaitForSingleObject( cleaningup_handle, INFINITE );
+		if ( iocp->m_terminate ) return ;
+
+		OvIOCPObject * iobj = OvNew OvIOCPObject;
+		iobj->sock = connerted;
+		iocp->m_overlaps.insert( iobj );
+
+		PostQueuedCompletionStatus( iocp_handle, 0, (DWORD)connerted, &iobj->connected.overlapped); // 워커 스레드에 종료 전송.
+	}
+
+}
 
 //////////////////////////////////////////////////////////////////////////
 void OvIOCP::_worker( void * p )
@@ -116,26 +147,44 @@ void OvIOCP::_worker( void * p )
 		if ( !key || !overlapped ) return ;
 
 		{
-			overlapped->cs.Lock();
-			if ( 0 == nofb && SOverlapped::Accept != overlapped->signal )
+			OvIOCPObject * iobj = overlapped->iobj;
+			iobj->cs.Lock();
+			if ( 0 == nofb && Connected != overlapped->signal )
 			{
+				// disconnected
+				iocp->m_overlaps.erase( iobj );
+				OliveNet::CloseSock( iobj->sock );
+				iobj->cs.Unlock();
+				OvDelete iobj;
+				printf("disconnected\n");
+				continue;
 			}
 			switch ( overlapped->signal )
 			{
-			case SOverlapped::Recv :
+			case Recved :
 				{
+					// recv
 				}
 				break;
-			case SOverlapped::Send :
+			case Sended :
 				{
+					// send
 				}
 				break;
-			case SOverlapped::Accept :
+			case Connected :
 				{
+					// connected
+					printf("connected\n");
+
+					// 초기 한번, disconnected 를 감지 하기 위해 리슨 상태로 만들어 놓는다.
+					DWORD dumy = 0;
+					WSABUF buf = {1,iobj->discon_buf};
+					CreateIoCompletionPort( (HANDLE)iobj->sock, iocp_handle, (DWORD)iobj->sock, WorkerThreadCount );
+					WSARecv( iobj->sock, &buf, 1, &dumy, &dumy, &iobj->recved.overlapped, NULL );
 				}
 				break;
 			}
-			overlapped->cs.Unlock();
+			iobj->cs.Unlock();
 		}
 
 	}
