@@ -151,14 +151,6 @@
 			<Filter
 				Name="OvBuffer"
 				>
-				<File
-					RelativePath=".\source\OvBuffer.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvBuffer.h"
-					>
-				</File>
 				<Filter
 					Name="OvBufferInputStream"
 					>
@@ -187,14 +179,6 @@
 			<Filter
 				Name="OvFile"
 				>
-				<File
-					RelativePath=".\source\OvFile.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvFile.h"
-					>
-				</File>
 				<Filter
 					Name="OvFileInputStream"
 					>
@@ -223,14 +207,6 @@
 			<Filter
 				Name="OvSocket"
 				>
-				<File
-					RelativePath=".\source\OliveNet.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OliveNet.h"
-					>
-				</File>
 				<Filter
 					Name="OvSocketInputStream"
 					>
@@ -259,14 +235,6 @@
 			<Filter
 				Name="OvObject"
 				>
-				<File
-					RelativePath=".\source\OvObject.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvObject.h"
-					>
-				</File>
 				<Filter
 					Name="OvObjectInputStream"
 					>
@@ -488,6 +456,50 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvMTQueue"
+				>
+				<File
+					RelativePath=".\include\OvMTQueue.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvObject"
+				>
+				<File
+					RelativePath=".\source\OvObject.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvObject.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvFile"
+				>
+				<File
+					RelativePath=".\source\OvFile.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvFile.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvBuffer"
+				>
+				<File
+					RelativePath=".\source\OvBuffer.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvBuffer.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Refernce"
@@ -636,6 +648,18 @@
 					>
 				</File>
 			</Filter>
+		</Filter>
+		<Filter
+			Name="OliveNet"
+			>
+			<File
+				RelativePath=".\source\OliveNet.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\OliveNet.h"
+				>
+			</File>
 		</Filter>
 		<File
 			RelativePath=".\ReadMe.txt"

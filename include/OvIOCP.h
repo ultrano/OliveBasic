@@ -1,5 +1,6 @@
 #pragma once
 #include "OvAutoPtr.h"
+#include "OvMTQueue.h"
 #include "OliveNet.h"
 #include "OvByteInputStream.h"
 #include "OvBufferOutputStream.h"
@@ -29,7 +30,7 @@ private:
 
 	HANDLE m_iocp_handle;
 	SOCKET m_listensock;
-	OvSet<SOverlapped*> m_clients;
+	OvMTQueue<SOverlapped*> m_overlaps;
 
 	// 상활별 대기 이벤트
 	HANDLE m_startup_complete;

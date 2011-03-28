@@ -8,12 +8,14 @@
 #include <list>
 #include <set>
 #include <map>
+#include <queue>
 
 #define OvString			std::string
 #define OvVector			std::vector
 #define OvList				std::list
 #define OvSet				std::set
 #define OvMap				std::map
+#define OvQueue				std::queue
 
 //////////////////////////////////////////////////////////////////////////
 
