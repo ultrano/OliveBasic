@@ -31,8 +31,8 @@
 #define OvNew	new
 #define OvDelete delete
 
-#define OvMemAlloc(mem_size) OvMemAlloc_Release(mem_size);
-#define OvMemFree(mem_pointer) OvMemFree_Release(mem_pointer);
+#define OvMemAlloc(mem_size) OvMemAlloc_Release(mem_size)
+#define OvMemFree(mem_pointer) OvMemFree_Release(mem_pointer)
 
 #endif
 
