@@ -232,6 +232,7 @@ void OvIOCP::_worker( void * p )
 		if ( !key || !overlapped ) return ;
 
 		{
+			volatile OvAutoSection lock(iocp->m_worker_cs);
 			OvIOCPObject * iobj = overlapped->iobj;
 			if ( 0 == nofb && Connected != overlapped->signal )
 			{

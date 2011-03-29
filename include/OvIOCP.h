@@ -42,6 +42,8 @@ private:
 
 	OvCriticalSection	m_callback_cs;
 	OvIOCPCallback*		m_callback;
+
+	OvCriticalSection	m_worker_cs;
 	//
 
 };
