@@ -1,6 +1,5 @@
 #pragma once
 #include "OvRefObject.h"
-#include "OvAutoPtr.h"
 #include "OvBufferInputStream.h"
 #include "OvBufferOutputStream.h"
 
@@ -11,8 +10,8 @@ class OvBuffer : public OvRefObject
 public:
 
 	enum { 
-		DEFAULT_BUFFER_CAPACITY = 256,
-		DEFAULT_BUFFER_INCREMENT = 64 
+		DEFAULT_BUFFER_CAPACITY = 0,
+		DEFAULT_BUFFER_INCREMENT = 1 
 	};
 
 	static OvBufferSPtr CreateBuffer( OvSize capacity = DEFAULT_BUFFER_CAPACITY
@@ -29,8 +28,9 @@ public:
 
 private:
 	OvBuffer();
+	~OvBuffer();
 private:
-	OvArrayAutoPtr<OvByte>	m_buf;
-	OvSize					m_size;
-	OvSize					m_increment;
+	OvByte*		m_buf;
+	OvSize		m_size;
+	OvSize		m_increment;
 };

@@ -21,7 +21,9 @@ OvSize OvBufferOutputStream::WriteBytes( OvByte * src, OvSize write_size )
 	if ( src_size < write_size )
 	{
 		OvSize increment = m_buffer->Increment();
-		m_buffer->Establish( ( write_size / increment ) + 1 );
+		OvUInt times = ( write_size / increment );
+		times += (write_size % increment)? 1:0;
+		m_buffer->Establish( times );
 	}
 	if ( OvByte * buf = m_buffer->Pointer() )
 	{

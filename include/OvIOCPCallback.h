@@ -1,10 +1,13 @@
 #pragma once
+#include <windows.h>
+#include "OvTypeDef.h"
+#include "OvMemObject.h"
 
 struct OvIOCPObject;
 class OvIOCPCallback : public OvMemObject
 {
 public:
-	virtual void OnConnected( void** user, OvByte** recv_buf, OvSize & buf_size ) = 0;
+	virtual void OnConnected( OvIOCPObject * iobj, void** user, OvByte** recv_buf, OvSize & buf_size ) = 0;
 	virtual void OnDisconnected( void* user ) = 0;
 	virtual void OnRecved( OvIOCPObject * iobj, OvSize completed_byte ) = 0;
 	virtual void OnSended( OvIOCPObject * iobj, OvSize completed_byte ) = 0;

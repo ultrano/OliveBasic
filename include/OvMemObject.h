@@ -23,8 +23,8 @@
 #define OvNew	new(__FUNCTION__,__LINE__)
 #define OvDelete delete
 
-#define OvMemAlloc(mem_size) OvMemAlloc_Debug(__FUNCTION__,__LINE__,mem_size);
-#define OvMemFree(mem_pointer) OvMemFree_Debug(mem_pointer);
+#define OvMemAlloc(mem_size) OvMemAlloc_Debug(__FUNCTION__,__LINE__,mem_size)
+#define OvMemFree(mem_pointer) OvMemFree_Debug(mem_pointer)
 
 #else
 
