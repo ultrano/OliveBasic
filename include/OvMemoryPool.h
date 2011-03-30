@@ -57,7 +57,7 @@ struct	OvMemHeader
 #ifdef _DEBUG
 	char*	m_pBlock;
 	int		m_iLine;
-	OvMemHeader():mNext(NULL),m_pBlock(NULL),m_iLine(NULL)
+	OvMemHeader():mNext(NULL),m_pBlock(NULL),m_iLine(-1)
 	{}
 #else
 	OvMemHeader():mNext(NULL)

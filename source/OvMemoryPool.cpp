@@ -16,7 +16,7 @@ void		OvMemoryPool::report_abnormal_memory_release(OvPoolHeader* _pPoolList)
 			{
 				OvMemHeader*	k_sequence  = NULL;
 				k_sequence			=	(OvMemHeader*)(POOL(_pPoolList)+(MEM_BLOCK_SIZE*i));
-				if (k_sequence && k_sequence->m_pBlock )
+				if ( k_sequence && ( k_sequence->m_pBlock && k_sequence->m_iLine != -1 ) )
 				{
 					OutputDebugString(
 						OU::string::format(
@@ -98,7 +98,7 @@ bool		OvMemoryPool::add_pool()
 		k_sequence->mNext	=	(OvMemHeader*)(POOL(k_pool)+(MEM_BLOCK_SIZE*(i+1)));
 #ifdef _DEBUG
 		k_sequence->m_pBlock=	NULL;
-		k_sequence->m_iLine	=	0;
+		k_sequence->m_iLine	=	-1;
 #endif
 	}
 #ifdef _DEBUG
@@ -124,7 +124,7 @@ void*		OvMemoryPool::alloc_memory()
 
 	// 메모리헤더로부터 사용메모리를 추출한다.
 	void*	k_return_mem = MEMORY(k_alloc);
-	
+
 	// 다음 대기메모리를 셋팅한다.
 	m_pFreeMemoryList = m_pFreeMemoryList->mNext;
 
@@ -163,7 +163,7 @@ void*		OvMemoryPool::alloc_memory_debug(char* _pBlock,int _iLine)
 	k_alloc		=	m_pFreeMemoryList;
 
 	void*	k_return_mem = MEMORY(k_alloc);
-
+	
 	m_pFreeMemoryList = m_pFreeMemoryList->mNext;
 
 	k_alloc->mMemPool	=	this;
@@ -176,7 +176,7 @@ void		OvMemoryPool::free_memory_debug(void* _memory)
 {
 	OvMemHeader*	k_mem_header = NULL;
 	k_mem_header			=	HEADER(_memory);
-	k_mem_header->m_iLine	=	NULL;
+	k_mem_header->m_iLine	=	-1;
 	k_mem_header->m_pBlock	=	NULL;
 	k_mem_header->mNext		=	m_pFreeMemoryList;
 	m_pFreeMemoryList		=	k_mem_header;

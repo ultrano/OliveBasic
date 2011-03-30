@@ -49,7 +49,7 @@ OvBool OliveNet::Cleanup()
 
 SOCKET OliveNet::Connect( const string& ip, OvShort port )
 {
-	SOCKET sock = socket( AF_INET, SOCK_STREAM, 0 );
+	SOCKET sock = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP );
 	if ( INVALID_SOCKET != sock )
 	{
 		SOCKADDR_IN addr_in;
@@ -69,7 +69,8 @@ SOCKET OliveNet::Connect( const string& ip, OvShort port )
 
 SOCKET OliveNet::Bind( const OvString& ip, OvShort port )
 {
-	SOCKET sock = socket( AF_INET, SOCK_STREAM, 0 );
+	//SOCKET sock = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP );
+	SOCKET sock = WSASocket( AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, NULL, WSA_FLAG_OVERLAPPED );
 	int opt = true;
 	setsockopt( sock, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt) );
 
@@ -103,6 +104,7 @@ SOCKET OliveNet::Accept( SOCKET listen )
 
 void OliveNet::CloseSock( SOCKET sock )
 {
+	shutdown( sock, SD_BOTH );
 	closesocket( sock );
 }
 

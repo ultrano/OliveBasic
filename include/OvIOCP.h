@@ -16,7 +16,6 @@ public:
 
 	OvBool	Startup( const OvString & ip, OvShort port, OvIOCPCallback * callback );
 	void	Cleanup();
-
 	HANDLE  GetIOCPHandle();
 
 private:
@@ -27,6 +26,7 @@ private:
 	void 		_on_disconnected( OvIOCPObject * iobj );
 	void 		_on_sended( OvIOCPObject * iobj, OvSize completed_byte );
 	void 		_on_recved( OvIOCPObject * iobj, OvSize completed_byte );
+	void 		_on_erroccured( OvIOCPObject * iobj, OvInt err_code );
 private:
 
 	HANDLE				m_iocp_handle;

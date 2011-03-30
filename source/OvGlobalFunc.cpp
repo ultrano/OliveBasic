@@ -1,4 +1,5 @@
 #include "OvGlobalFunc.h"
+#include "OvMemObject.h"
 #include "OvUtility.h"
 using namespace std;
 
@@ -49,7 +50,7 @@ OvBool		OvStringAllocator(LPTSTR* _lpp_dest,LPCTSTR lp_src)
 		return false;
 	}
 	size_t	k_len = strlen(lp_src) + 1;
-	*_lpp_dest = new OvChar[k_len];
+	*_lpp_dest = (OvChar*)OvMemAlloc( k_len );
 	memset((void*)(*_lpp_dest),0,k_len*sizeof(OvChar));
 	if (!(*_lpp_dest))
 	{
@@ -99,22 +100,6 @@ OvString	OvGetExtentionInFullFilePath(const OvString& strFileFullPath)
 	}
 	return kReturnString;
 }
-/*inline OvBool		OvStringAllocator(const OvChar** _lpp_dest,const OvChar* lp_src)
-{
-if (!lp_src)
-{
-return false;
-}
-OvString	k_src(lp_src);
-*_lpp_dest = new OvChar[k_src.length()];
-memset((void*)(*_lpp_dest),0,k_src.length()*sizeof(OvChar));
-if (!(*_lpp_dest))
-{
-return false;
-}
-memcpy((void*)(*_lpp_dest),(void*)k_src.data(),k_src.length()*sizeof(OvChar));
-return true;
-};*/
 
 OvUInt OvMath::Factorial( OvUInt total )
 {

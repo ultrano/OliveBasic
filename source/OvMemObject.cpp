@@ -61,12 +61,14 @@ void*	OvMemAlloc_Debug(char* _pBlock,int _iLine,const size_t _szMemSize)
 	static OvCriticalSection cs;
 	OvAutoSection lock(cs);
 	return OvMemoryMgr::GetInstance()->Alloc_Debug(_pBlock, _iLine,_szMemSize);
+	//return malloc(_szMemSize);
 }
 void	OvMemFree_Debug(void* _pMemory)
 {
 	static OvCriticalSection cs;
 	OvAutoSection lock(cs);
 	OvMemoryMgr::GetInstance()->Free_Debug(_pMemory);
+	//free(_pMemory);
 }
 
 #endif
