@@ -173,8 +173,7 @@ void OvIOCP::_on_disconnected( OvIOCPObject * iobj )
 		OvAutoSection callback_lock( m_callback_cs );
 		m_callback->OnDisconnected( iobj );
 	}
-	shutdown( iobj->sock, SD_BOTH );
-	closesocket( iobj->sock );
+
 	m_overlaps.erase( iobj );
 	OvDelete iobj;
 	printf("disconnected\n");
@@ -294,15 +293,15 @@ void* OU::iocp::GetUserData( OvIOCPObject * iobj )
 
 void OU::iocp::RecvData( OvIOCPObject * iobj, OvByte * buf, OvSize len )
 {
-	if ( iobj && (buf && len) )
+	if (  ( iobj && iobj->sock != INVALID_SOCKET ) && (buf && len) )
 	{
-		DWORD dummy = 0;
 		WSABUF wsabuf = {len, (char*)buf};
+		len = 0;
 		int ret = WSARecv( iobj->sock
 			, &(wsabuf)
 			, 1
-			, (DWORD*)&dummy 
-			, (DWORD*)&dummy 
+			, (DWORD*)&len
+			, (DWORD*)&len
 			, &(iobj->recved.overlapped)
 			, NULL );
 		if ( ret == SOCKET_ERROR )
@@ -319,7 +318,7 @@ void OU::iocp::RecvData( OvIOCPObject * iobj, OvByte * buf, OvSize len )
 
 void OU::iocp::SendData( OvIOCPObject * iobj, OvByte * buf, OvSize len )
 {
-	if ( iobj && (buf && len) )
+	if ( ( iobj && iobj->sock != INVALID_SOCKET ) && (buf && len) )
 	{
 		WSABUF wsabuf = {len, (char*)buf};
 		int ret = WSASend( iobj->sock
