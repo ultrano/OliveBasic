@@ -41,7 +41,6 @@ OvSize OvIOCPOutputStream::WriteBytes( OvByte * write_buf, OvSize write_size )
 			else if ( err != WSAEWOULDBLOCK &&
 				err != WSA_IO_PENDING )
 			{
-				m_object->iocp = NULL;
 				PostQueuedCompletionStatus( iocp, err, (DWORD)m_object->sock, (LPOVERLAPPED)m_object->erroccured );
 				return 0;
 			}

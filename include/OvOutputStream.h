@@ -20,12 +20,9 @@ interface_class OvOutputStream : public OvRefObject
 	OvBool Write( const OvChar* data){ return Write( OvString(data) ); };
 	OvBool Write( const OvString& data )
 	{
-		OvVector<OvByte> strbuf;
 		OvSize size = data.size();
-		strbuf.resize(sizeof(size) + size );
-		memcpy( &strbuf[ 0 ], &size, sizeof(size));
-		memcpy( &strbuf[sizeof(size)], &data[0], size);
-		return ((sizeof(size) + size ) == WriteBytes( &strbuf[0], strbuf.size() ));
+		Write( size );
+		return ((sizeof(size) + size ) == WriteBytes( (OvByte*)&data[0], size ));
 	};
 
 };

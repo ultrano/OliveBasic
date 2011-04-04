@@ -28,7 +28,7 @@ OvSize OvIOCPInputStream::ReadBytes( OvByte * dest, OvSize dest_size )
 			, (DWORD*)&dest_size
 			, (LPOVERLAPPED)( m_object->recved )
 			, NULL );
-		if ( ret == SOCKET_ERROR )
+		if ( ret == SOCKET_ERROR && m_object->iocp )
 		{
 			HANDLE iocp = m_object->iocp->GetIOCPHandle();
 			int err = WSAGetLastError();
@@ -41,7 +41,6 @@ OvSize OvIOCPInputStream::ReadBytes( OvByte * dest, OvSize dest_size )
 			else if ( err != WSAEWOULDBLOCK &&
 				err != WSA_IO_PENDING )
 			{
-				m_object->iocp = NULL;
 				PostQueuedCompletionStatus( iocp, err, (DWORD)m_object->sock, (LPOVERLAPPED)m_object->erroccured );
 				return 0;
 			}
