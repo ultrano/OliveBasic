@@ -4,6 +4,8 @@
 #include "OliveNet.h"
 #include "OvByteInputStream.h"
 #include "OvBufferOutputStream.h"
+#include "OvIOCPInputStream.h"
+#include "OvIOCPOutputStream.h"
 
 struct OvIOCPObject;
 class OvIOCPCallback;
@@ -28,10 +30,9 @@ private:
 	void 		_on_recved( OvIOCPObject * iobj, OvSize completed_byte );
 	void 		_on_erroccured( OvIOCPObject * iobj, OvInt err_code );
 private:
-
-	HANDLE				m_iocp_handle;
-	SOCKET				m_listensock;
-	OvMTSet<OvIOCPObject*> m_overlaps;
+	HANDLE					m_iocp_handle;
+	SOCKET					m_listensock;
+	OvMTSet<OvIOCPObject*>	m_objects;
 
 	// 상활별 대기 이벤트
 	HANDLE				m_startup_complete;

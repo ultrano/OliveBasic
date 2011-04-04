@@ -72,7 +72,6 @@ SOCKET OliveNet::Bind( const OvString& ip, OvShort port )
 	//SOCKET sock = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP );
 	SOCKET sock = WSASocket( AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, NULL, WSA_FLAG_OVERLAPPED );
 	int opt = true;
-	setsockopt( sock, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt) );
 
 	OvUInt addr = ( ip == "*" )? htonl(INADDR_ANY) : inet_addr( ip.c_str() );
 	SOCKADDR_IN addr_in;

@@ -22,7 +22,7 @@ public:
 		m_set.erase( val );
 	}
 
-	OvBool		is_contained( const value_type& val )
+	OvBool		contains( const value_type& val )
 	{
 		OvAutoSection lock(m_cs);
 		OvBool ret = (m_set.end() != m_set.find( val ));
