@@ -544,6 +544,30 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvNexObject"
+				>
+				<File
+					RelativePath=".\source\OvNexObject.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvNexObject.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvValue"
+				>
+				<File
+					RelativePath=".\source\OvValue.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvValue.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Refernce"

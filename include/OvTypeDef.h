@@ -13,6 +13,7 @@
 #define OvString			std::string
 #define OvVector			std::vector
 #define OvList				std::list
+#define OvPair				std::pair
 #define OvSet				std::set
 #define OvMap				std::map
 #define OvQueue				std::queue
