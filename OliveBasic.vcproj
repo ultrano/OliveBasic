@@ -568,6 +568,18 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvComponent"
+				>
+				<File
+					RelativePath=".\source\OvComponent.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvComponent.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Refernce"

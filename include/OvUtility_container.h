@@ -29,10 +29,5 @@ namespace OU
 			return ret;
 		}
 
-		template<typename T1, typename T2>
-		OvPair<T1,T2> makepair( const T1& t1, const T2& t2 )
-		{
-			return OvPair<T1,T2>( t1, t2);
-		}
 	}
 }

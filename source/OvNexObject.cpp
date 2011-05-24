@@ -1,4 +1,5 @@
 #include "OvNexObject.h"
+#include "OvComponent.h"
 
 OvRTTI_IMPL( OvNexObject );
 
@@ -12,26 +13,42 @@ void OvNexObject::Serialize( OvObjectOutputStream & output )
 		output.Write( val.first );
 		output.WriteObject( val.second );
 	}
+
+	output.Write( m_component_list.size() );
+	for each ( OvComponentSPtr comp in m_component_list )
+	{
+		output.WriteObject( comp );
+	}
 }
 
 void OvNexObject::Deserialize( OvObjectInputStream & input )
 {
 	__super::Deserialize( input );
 
-	OvUInt table_size = 0;
-	input.Read( table_size );
-	while ( table_size-- )
+	OvUInt count = 0;
+
+	count = 0;
+	input.Read( count );
+	while ( count-- )
 	{
 		OvString key;
 		input.Read( key );
 		OvValueSPtr val = (OvValue*)input.ReadObject();
-		m_value_table.insert( OU::container::makepair( key, val ) );
+		m_value_table.insert( std::make_pair( key, val ) );
+	}
+
+	count = 0;
+	input.Read( count );
+	while ( count-- )
+	{
+		OvComponentSPtr comp = (OvComponent*)input.ReadObject();
+		m_component_list.push_back( comp );
 	}
 }
 
 void OvNexObject::InsertValue( const OvString & key, OvValueSPtr val )
 {
-	m_value_table.insert( OU::container::makepair( key, val ) );
+	m_value_table.insert( std::make_pair( key, val ) );
 }
 
 OvValueSPtr OvNexObject::FindValue( const OvString & key )
@@ -44,4 +61,19 @@ OvValueSPtr OvNexObject::FindValue( const OvString & key )
 		val = itor->second;
 	}
 	return val;
+}
+
+void OvNexObject::_add_component( OvComponentSPtr comp )
+{
+	m_component_list.push_back( comp );
+}
+
+OvComponentSPtr OvNexObject::RemoveComponent( OvComponentSPtr comp )
+{
+	component_list::iterator itor = OU::container::find( m_component_list, comp );
+	if ( itor != m_component_list.end() )
+	{
+		return *itor;
+	}
+	return NULL;
 }
