@@ -1,18 +1,20 @@
 #pragma once
 
 #include "OvMemObject.h"
+#include "OvTypeDef.h"
 
-class OvRect : public OvMemObject
+struct OvRect : public OvMemObject
 {
+	OvFloat left;
+	OvFloat top;
+	OvFloat right;
+	OvFloat bottom;
+
 	OvRect();
+	OvRect( OvFloat pleft, OvFloat ptop, OvFloat pright, OvFloat pbottom );
 	~OvRect();
 
-private:
-
-	OvFloat m_left;
-	OvFloat m_right;
-	OvFloat m_top;
-	OvFloat m_bottom;
-
+	OvBool IsInRect( OvFloat px, OvFloat py ) const;
+	OvBool IsIntersect( const OvRect& rect ) const;
 
 };

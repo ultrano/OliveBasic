@@ -16,3 +16,11 @@
 #include "OvUtility_rtti.h"
 #include "OvUtility_thread.h"
 //////////////////////////////////////////////////////////////////////////
+
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
