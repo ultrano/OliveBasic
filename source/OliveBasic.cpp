@@ -11,6 +11,6 @@ void OliveBasic::Startup()
 
 void OliveBasic::Cleanup()
 {
-	OvObjectManager::Teardown();
-	OvMemoryMgr::Teardown();
+	OvObjectManager::Cleanup();
+	OvMemoryMgr::Cleanup();
 }

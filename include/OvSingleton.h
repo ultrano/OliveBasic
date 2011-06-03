@@ -10,11 +10,11 @@ public:
 		if ( !GetInstance() )
 		{
 			T * instance = new T;
-			return instance;
+			return !!(instance);
 		}
 		return false;
 	}
-	static void Teardown()
+	static void Cleanup()
 	{
 		if ( T * instance = GetInstance() )
 		{
