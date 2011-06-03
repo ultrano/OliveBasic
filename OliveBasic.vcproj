@@ -580,6 +580,18 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvRect"
+				>
+				<File
+					RelativePath=".\source\OvRect.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvRect.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Refernce"
