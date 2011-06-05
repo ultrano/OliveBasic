@@ -5,16 +5,17 @@
 
 struct OvRect : public OvMemObject
 {
-	OvFloat left;
-	OvFloat top;
-	OvFloat right;
-	OvFloat bottom;
+	OvSize left;
+	OvSize top;
+	OvSize right;
+	OvSize bottom;
 
 	OvRect();
-	OvRect( OvFloat pleft, OvFloat ptop, OvFloat pright, OvFloat pbottom );
+	OvRect( OvSize pleft, OvSize ptop, OvSize pright, OvSize pbottom );
 	~OvRect();
 
 	OvBool IsInRect( OvFloat px, OvFloat py ) const;
 	OvBool IsIntersect( const OvRect& rect ) const;
 
+	OvSize Height() const;
 };

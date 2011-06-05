@@ -2,15 +2,15 @@
 #include "OvUtility.h"
 
 OvRect::OvRect()
-: left	( 0.0f )
-, top	( 0.0f )
-, right	( 0.0f )
-, bottom( 0.0f )
+: left	( 0 )
+, top	( 0 )
+, right	( 0 )
+, bottom( 0 )
 {
 
 }
 
-OvRect::OvRect( OvFloat pleft, OvFloat ptop, OvFloat pright, OvFloat pbottom )
+OvRect::OvRect( OvSize pleft, OvSize ptop, OvSize pright, OvSize pbottom )
 : left	( pleft )
 , top	( ptop )
 , right	( pright )
@@ -43,4 +43,9 @@ OvBool OvRect::IsIntersect( const OvRect& rect ) const
 		 	 left   < temp.right &&
 		 	 bottom > temp.top	 &&
 		 	 top    < temp.bottom );
+}
+
+OvSize OvRect::Height() const
+{
+	return ( ( right - left ) );
 }
