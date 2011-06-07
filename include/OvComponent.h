@@ -7,8 +7,10 @@ class OvComponent : public OvObject
 	OvRTTI_DECL(OvComponent);
 public:
 
+	virtual void	Update( OvTimeTick elapsed ) = 0;
+
 	void			SetTarget( OvXObjectSPtr target );
-	OvXObjectSPtr GetTarget();
+	OvXObjectSPtr	GetTarget();
 
 private:
 
