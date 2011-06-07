@@ -401,54 +401,6 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvIOCP"
-				>
-				<File
-					RelativePath=".\source\OvIOCP.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvIOCP.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvIOCPCallback.h"
-					>
-				</File>
-				<Filter
-					Name="OvIOCPOutputStream"
-					>
-					<File
-						RelativePath=".\source\OvIOCPOutputStream.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\include\OvIOCPOutputStream.h"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="OvIOCPObject"
-					>
-					<File
-						RelativePath=".\include\OvIOCPObject.h"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="OvIOCPInputStream"
-					>
-					<File
-						RelativePath=".\source\OvIOCPInputStream.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\include\OvIOCPInputStream.h"
-						>
-					</File>
-				</Filter>
-			</Filter>
-			<Filter
 				Name="OvTypeDef"
 				>
 				<File
@@ -493,14 +445,6 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvMTQueue"
-				>
-				<File
-					RelativePath=".\include\OvMTQueue.h"
-					>
-				</File>
-			</Filter>
-			<Filter
 				Name="OvObject"
 				>
 				<File
@@ -533,14 +477,6 @@
 				</File>
 				<File
 					RelativePath=".\include\OvBuffer.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="OvMTSet"
-				>
-				<File
-					RelativePath=".\include\OvMTSet.h"
 					>
 				</File>
 			</Filter>
