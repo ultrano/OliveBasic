@@ -34,9 +34,9 @@ OvSize OvBufferOutputStream::WriteBytes( OvByte * src, OvSize write_size )
 	return 0;
 }
 
-OvSize OvBufferOutputStream::Skip( OvSize offset )
+OvSize OvBufferOutputStream::Skip( OvInt offset )
 {
-	OvSize src_size = 0;
+	OvInt src_size = 0;
 	if ( offset > 0 )
 	{
 		src_size = m_buffer->Size() - m_write_caret;
@@ -49,7 +49,8 @@ OvSize OvBufferOutputStream::Skip( OvSize offset )
 	}
 	else
 	{
-		src_size = -m_write_caret;
+		src_size = m_write_caret;
+		src_size = -src_size;
 		offset = max( src_size, offset );
 	}
 

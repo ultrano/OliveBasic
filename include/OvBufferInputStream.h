@@ -13,7 +13,7 @@ public:
 
 	virtual OvSize ReadBytes( OvByte * dest, OvSize dest_size ) override;
 	
-	OvSize Skip( OvSize offset );
+	OvSize Skip( OvInt offset );
 
 	OvBufferSPtr GetBuffer();
 

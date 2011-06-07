@@ -15,14 +15,18 @@ public:
 	OvXObject();
 	~OvXObject();
 
+	//! Update
+	virtual void Update( OvTimeTick elapsed ) = 0;
+
+	void			InsertValue( const OvString & key, OvValueSPtr val );
+	OvValueSPtr 	FindValue( const OvString & key );
+
+	void			CopyComponentSet( OvObjectSet & comset );
+	OvComponentSPtr RemoveComponent( OvComponentSPtr comp );
+
 	//! Stream
 	virtual void Serialize( OvObjectOutputStream & output );
 	virtual void Deserialize( OvObjectInputStream & input );
-
-	void		InsertValue( const OvString & key, OvValueSPtr val );
-	OvValueSPtr FindValue( const OvString & key );
-
-	OvComponentSPtr RemoveComponent( OvComponentSPtr comp );
 
 private:
 
@@ -33,7 +37,6 @@ private:
 	typedef OvMap<OvString,OvValueSPtr> value_table;
 	value_table m_value_table;
 
-	typedef OvList<OvComponentSPtr>		component_list;
-	component_list	m_component_list;
+	OvObjectSet	m_component_set;
 
 };

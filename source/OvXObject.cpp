@@ -14,8 +14,8 @@ void OvXObject::Serialize( OvObjectOutputStream & output )
 		output.WriteObject( val.second );
 	}
 
-	output.Write( m_component_list.size() );
-	for each ( OvComponentSPtr comp in m_component_list )
+	output.Write( m_component_set.size() );
+	for each ( OvComponentSPtr comp in m_component_set )
 	{
 		output.WriteObject( comp );
 	}
@@ -42,7 +42,7 @@ void OvXObject::Deserialize( OvObjectInputStream & input )
 	while ( count-- )
 	{
 		OvComponentSPtr comp = (OvComponent*)input.ReadObject();
-		m_component_list.push_back( comp );
+		m_component_set.insert( comp );
 	}
 }
 
@@ -65,15 +65,20 @@ OvValueSPtr OvXObject::FindValue( const OvString & key )
 
 void OvXObject::_add_component( OvComponentSPtr comp )
 {
-	m_component_list.push_back( comp );
+	m_component_set.insert( comp );
 }
 
 OvComponentSPtr OvXObject::RemoveComponent( OvComponentSPtr comp )
 {
-	component_list::iterator itor = OU::container::find( m_component_list, comp );
-	if ( itor != m_component_list.end() )
+	OvObjectSet::iterator itor = m_component_set.find( comp );
+	if ( itor != m_component_set.end() )
 	{
 		return *itor;
 	}
 	return NULL;
+}
+
+void OvXObject::CopyComponentSet( OvObjectSet & comset )
+{
+	comset = m_component_set;
 }

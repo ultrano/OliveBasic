@@ -32,6 +32,7 @@ typedef char				OvChar;
 typedef unsigned char		OvUChar;
 typedef unsigned char		OvByte;
 
+typedef float				OvTimeTick;
 
 #define interface_class		class
 #define template_class		class
