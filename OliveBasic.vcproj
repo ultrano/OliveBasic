@@ -545,14 +545,14 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvNexObject"
+				Name="OvXObject"
 				>
 				<File
-					RelativePath=".\source\OvNexObject.cpp"
+					RelativePath=".\source\OvXObject.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\include\OvNexObject.h"
+					RelativePath=".\include\OvXObject.h"
 					>
 				</File>
 			</Filter>

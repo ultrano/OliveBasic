@@ -1,9 +1,9 @@
-#include "OvNexObject.h"
+#include "OvXObject.h"
 #include "OvComponent.h"
 
-OvRTTI_IMPL( OvNexObject );
+OvRTTI_IMPL( OvXObject );
 
-void OvNexObject::Serialize( OvObjectOutputStream & output )
+void OvXObject::Serialize( OvObjectOutputStream & output )
 {
 	__super::Serialize( output );
 
@@ -21,7 +21,7 @@ void OvNexObject::Serialize( OvObjectOutputStream & output )
 	}
 }
 
-void OvNexObject::Deserialize( OvObjectInputStream & input )
+void OvXObject::Deserialize( OvObjectInputStream & input )
 {
 	__super::Deserialize( input );
 
@@ -46,12 +46,12 @@ void OvNexObject::Deserialize( OvObjectInputStream & input )
 	}
 }
 
-void OvNexObject::InsertValue( const OvString & key, OvValueSPtr val )
+void OvXObject::InsertValue( const OvString & key, OvValueSPtr val )
 {
 	m_value_table.insert( std::make_pair( key, val ) );
 }
 
-OvValueSPtr OvNexObject::FindValue( const OvString & key )
+OvValueSPtr OvXObject::FindValue( const OvString & key )
 {
 	OvValueSPtr val = NULL;
 	value_table::iterator itor = m_value_table.find( key );
@@ -63,12 +63,12 @@ OvValueSPtr OvNexObject::FindValue( const OvString & key )
 	return val;
 }
 
-void OvNexObject::_add_component( OvComponentSPtr comp )
+void OvXObject::_add_component( OvComponentSPtr comp )
 {
 	m_component_list.push_back( comp );
 }
 
-OvComponentSPtr OvNexObject::RemoveComponent( OvComponentSPtr comp )
+OvComponentSPtr OvXObject::RemoveComponent( OvComponentSPtr comp )
 {
 	component_list::iterator itor = OU::container::find( m_component_list, comp );
 	if ( itor != m_component_list.end() )

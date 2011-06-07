@@ -10,7 +10,7 @@ OvRect::OvRect()
 
 }
 
-OvRect::OvRect( OvSize pleft, OvSize ptop, OvSize pright, OvSize pbottom )
+OvRect::OvRect( OvUInt pleft, OvUInt ptop, OvUInt pright, OvUInt pbottom )
 : left	( pleft )
 , top	( ptop )
 , right	( pright )
@@ -24,7 +24,7 @@ OvRect::~OvRect()
 
 }
 
-OvBool OvRect::IsInRect( OvFloat px, OvFloat py ) const
+OvBool OvRect::IsInRect( OvUInt px, OvUInt py ) const
 {
 	return ! ((left   >  px ) ||
 			  (right  <= px ) ||
@@ -45,7 +45,12 @@ OvBool OvRect::IsIntersect( const OvRect& rect ) const
 		 	 top    < temp.bottom );
 }
 
-OvSize OvRect::Height() const
+OvUInt OvRect::Height() const
+{
+	return ( ( bottom - top ) );
+}
+
+OvUInt OvRect::Width() const
 {
 	return ( ( right - left ) );
 }

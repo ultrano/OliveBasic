@@ -1,17 +1,17 @@
 #include "OvObject.h"
 
-OvREF_POINTER(OvNexObject);
+OvREF_POINTER(OvXObject);
 OvREF_POINTER(OvComponent);
 class OvComponent : public OvObject
 {
 	OvRTTI_DECL(OvComponent);
 public:
 
-	void			SetTarget( OvNexObjectSPtr target );
-	OvNexObjectSPtr GetTarget();
+	void			SetTarget( OvXObjectSPtr target );
+	OvXObjectSPtr GetTarget();
 
 private:
 
-	OvNexObjectSPtr m_target;
+	OvXObjectSPtr m_target;
 
 };

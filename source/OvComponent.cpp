@@ -1,9 +1,9 @@
 #include "OvComponent.h"
-#include "OvNexObject.h"
+#include "OvXObject.h"
 
 OvRTTI_IMPL(OvComponent);
 
-void OvComponent::SetTarget( OvNexObjectSPtr target )
+void OvComponent::SetTarget( OvXObjectSPtr target )
 {
 	if ( m_target )
 	{
@@ -16,7 +16,7 @@ void OvComponent::SetTarget( OvNexObjectSPtr target )
 	m_target = target;
 }
 
-OvNexObjectSPtr OvComponent::GetTarget()
+OvXObjectSPtr OvComponent::GetTarget()
 {
 	return m_target;
 }

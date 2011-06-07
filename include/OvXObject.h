@@ -4,16 +4,16 @@
 
 
 OvREF_POINTER(OvComponent);
-OvREF_POINTER(OvNexObject);
-class OvNexObject : public OvObject
+OvREF_POINTER(OvXObject);
+class OvXObject : public OvObject
 {
-	OvRTTI_DECL( OvNexObject );
+	OvRTTI_DECL( OvXObject );
 	friend class OvComponent;
 
 public:
 
-	OvNexObject();
-	~OvNexObject();
+	OvXObject();
+	~OvXObject();
 
 	//! Stream
 	virtual void Serialize( OvObjectOutputStream & output );
