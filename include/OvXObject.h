@@ -16,17 +16,19 @@ public:
 	~OvXObject();
 
 	//! Update
-	virtual void Update( OvTimeTick elapsed ) = 0;
+	virtual void	Update( OvTimeTick elapsed ) = 0;
 
+	//! Values
 	void			InsertValue( const OvString & key, OvValueSPtr val );
 	OvValueSPtr 	FindValue( const OvString & key );
 
+	//! Components
 	void			CopyComponentSet( OvObjectSet & comset );
 	OvComponentSPtr RemoveComponent( OvComponentSPtr comp );
 
 	//! Stream
-	virtual void Serialize( OvObjectOutputStream & output );
-	virtual void Deserialize( OvObjectInputStream & input );
+	virtual void 	Serialize( OvObjectOutputStream & output );
+	virtual void 	Deserialize( OvObjectInputStream & input );
 
 private:
 
