@@ -9,7 +9,7 @@ public:
 
 	void	Reset( OvByte * buf, OvSize size );
 
-	virtual OvSize WriteBytes( OvByte * src, OvSize write_size ) override;
+	virtual OvSize WriteBytes( OvByte * src, OvSize write_size ) OVERRIDE;
 
 	OvByte * GetBuffer( OvSize & size );
 

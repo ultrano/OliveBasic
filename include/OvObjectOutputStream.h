@@ -9,7 +9,7 @@ public:
 	OvObjectOutputStream( OvOutputStream* output );
 	~OvObjectOutputStream();
 
-	virtual OvSize WriteBytes( OvByte * write_buf, OvSize write_size ) override;
+	virtual OvSize WriteBytes( OvByte * write_buf, OvSize write_size ) OVERRIDE;
 
 	OvBool	WriteObject( OvObjectSPtr obj );
 

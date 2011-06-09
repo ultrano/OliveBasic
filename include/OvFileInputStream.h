@@ -11,7 +11,7 @@ public:
 
 	OvFileInputStream( const OvString& file, const OvString& mode = "rb" );
 
-	virtual OvSize ReadBytes( OvByte * dest, OvSize dest_size ) override;
+	virtual OvSize ReadBytes( OvByte * dest, OvSize dest_size ) OVERRIDE;
 
 	OvSize Skip( OvSize offset ) ;
 

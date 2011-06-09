@@ -9,7 +9,7 @@ public:
 	OvSocketOutputStream( SOCKET sock );
 	~OvSocketOutputStream();
 
-	virtual OvSize WriteBytes( OvByte * write_buf, OvSize write_size ) override;
+	virtual OvSize WriteBytes( OvByte * write_buf, OvSize write_size ) OVERRIDE;
 
 private:
 

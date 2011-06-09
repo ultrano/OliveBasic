@@ -9,7 +9,7 @@ public:
 	OvSocketInputStream( SOCKET sock );
 	~OvSocketInputStream();
 
-	virtual OvSize ReadBytes( OvByte * dest, OvSize dest_size ) override;
+	virtual OvSize ReadBytes( OvByte * dest, OvSize dest_size ) OVERRIDE;
 
 private:
 

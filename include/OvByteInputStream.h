@@ -10,7 +10,7 @@ public:
 
 	void	Reset( OvByte * buf, OvSize size );
 
-	virtual OvSize ReadBytes( OvByte * dest, OvSize dest_size ) override;
+	virtual OvSize ReadBytes( OvByte * dest, OvSize dest_size ) OVERRIDE;
 
 	OvByte * GetBuffer( OvSize & size );
 	OvByte * GetPtr();

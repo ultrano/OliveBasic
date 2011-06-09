@@ -15,20 +15,20 @@ public:
 	OvXObject();
 	~OvXObject();
 
-	//! Update
+	/// Update
 	virtual void	Update( OvTimeTick elapsed ) = 0;
 
-	//! Values
+	/// Values
 	void			InsertValue( const OvString & key, OvValueSPtr val );
 	OvValueSPtr 	FindValue( const OvString & key );
 
-	//! Components
+	/// Components
 	void			CopyComponentSet( OvObjectSet & comset );
 	OvComponentSPtr RemoveComponent( OvComponentSPtr comp );
 
-	//! Stream
-	virtual void 	Serialize( OvObjectOutputStream & output );
-	virtual void 	Deserialize( OvObjectInputStream & input );
+	/// Stream
+	virtual void 	Serialize( OvObjectOutputStream & output ) OVERRIDE;
+	virtual void 	Deserialize( OvObjectInputStream & input ) OVERRIDE;
 
 private:
 

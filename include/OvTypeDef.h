@@ -38,4 +38,6 @@ typedef float				OvTimeTick;
 #define template_class		class
 #define abstract_class		class
 
+#define OVERRIDE			override
+
 //////////////////////////////////////////////////////////////////////////
