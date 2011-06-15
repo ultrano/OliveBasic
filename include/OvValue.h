@@ -1,8 +1,8 @@
 #pragma once
 #include "OvObject.h"
 
-OvREF_POINTER(OvValue);
-class OvValue : public OvObject
+OvSmartPointer_Struct(OvValue);
+struct OvValue : public OvObject
 {
 	OvRTTI_DECL( OvValue );
 
@@ -12,7 +12,7 @@ class OvValue : public OvObject
 
 };
 
-class OvFloatVal : public OvValue
+struct OvFloatVal : public OvValue
 {
 	OvRTTI_DECL( OvFloatVal );
 
@@ -20,11 +20,10 @@ class OvFloatVal : public OvValue
 	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;
 	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
 
-public:
-	OvFloat m_val;
+	OvFloat val;
 };
 
-class OvIntegerVal : public OvValue
+struct OvIntegerVal : public OvValue
 {
 	OvRTTI_DECL( OvIntegerVal );
 
@@ -32,6 +31,5 @@ class OvIntegerVal : public OvValue
 	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;
 	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
 
-public:
-	OvInt m_val;
+	OvInt val;
 };

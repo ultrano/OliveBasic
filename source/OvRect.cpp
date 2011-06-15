@@ -10,6 +10,15 @@ OvRect::OvRect()
 
 }
 
+OvRect::OvRect( const OvRect& rect )
+: left	( rect.left )
+, top	( rect.top )
+, right	( rect.right )
+, bottom( rect.bottom )
+{
+
+}
+
 OvRect::OvRect( OvUInt pleft, OvUInt ptop, OvUInt pright, OvUInt pbottom )
 : left	( pleft )
 , top	( ptop )
@@ -45,12 +54,22 @@ OvBool OvRect::IsIntersect( const OvRect& rect ) const
 		 	 top    < temp.bottom );
 }
 
-OvUInt OvRect::Height() const
+void OvRect::SetHeight( OvUInt height )
+{
+	bottom = top + height;
+}
+
+OvUInt OvRect::GetHeight() const
 {
 	return ( ( bottom - top ) );
 }
 
-OvUInt OvRect::Width() const
+void OvRect::SetWidth( OvUInt height )
+{
+	right = left + height;
+}
+
+OvUInt OvRect::GetWidth() const
 {
 	return ( ( right - left ) );
 }

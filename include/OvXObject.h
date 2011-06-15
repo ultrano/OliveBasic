@@ -3,8 +3,8 @@
 #include "OvValue.h"
 
 
-OvREF_POINTER(OvComponent);
-OvREF_POINTER(OvXObject);
+OvSmartPointer_Class(OvComponent);
+OvSmartPointer_Class(OvXObject);
 class OvXObject : public OvObject
 {
 	OvRTTI_DECL( OvXObject );
@@ -12,6 +12,7 @@ class OvXObject : public OvObject
 
 public:
 
+	/// Construct & Destruct
 	OvXObject();
 	~OvXObject();
 

@@ -11,12 +11,16 @@ struct OvRect : public OvMemObject
 	OvUInt bottom;
 
 	OvRect();
+	OvRect( const OvRect& rect);
 	OvRect( OvUInt pleft, OvUInt ptop, OvUInt pright, OvUInt pbottom );
 	~OvRect();
 
 	OvBool IsInRect( OvUInt px, OvUInt py ) const;
 	OvBool IsIntersect( const OvRect& rect ) const;
 
-	OvUInt Height() const;
-	OvUInt Width() const;
+	void   SetHeight( OvUInt height );
+	OvUInt GetHeight() const;
+
+	void   SetWidth( OvUInt height );
+	OvUInt GetWidth() const;
 };

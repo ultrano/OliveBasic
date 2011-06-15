@@ -1,7 +1,7 @@
 #pragma once
 #include "OvOutputStream.h"
 
-OvREF_POINTER(OvObject);
+OvSmartPointer_Class(OvObject);
 class OvObjectOutputStream : public OvOutputStream
 {
 public:

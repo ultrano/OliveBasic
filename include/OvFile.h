@@ -3,7 +3,7 @@
 #include "OvFileInputStream.h"
 #include "OvFileOutputStream.h"
 
-OvREF_POINTER(OvFile);
+OvSmartPointer_Class(OvFile);
 class OvFile : public OvRefObject
 {
 	OvRTTI_DECL(OvFile);

@@ -5,24 +5,24 @@ OvRTTI_IMPL( OvFloatVal );
 void OvFloatVal::Serialize( OvObjectOutputStream & output )
 {
 	__super::Serialize(output);
-	output.Write( m_val );
+	output.Write( val );
 }
 
 void OvFloatVal::Deserialize( OvObjectInputStream & input )
 {
 	__super::Deserialize(input);
-	input.Read( m_val );
+	input.Read( val );
 }
 
 OvRTTI_IMPL( OvIntegerVal );
 void OvIntegerVal::Serialize( OvObjectOutputStream & output )
 {
 	__super::Serialize(output);
-	output.Write( m_val );
+	output.Write( val );
 }
 
 void OvIntegerVal::Deserialize( OvObjectInputStream & input )
 {
 	__super::Deserialize(input);
-	input.Read( m_val );
+	input.Read( val );
 }

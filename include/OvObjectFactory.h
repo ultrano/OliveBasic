@@ -3,7 +3,7 @@
 #include "OvRefObject.h"
 #include "OvObjectID.h"
 using namespace std;
-OvREF_POINTER(OvObject);
+OvSmartPointer_Class(OvObject);
 
 
 namespace Olive

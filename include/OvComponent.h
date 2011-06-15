@@ -1,7 +1,7 @@
 #include "OvObject.h"
 
-OvREF_POINTER(OvXObject);
-OvREF_POINTER(OvComponent);
+OvSmartPointer_Class(OvXObject);
+OvSmartPointer_Class(OvComponent);
 class OvComponent : public OvObject
 {
 	OvRTTI_DECL(OvComponent);

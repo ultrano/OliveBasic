@@ -3,6 +3,16 @@
 
 OvRTTI_IMPL( OvXObject );
 
+OvXObject::OvXObject()
+{
+
+}
+
+OvXObject::~OvXObject()
+{
+
+}
+
 void OvXObject::Serialize( OvObjectOutputStream & output )
 {
 	__super::Serialize( output );

@@ -4,8 +4,11 @@
 #pragma warning( disable : 4311 )
 
 #include "OvRefObject.h"
-#define OvREF_POINTER(__class_name)	class __class_name;\
+#define OvSmartPointer_Class(__class_name)	class __class_name;\
 	typedef OvSmartPointer<__class_name>	__class_name##SPtr;
+
+#define OvSmartPointer_Struct(__struct_name)	struct __struct_name;\
+	typedef OvSmartPointer<__struct_name>	__struct_name##SPtr;
 
 template<typename Type_0>
 template_class	OvSmartPointer : public OvMemObject

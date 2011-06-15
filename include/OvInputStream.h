@@ -3,7 +3,7 @@
 #include "OvUtility_RTTI.h"
 #include "OvRefObject.h"
 
-OvREF_POINTER( OvInputStream );
+OvSmartPointer_Class( OvInputStream );
 interface_class OvInputStream : public OvRefObject
 {
 	OvRTTI_DECL_ROOT(OvInputStream);

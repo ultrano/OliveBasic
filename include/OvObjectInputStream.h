@@ -2,8 +2,8 @@
 #include "OvInputStream.h"
 
 class OvObjectID;
-OvREF_POINTER(OvObject);
-OvREF_POINTER(OvObjectInputStream);
+OvSmartPointer_Class(OvObject);
+OvSmartPointer_Class(OvObjectInputStream);
 class OvObjectInputStream : public OvInputStream
 {
 public:

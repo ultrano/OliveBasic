@@ -10,7 +10,7 @@
 class OvStorage;
 class OvObjectProperties;
 
-OvREF_POINTER(OvObject);
+OvSmartPointer_Class(OvObject);
 typedef OvSet<OvObjectSPtr> OvObjectSet;
 
 class OvObject : public OvRefObject
