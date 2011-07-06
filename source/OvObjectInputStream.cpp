@@ -38,7 +38,7 @@ OvObject* OvObjectInputStream::ReadObject()
 		}
 		else
 		{
-			obj = Olive::CreateObject( type_name );
+			obj = OvCreateObject( type_name );
 			m_restore_table[ oldID ] = obj;
 		}
 	}

@@ -1,6 +1,12 @@
 #include "OvActObject.h"
 #include "OvComponent.h"
 OvRTTI_IMPL(OvActObject);
+OvFACTORY_OBJECT_IMPL(OvActObject);
+
+OvActObject::OvActObject( factory )
+{
+
+}
 
 void OvActObject::Update( OvFloat elapsed )
 {

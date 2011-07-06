@@ -7,8 +7,12 @@ OvSmartPointer_Class(OvActObject);
 class OvActObject :  public OvXObject
 {
 	OvRTTI_DECL(OvActObject);
+	OvFACTORY_OBJECT_DECL(OvActObject);
+
 	friend class OvComponent;
 public:
+
+	OvActObject(factory);
 
 	virtual void Update( OvFloat elapsed );
 

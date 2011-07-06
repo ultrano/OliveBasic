@@ -16,7 +16,7 @@ OvComponent::~OvComponent()
 
 void OvComponent::SetTarget( OvActObjectSPtr target )
 {
-	if ( target && m_target != target )
+	if ( m_target != target )
 	{
 		if ( m_target )
 		{
