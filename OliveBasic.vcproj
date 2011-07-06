@@ -529,6 +529,18 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvActObject"
+				>
+				<File
+					RelativePath=".\source\OvActObject.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvActObject.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Refernce"

@@ -16,6 +16,9 @@ struct OvFloatVal : public OvValue
 {
 	OvRTTI_DECL( OvFloatVal );
 
+	OvFloatVal() : val(0){};
+	OvFloatVal( OvFloat _val ) : val(_val){};
+
 	/// Stream
 	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;
 	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
@@ -26,6 +29,9 @@ struct OvFloatVal : public OvValue
 struct OvIntegerVal : public OvValue
 {
 	OvRTTI_DECL( OvIntegerVal );
+
+	OvIntegerVal() : val(0){};
+	OvIntegerVal( OvInt _val ) : val(_val){};
 
 	/// Stream
 	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;

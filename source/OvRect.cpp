@@ -19,7 +19,7 @@ OvRect::OvRect( const OvRect& rect )
 
 }
 
-OvRect::OvRect( OvUInt pleft, OvUInt ptop, OvUInt pright, OvUInt pbottom )
+OvRect::OvRect( OvInt pleft, OvInt ptop, OvInt pright, OvInt pbottom )
 : left	( pleft )
 , top	( ptop )
 , right	( pright )
@@ -33,12 +33,13 @@ OvRect::~OvRect()
 
 }
 
-OvBool OvRect::IsInRect( OvUInt px, OvUInt py ) const
+OvBool OvRect::IsInRect( OvInt px, OvInt py ) const
 {
-	return ! ((left   >  px ) ||
-			  (right  <= px ) ||
-			  (top    >  py ) ||
-			  (bottom <= py ) );
+	bool ret = ! ((left   >  px ) ||
+		(right  <= px ) ||
+		(top    >  py ) ||
+		(bottom <= py ) );
+	return ret;
 }
 
 OvBool OvRect::IsIntersect( const OvRect& rect ) const
@@ -54,22 +55,22 @@ OvBool OvRect::IsIntersect( const OvRect& rect ) const
 		 	 top    < temp.bottom );
 }
 
-void OvRect::SetHeight( OvUInt height )
+void OvRect::SetHeight( OvInt height )
 {
 	bottom = top + height;
 }
 
-OvUInt OvRect::GetHeight() const
+OvInt OvRect::GetHeight() const
 {
 	return ( ( bottom - top ) );
 }
 
-void OvRect::SetWidth( OvUInt height )
+void OvRect::SetWidth( OvInt height )
 {
 	right = left + height;
 }
 
-OvUInt OvRect::GetWidth() const
+OvInt OvRect::GetWidth() const
 {
 	return ( ( right - left ) );
 }

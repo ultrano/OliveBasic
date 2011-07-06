@@ -34,6 +34,21 @@ typedef unsigned char		OvByte;
 
 typedef float				OvTimeTick;
 
+//////////////////////////////////////////////////////////////////////////
+
+#include "OvMemObject.h"
+template<typename T>
+struct	OvTPoint2 : public OvMemObject { T	x, y; };
+typedef OvTPoint2<OvInt>	OvIPoint2;
+typedef OvTPoint2<OvFloat>	OvFPoint2;
+
+template<typename T>
+struct	OvTPoint3 : public OvMemObject { T	x, y, z; };
+typedef OvTPoint3<OvInt>	OvIPoint3;
+typedef OvTPoint3<OvFloat>	OvFPoint3;
+
+//////////////////////////////////////////////////////////////////////////
+
 #define interface_class		class
 #define template_class		class
 #define abstract_class		class

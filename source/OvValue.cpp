@@ -1,6 +1,21 @@
 #include "OvValue.h"
-OvRTTI_IMPL( OvValue );
 
+//////////////////////////////////////////////////////////////////////////
+OvRTTI_IMPL( OvValue );
+void OvValue::Serialize( OvObjectOutputStream & output )
+{
+	__super::Serialize(output);
+
+}
+
+void OvValue::Deserialize( OvObjectInputStream & input )
+{
+	__super::Deserialize(input);
+
+}
+
+
+//////////////////////////////////////////////////////////////////////////
 OvRTTI_IMPL( OvFloatVal );
 void OvFloatVal::Serialize( OvObjectOutputStream & output )
 {
@@ -14,6 +29,7 @@ void OvFloatVal::Deserialize( OvObjectInputStream & input )
 	input.Read( val );
 }
 
+//////////////////////////////////////////////////////////////////////////
 OvRTTI_IMPL( OvIntegerVal );
 void OvIntegerVal::Serialize( OvObjectOutputStream & output )
 {
