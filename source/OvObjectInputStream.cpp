@@ -31,17 +31,20 @@ OvObject* OvObjectInputStream::ReadObject()
 	OvObjectSPtr obj = NULL;
 	if ( oldID != OvObjectID::INVALID )
 	{
-		id_obj_table::iterator itor = m_deserialized_done.find( oldID );
-		if ( itor != m_deserialized_done.end() )
+		id_obj_table::iterator done = m_deserialized_done.find( oldID );	//< 완료 목록
+		id_obj_table::iterator yet  = m_deserialized_yet.find( oldID );		//< 대기 목록
+
+		if ( done != m_deserialized_done.end() )
 		{
-			obj = itor->second;
+			obj = done->second;
 		}
-		else
+		else if ( yet != m_deserialized_yet.end() )
 		{
-			if ( obj = OvCreateObject( type_name ) )
-			{
-				m_deserialized_yet[ oldID ] = obj;
-			}
+			obj = yet->second;
+		}
+		else if ( obj = OvCreateObject( type_name ) )
+		{
+			m_deserialized_yet[ oldID ] = obj;
 		}
 	}
 	return obj.GetRear();
