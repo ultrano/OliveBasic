@@ -706,10 +706,26 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvClientMessage"
+				Name="OvComponentMsg"
 				>
 				<File
-					RelativePath=".\include\OvClientMessage.h"
+					RelativePath=".\source\OvComponentMsg.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvComponentMsg.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvWinMsgComponent"
+				>
+				<File
+					RelativePath=".\source\OvWinMsgComponent.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvWinMsgComponent.h"
 					>
 				</File>
 			</Filter>

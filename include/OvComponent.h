@@ -1,7 +1,7 @@
 #pragma once
 #include "OvXObject.h"
 
-OvSmartPointer_Class(OvClientMessage);
+OvSmartPointer_Struct(OvComponentMsg);
 OvSmartPointer_Class(OvActObject);
 OvSmartPointer_Class(OvComponent);
 class OvComponent : public OvXObject
@@ -12,9 +12,13 @@ public:
 	OvComponent();
 	~OvComponent();
 
+	/// Stream
+	virtual void 	Serialize( OvObjectOutputStream & output ) OVERRIDE;
+	virtual void 	Deserialize( OvObjectInputStream & input ) OVERRIDE;
+
 	virtual void	Setup() {};
 	virtual void	Teardown() {};
-	virtual void	OnComponentMsg( OvClientMessageSPtr msg );
+	virtual void	OnComponentMsg( OvComponentMsgSPtr msg );
 
 	virtual void	Update( OvTimeTick elapsed ) = 0;
 

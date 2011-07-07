@@ -1,6 +1,6 @@
 #include "OvComponent.h"
 #include "OvActObject.h"
-#include "OvClientMessage.h"
+#include "OvComponentMsg.h"
 
 OvRTTI_IMPL(OvComponent);
 
@@ -38,7 +38,23 @@ OvActObjectSPtr OvComponent::GetTarget() const
 	return m_target;
 }
 
-void OvComponent::OnComponentMsg( OvClientMessageSPtr msg )
+void OvComponent::OnComponentMsg( OvComponentMsgSPtr msg )
 {
+
+}
+
+void OvComponent::Serialize( OvObjectOutputStream & output )
+{
+	__super::Serialize(output);
+
+	output.WriteObject( m_target );
+
+}
+
+void OvComponent::Deserialize( OvObjectInputStream & input )
+{
+	__super::Deserialize(input);
+
+	m_target = (OvActObject*)input.ReadObject();
 
 }

@@ -2,7 +2,7 @@
 #include "OvXObject.h"
 
 OvSmartPointer_Class(OvComponent);
-OvSmartPointer_Class(OvClientMessage);
+OvSmartPointer_Struct(OvComponentMsg);
 
 OvSmartPointer_Class(OvActObject);
 class OvActObject :  public OvXObject
@@ -18,7 +18,7 @@ public:
 	virtual void Update( OvFloat elapsed );
 
 	void	GetComponentSet( OvObjectSet& components );
-	void	PostComponentMsg( OvClientMessageSPtr msg );
+	void	PostComponentMsg( OvComponentMsgSPtr msg );
 
 	void			AttachChild( OvActObjectSPtr child );
 	OvActObjectSPtr DettachChild( OvActObjectSPtr child );
