@@ -27,7 +27,10 @@ OvBool OvObjectOutputStream::WriteObject( OvObjectSPtr obj )
 	OvString type_name = "";
 	if ( obj )
 	{
-		m_serialized_yet.insert( obj );
+		if ( m_serialized_done.find( obj ) == m_serialized_done.end() )
+		{
+			m_serialized_yet.insert( obj );
+		}
 		objID = obj->GetObjectID();
 		type_name = OvTypeName( obj );
 	}
