@@ -506,18 +506,6 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvComponent"
-				>
-				<File
-					RelativePath=".\source\OvComponent.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvComponent.h"
-					>
-				</File>
-			</Filter>
-			<Filter
 				Name="OvRect"
 				>
 				<File
@@ -526,18 +514,6 @@
 				</File>
 				<File
 					RelativePath=".\include\OvRect.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="OvActObject"
-				>
-				<File
-					RelativePath=".\source\OvActObject.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvActObject.h"
 					>
 				</File>
 			</Filter>
@@ -701,6 +677,42 @@
 				RelativePath=".\include\OliveNet.h"
 				>
 			</File>
+		</Filter>
+		<Filter
+			Name="InProgress"
+			>
+			<Filter
+				Name="OvActObject"
+				>
+				<File
+					RelativePath=".\source\OvActObject.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvActObject.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvComponent"
+				>
+				<File
+					RelativePath=".\source\OvComponent.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvComponent.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvClientMessage"
+				>
+				<File
+					RelativePath=".\include\OvClientMessage.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<File
 			RelativePath=".\ReadMe.txt"

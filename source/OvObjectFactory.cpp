@@ -1,5 +1,6 @@
 #include "OvObjectFactory.h"
 #include "OvObject.h"
+#include "OvBuffer.h"
 #include <map>
 using namespace std;
 
@@ -20,16 +21,29 @@ OvBool OvIsObjectCreatable( const OvString& type_name )
 	return ( itor != GetFactory().factory_table.end() );
 }
 
+OvObject* OvCreateObject_Ptr( const OvString& type_name )
+{
+	construct_function func = GetFactory().factory_table[ type_name ];
+	return ( func )? ( func() ) : ( 0 );
+}
+
 OvObjectSPtr OvCreateObject( const OvString& type_name )
 {
 	construct_function func = GetFactory().factory_table[ type_name ];
 	return ( func )? ( func() ) : ( 0 );
 }
 
-OvObject* OvCreateObject_Ptr( const OvString& type_name )
+OvObjectSPtr OvCopyObject( OvObjectSPtr origin )
 {
-	construct_function func = GetFactory().factory_table[ type_name ];
-	return ( func )? ( func() ) : ( 0 );
+	OvBufferSPtr origin_buf = OvBuffer::CreateBuffer();
+
+	OvBufferOutputStream bos( origin_buf );
+	OvObjectOutputStream oos( &bos );
+	oos.Serialize( origin );
+
+	OvBufferInputStream bis( origin_buf );
+	OvObjectInputStream ois( &bis );
+	return ois.Deserialize();
 }
 
 void OvRegisterConstructFunc( const OvChar* type_name, construct_function func )

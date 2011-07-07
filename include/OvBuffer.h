@@ -11,7 +11,7 @@ public:
 
 	enum { 
 		DEFAULT_BUFFER_CAPACITY = 0,
-		DEFAULT_BUFFER_INCREMENT = 1 
+		DEFAULT_BUFFER_INCREMENT = 128 
 	};
 
 	static OvBufferSPtr CreateBuffer( OvSize capacity = DEFAULT_BUFFER_CAPACITY

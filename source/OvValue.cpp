@@ -17,6 +17,7 @@ void OvValue::Deserialize( OvObjectInputStream & input )
 
 //////////////////////////////////////////////////////////////////////////
 OvRTTI_IMPL( OvFloatVal );
+OvFACTORY_OBJECT_IMPL(OvFloatVal);
 void OvFloatVal::Serialize( OvObjectOutputStream & output )
 {
 	__super::Serialize(output);
@@ -30,14 +31,15 @@ void OvFloatVal::Deserialize( OvObjectInputStream & input )
 }
 
 //////////////////////////////////////////////////////////////////////////
-OvRTTI_IMPL( OvIntegerVal );
-void OvIntegerVal::Serialize( OvObjectOutputStream & output )
+OvRTTI_IMPL( OvIntVal );
+OvFACTORY_OBJECT_IMPL(OvIntVal);
+void OvIntVal::Serialize( OvObjectOutputStream & output )
 {
 	__super::Serialize(output);
 	output.Write( val );
 }
 
-void OvIntegerVal::Deserialize( OvObjectInputStream & input )
+void OvIntVal::Deserialize( OvObjectInputStream & input )
 {
 	__super::Deserialize(input);
 	input.Read( val );
