@@ -27,7 +27,7 @@ OvBool OvObjectOutputStream::WriteObject( OvObjectSPtr obj )
 	OvString type_name = "";
 	if ( obj )
 	{
-		m_serialize_targets.insert( obj );
+		m_serialized_yet.insert( obj );
 		objID = obj->GetObjectID();
 		type_name = OvTypeName( obj );
 	}
@@ -41,16 +41,14 @@ OvBool OvObjectOutputStream::Serialize( OvObjectSPtr obj )
 	WriteObject( obj );
 
 	OvSet<OvObjectSPtr> copy_targets;
-	while ( m_serialize_targets.size() != m_serialized.size() )
+	while ( m_serialized_yet.size() )
 	{
-		copy_targets = m_serialize_targets;
+		copy_targets = m_serialized_yet;
+		m_serialized_yet.clear();
 		for each( OvObjectSPtr target in copy_targets )
 		{
-			if ( m_serialized.find( target ) == m_serialized.end() )
-			{
-				target->Serialize( *this );
-				m_serialized.insert( target );
-			}
+			target->Serialize( *this );
+			m_serialized_done.insert( target );
 		}
 	}
 	return true;

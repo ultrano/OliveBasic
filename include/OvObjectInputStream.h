@@ -21,7 +21,7 @@ private:
 
 	typedef OvMap<OvObjectID,OvObjectSPtr> id_obj_table;
 	OvInputStream* m_input;
-	id_obj_table	m_deserialize_done;
-	id_obj_table	m_deserialize_yet;
+	id_obj_table	m_deserialized_done;
+	id_obj_table	m_deserialized_yet;
 
 };
