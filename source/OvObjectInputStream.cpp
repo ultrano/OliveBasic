@@ -38,8 +38,10 @@ OvObject* OvObjectInputStream::ReadObject()
 		}
 		else
 		{
-			obj = OvCreateObject( type_name );
-			m_restore_table[ oldID ] = obj;
+			if ( obj = OvCreateObject( type_name ) )
+			{
+				m_restore_table[ oldID ] = obj;
+			}
 		}
 	}
 	return obj.GetRear();
@@ -55,11 +57,13 @@ OvObject* OvObjectInputStream::Deserialize()
 		copy_table = m_restore_table;
 		for each ( const restore_table::value_type val in copy_table )
 		{
-			OvObject* obj = val.second.GetRear();
-			if ( m_deseiralied.find(obj) == m_deseiralied.end() )
+			if ( OvObject* obj = val.second.GetRear() )
 			{
-				obj->Deserialize( *this );
-				m_deseiralied.insert( obj );
+				if ( m_deseiralied.find(obj) == m_deseiralied.end() )
+				{
+					obj->Deserialize( *this );
+					m_deseiralied.insert( obj );
+				}
 			}
 		}
 	}
