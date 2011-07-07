@@ -1,5 +1,6 @@
 #include "OvComponent.h"
 #include "OvActObject.h"
+#include "OvClientMessage.h"
 
 OvRTTI_IMPL(OvComponent);
 
@@ -35,4 +36,9 @@ void OvComponent::SetTarget( OvActObjectSPtr target )
 OvActObjectSPtr OvComponent::GetTarget() const
 {
 	return m_target;
+}
+
+void OvComponent::OnComponentMsg( OvClientMessageSPtr msg )
+{
+
 }

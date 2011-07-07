@@ -1,6 +1,7 @@
 #pragma once
 #include "OvXObject.h"
 
+OvSmartPointer_Class(OvClientMessage);
 OvSmartPointer_Class(OvActObject);
 OvSmartPointer_Class(OvComponent);
 class OvComponent : public OvXObject
@@ -13,6 +14,7 @@ public:
 
 	virtual void	Setup() {};
 	virtual void	Teardown() {};
+	virtual void	OnComponentMsg( OvClientMessageSPtr msg );
 
 	virtual void	Update( OvTimeTick elapsed ) = 0;
 

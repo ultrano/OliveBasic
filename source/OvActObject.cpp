@@ -1,5 +1,6 @@
 #include "OvActObject.h"
 #include "OvComponent.h"
+#include "OvClientMessage.h"
 OvRTTI_IMPL(OvActObject);
 OvFACTORY_OBJECT_IMPL(OvActObject);
 
@@ -11,7 +12,16 @@ OvActObject::OvActObject( factory )
 void OvActObject::Update( OvFloat elapsed )
 {
 	OvObjectSet components = m_components;
+	OvObjectSet component_msg = m_component_msg;
+	m_component_msg.clear();
 
+	for each( OvClientMessageSPtr msg in component_msg )
+	{
+		for each( OvComponentSPtr comp in components )
+		{
+			comp->OnComponentMsg( msg );
+		}
+	}
 	for each( OvComponentSPtr comp in components )
 	{
 		comp->Update( elapsed );
@@ -123,4 +133,9 @@ void OvActObject::Deserialize( OvObjectInputStream & input )
 	}
 
 	m_parent = (OvActObject*)input.ReadObject();
+}
+
+void OvActObject::PostComponentMsg( OvClientMessageSPtr msg )
+{
+	m_component_msg.insert( msg );
 }
