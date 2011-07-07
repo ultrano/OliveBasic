@@ -19,9 +19,9 @@ public:
 
 private:
 
-	typedef OvMap<OvObjectID,OvObjectSPtr> restore_table;
+	typedef OvMap<OvObjectID,OvObjectSPtr> id_obj_table;
 	OvInputStream* m_input;
-	restore_table	m_restore_table;
-	OvSet<OvObjectSPtr>		m_deseiralied;
+	id_obj_table	m_deserialize_done;
+	id_obj_table	m_deserialize_yet;
 
 };

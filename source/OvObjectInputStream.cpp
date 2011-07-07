@@ -31,8 +31,8 @@ OvObject* OvObjectInputStream::ReadObject()
 	OvObjectSPtr obj = NULL;
 	if ( oldID != OvObjectID::INVALID )
 	{
-		restore_table::iterator itor = m_restore_table.find( oldID );
-		if ( itor != m_restore_table.end() )
+		id_obj_table::iterator itor = m_deserialize_done.find( oldID );
+		if ( itor != m_deserialize_done.end() )
 		{
 			obj = itor->second;
 		}
@@ -40,7 +40,7 @@ OvObject* OvObjectInputStream::ReadObject()
 		{
 			if ( obj = OvCreateObject( type_name ) )
 			{
-				m_restore_table[ oldID ] = obj;
+				m_deserialize_yet[ oldID ] = obj;
 			}
 		}
 	}
@@ -51,19 +51,17 @@ OvObject* OvObjectInputStream::Deserialize()
 {
 	OvObject* root = ReadObject();
 
-	restore_table copy_table;
-	while ( m_deseiralied.size() != m_restore_table.size() )
+	id_obj_table copy_table;
+	while ( m_deserialize_yet.size() )
 	{
-		copy_table = m_restore_table;
-		for each ( const restore_table::value_type val in copy_table )
+		copy_table = m_deserialize_yet;
+		m_deserialize_yet.clear();
+		for each ( const id_obj_table::value_type val in copy_table )
 		{
 			if ( OvObject* obj = val.second.GetRear() )
 			{
-				if ( m_deseiralied.find(obj) == m_deseiralied.end() )
-				{
-					obj->Deserialize( *this );
-					m_deseiralied.insert( obj );
-				}
+				obj->Deserialize( *this );
+				m_deserialize_done[val.first] = val.second ;
 			}
 		}
 	}
