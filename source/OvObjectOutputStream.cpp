@@ -34,8 +34,8 @@ OvBool OvObjectOutputStream::WriteObject( OvObjectSPtr obj )
 		objID = obj->GetObjectID();
 		type_name = OvTypeName( obj );
 	}
-	Write( objID );
 	Write( type_name );
+	Write( objID );
 	return !!obj;
 }
 

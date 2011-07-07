@@ -25,8 +25,8 @@ OvObject* OvObjectInputStream::ReadObject()
 {
 	OvObjectID	oldID;
 	OvString	type_name;
-	Read( oldID );
 	Read( type_name );
+	Read( oldID );
 
 	OvObjectSPtr obj = NULL;
 	if ( oldID != OvObjectID::INVALID )
