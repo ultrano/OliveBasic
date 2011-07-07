@@ -35,15 +35,19 @@ OvObjectSPtr OvCreateObject( const OvString& type_name )
 
 OvObjectSPtr OvCopyObject( OvObjectSPtr origin )
 {
-	OvBufferSPtr origin_buf = OvBuffer::CreateBuffer();
+	if ( origin )
+	{
+		OvBufferSPtr origin_buf = OvBuffer::CreateBuffer();
 
-	OvBufferOutputStream bos( origin_buf );
-	OvObjectOutputStream oos( &bos );
-	oos.Serialize( origin );
+		OvBufferOutputStream bos( origin_buf );
+		OvObjectOutputStream oos( &bos );
+		oos.Serialize( origin );
 
-	OvBufferInputStream bis( origin_buf );
-	OvObjectInputStream ois( &bis );
-	return ois.Deserialize();
+		OvBufferInputStream bis( origin_buf );
+		OvObjectInputStream ois( &bis );
+		return ois.Deserialize();
+	}
+	return NULL;
 }
 
 void OvRegisterConstructFunc( const OvChar* type_name, construct_function func )
