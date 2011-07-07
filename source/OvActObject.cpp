@@ -15,16 +15,17 @@ void OvActObject::Update( OvFloat elapsed )
 	OvObjectSet component_msg = m_component_msg;
 	m_component_msg.clear();
 
+	for each( OvComponentSPtr comp in components )
+	{
+		comp->Update( elapsed );
+	}
+
 	for each( OvClientMessageSPtr msg in component_msg )
 	{
 		for each( OvComponentSPtr comp in components )
 		{
 			comp->OnComponentMsg( msg );
 		}
-	}
-	for each( OvComponentSPtr comp in components )
-	{
-		comp->Update( elapsed );
 	}
 
 	OvObjectSet children = m_children;
