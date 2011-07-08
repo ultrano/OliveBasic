@@ -24,18 +24,23 @@ OvSize OvObjectOutputStream::WriteBytes( OvByte * write_buf, OvSize write_size )
 OvBool OvObjectOutputStream::WriteObject( OvObjectSPtr obj )
 {
 	OvObjectID objID = OvObjectID::INVALID;
-	OvString type_name = "";
+	OvString type_name;
 	if ( obj )
 	{
-		if ( m_serialized_done.find( obj ) == m_serialized_done.end() )
-		{
-			m_serialized_yet.insert( obj );
-		}
 		objID = obj->GetObjectID();
-		type_name = OvTypeName( obj );
+		OvSet<OvObjectSPtr>::iterator done = m_serialized_done.find( obj );	//< 완료 목록
+		OvList<OvObjectSPtr>::iterator yet  = OU::container::find( m_serialized_yet, obj );		//< 대기 목록
+		if (( done == m_serialized_done.end() ) && ( yet == m_serialized_yet.end() ))
+		{
+			type_name = OvTypeName( obj );
+			m_serialized_yet.push_back( obj );
+		}
 	}
-	Write( type_name );
 	Write( objID );
+	if ( type_name.size() )
+	{
+		Write( type_name );
+	}
 	return !!obj;
 }
 
@@ -43,7 +48,7 @@ OvBool OvObjectOutputStream::Serialize( OvObjectSPtr obj )
 {
 	WriteObject( obj );
 
-	OvSet<OvObjectSPtr> copy_targets;
+	OvList<OvObjectSPtr> copy_targets;
 	while ( m_serialized_yet.size() )
 	{
 		copy_targets = m_serialized_yet;

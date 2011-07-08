@@ -25,26 +25,38 @@ OvObject* OvObjectInputStream::ReadObject()
 {
 	OvObjectID	oldID;
 	OvString	type_name;
-	Read( type_name );
+
 	Read( oldID );
 
 	OvObjectSPtr obj = NULL;
 	if ( oldID != OvObjectID::INVALID )
 	{
-		id_obj_table::iterator done = m_deserialized_done.find( oldID );	//< 완료 목록
-		id_obj_table::iterator yet  = m_deserialized_yet.find( oldID );		//< 대기 목록
 
-		if ( done != m_deserialized_done.end() )
+		for each ( id_obj_list::value_type val in m_deserialized_yet )
 		{
-			obj = done->second;
+			if ( val.first == oldID )
+			{
+				obj = val.second;
+				break;
+			}
 		}
-		else if ( yet != m_deserialized_yet.end() )
+
+		if ( ! obj )
 		{
-			obj = yet->second;
-		}
-		else if ( obj = OvCreateObject( type_name ) )
-		{
-			m_deserialized_yet[ oldID ] = obj;
+
+			id_obj_table::iterator done = m_deserialized_done.find( oldID );
+			if ( done != m_deserialized_done.end() )
+			{
+				obj = done->second;
+			}
+			else
+			{
+				Read( type_name );
+				if ( obj = OvCreateObject( type_name ) )
+				{
+					m_deserialized_yet.push_back( make_pair( oldID, obj ) );
+				}
+			}
 		}
 	}
 	return obj.GetRear();
@@ -54,17 +66,19 @@ OvObject* OvObjectInputStream::Deserialize()
 {
 	OvObject* root = ReadObject();
 
-	id_obj_table copy_table;
+	id_obj_list copy_table;
 	while ( m_deserialized_yet.size() )
 	{
 		copy_table = m_deserialized_yet;
 		m_deserialized_yet.clear();
-		for each ( const id_obj_table::value_type val in copy_table )
+		for each ( id_obj_list::value_type val in copy_table )
 		{
-			if ( OvObject* obj = val.second.GetRear() )
+			OvObjectID oldID = val.first;
+			OvObjectSPtr obj = val.second;
+			if ( oldID != OvObjectID::INVALID && obj )
 			{
 				obj->Deserialize( *this );
-				m_deserialized_done[val.first] = val.second ;
+				m_deserialized_done[ oldID ] = obj;
 			}
 		}
 	}
