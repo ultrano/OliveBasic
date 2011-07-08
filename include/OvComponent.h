@@ -1,5 +1,6 @@
 #pragma once
 #include "OvXObject.h"
+#include "OvComponentMsg.h"
 
 OvSmartPointer_Struct(OvComponentMsg);
 OvSmartPointer_Class(OvActObject);

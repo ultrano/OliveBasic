@@ -12,6 +12,7 @@ struct OvValue : public OvObject
 
 };
 
+OvSmartPointer_Struct(OvFloatVal);
 struct OvFloatVal : public OvValue
 {
 	OvRTTI_DECL( OvFloatVal );
@@ -29,6 +30,7 @@ public:
 	OvFloat val;
 };
 
+OvSmartPointer_Struct(OvIntVal);
 struct OvIntVal : public OvValue
 {
 	OvRTTI_DECL( OvIntVal );

@@ -20,6 +20,9 @@ public:
 	void	GetComponentSet( OvObjectSet& components );
 	void	PostComponentMsg( OvComponentMsgSPtr msg );
 
+	template<typename T>
+	OvSmartPointer<T> FindComponent();
+
 	void			AttachChild( OvActObjectSPtr child );
 	OvActObjectSPtr DettachChild( OvActObjectSPtr child );
 	OvActObjectSPtr GetParent();
@@ -42,3 +45,16 @@ private:
 	OvActObject* m_parent;
 
 };
+
+template<typename T>
+OvSmartPointer<T> OvActObject::FindComponent()
+{
+	for each ( OvObjectSPtr comp in m_components )
+	{
+		if ( OvIsTypeOf<T>(comp) )
+		{
+			return comp;
+		}
+	}
+	return NULL;
+}
