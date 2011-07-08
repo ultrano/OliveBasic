@@ -44,3 +44,18 @@ void OvIntVal::Deserialize( OvObjectInputStream & input )
 	__super::Deserialize(input);
 	input.Read( val );
 }
+
+//////////////////////////////////////////////////////////////////////////
+OvRTTI_IMPL( OvRectVal );
+OvFACTORY_OBJECT_IMPL(OvRectVal);
+void OvRectVal::Serialize( OvObjectOutputStream & output )
+{
+	__super::Serialize(output);
+	output.Write( val );
+}
+
+void OvRectVal::Deserialize( OvObjectInputStream & input )
+{
+	__super::Deserialize(input);
+	input.Read( val );
+}
