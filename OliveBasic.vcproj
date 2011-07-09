@@ -517,6 +517,30 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvVector2"
+				>
+				<File
+					RelativePath=".\source\OvVector2.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvVector2.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvVector3"
+				>
+				<File
+					RelativePath=".\source\OvVector3.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvVector3.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Refernce"
