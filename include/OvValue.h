@@ -72,3 +72,23 @@ public:
 
 	OvRect val;
 };
+
+//////////////////////////////////////////////////////////////////////////
+
+OvSmartPointer_Struct(OvStringVal);
+struct OvStringVal : public OvValue
+{
+	OvRTTI_DECL( OvStringVal );
+	OvFACTORY_OBJECT_DECL(OvStringVal);
+	OvStringVal(factory){};
+public:
+
+	OvStringVal() {};
+	OvStringVal( const OvString& _val ) : val(_val){};
+
+	/// Stream
+	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;
+	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
+
+	OvString val;
+};
