@@ -45,15 +45,15 @@ OvObjectSPtr OvObject::CustomClone()
 
 void OvObject::Serialize( OvObjectOutputStream & output )
 {
-	output.Write( GetObjectID() );
-	output.Write( OvTypeName( this ) );
+// 	output.Write( GetObjectID() );
+// 	output.Write( OvTypeName( this ) );
 }
 
 void OvObject::Deserialize( OvObjectInputStream & input )
 {
-	OvObjectID	oldID;
-	OvString	type_name;
-
-	input.Read( oldID );
-	input.Read( type_name );
+// 	OvObjectID	oldID;
+// 	OvString	type_name;
+// 
+// 	input.Read( oldID );
+// 	input.Read( type_name );
 }
