@@ -12,6 +12,7 @@ class OvObjectProperties;
 
 OvSmartPointer_Class(OvObject);
 typedef OvSet<OvObjectSPtr> OvObjectSet;
+typedef OvList<OvObjectSPtr> OvObjectList;
 
 class OvObject : public OvRefObject
 {

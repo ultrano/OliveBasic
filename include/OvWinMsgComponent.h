@@ -13,7 +13,7 @@ public:
 	OvWinMsgComponent();
 	~OvWinMsgComponent();
 
-	void OnMsgNotified( OvComponentMsgSPtr msg );
+	void OnMsgNotified( OvMessageSPtr msg );
 	virtual void Update( OvTimeTick elapsed ) OVERRIDE;
 
 private:

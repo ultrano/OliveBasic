@@ -730,14 +730,14 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvComponentMsg"
+				Name="OvMessage"
 				>
 				<File
-					RelativePath=".\source\OvComponentMsg.cpp"
+					RelativePath=".\source\OvMessage.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\include\OvComponentMsg.h"
+					RelativePath=".\include\OvMessage.h"
 					>
 				</File>
 			</Filter>
@@ -750,6 +750,18 @@
 				</File>
 				<File
 					RelativePath=".\include\OvWinMsgComponent.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvStringTable"
+				>
+				<File
+					RelativePath=".\source\OvStringTable.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvStringTable.h"
 					>
 				</File>
 			</Filter>

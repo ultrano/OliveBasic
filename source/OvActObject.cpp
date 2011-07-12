@@ -1,6 +1,6 @@
 #include "OvActObject.h"
 #include "OvComponent.h"
-#include "OvComponentMsg.h"
+#include "OvMessage.h"
 OvRTTI_IMPL(OvActObject);
 OvFACTORY_OBJECT_IMPL(OvActObject);
 
@@ -15,22 +15,22 @@ void OvActObject::Update( OvFloat elapsed )
 	OvObjectSet component_msg = m_component_msg;
 	m_component_msg.clear();
 
+	for each( OvMessageSPtr msg in component_msg )
+	{
+		for each( OvComponentSPtr comp in components )
+		{
+			comp->OnComponentMsg( msg.GetRear() );
+		}
+	}
+
 	for each( OvComponentSPtr comp in components )
 	{
 		comp->Update( elapsed );
 	}
 
-	for each( OvComponentMsgSPtr msg in component_msg )
-	{
-		for each( OvComponentSPtr comp in components )
-		{
-			comp->OnComponentMsg( msg );
-		}
-	}
-
 	OvObjectSet children = m_children;
 
-	for each( OvComponentSPtr child in children )
+	for each( OvActObjectSPtr child in children )
 	{
 		child->Update( elapsed );
 	}
@@ -57,17 +57,20 @@ void OvActObject::GetComponentSet( OvObjectSet& components )
 	components = m_components;
 }
 
+void OvActObject::GetChildrenSet( OvObjectSet& children )
+{
+	children = m_children;
+}
+
 void OvActObject::AttachChild( OvActObjectSPtr child )
 {
-	if ( child )
+	if ( OvIsKindOf<OvActObject>(child) )
 	{
-		OvActObjectSPtr old_parent = child->GetParent();
-		if ( old_parent )
+		if ( this != child->GetParent())
 		{
-			old_parent->DettachChild( child );
+			m_children.insert( child );
+			child->SetParent( this );
 		}
-		m_children.insert( child );
-		child->_set_parent( this );
 	}
 }
 
@@ -86,14 +89,32 @@ OvActObjectSPtr OvActObject::DettachChild( OvActObjectSPtr child )
 	return ret;
 }
 
+void OvActObject::ClearChildren()
+{
+	m_children.clear();
+}
+
 OvActObjectSPtr OvActObject::GetParent()
 {
 	return m_parent;
 }
 
-void OvActObject::_set_parent( OvActObject* parent )
+void OvActObject::SetParent( OvActObject* parent )
 {
-	m_parent = parent;
+	if ( m_parent != parent )
+	{
+		if ( m_parent )
+		{
+			m_parent->DettachChild( this );
+		}
+
+		m_parent = parent;
+
+		if ( m_parent )
+		{
+			m_parent->AttachChild( this );
+		}
+	}
 }
 
 void OvActObject::Serialize( OvObjectOutputStream & output )
@@ -136,7 +157,7 @@ void OvActObject::Deserialize( OvObjectInputStream & input )
 	m_parent = (OvActObject*)input.ReadObject();
 }
 
-void OvActObject::PostComponentMsg( OvComponentMsgSPtr msg )
+void OvActObject::PostComponentMsg( OvMessageSPtr msg )
 {
 	m_component_msg.insert( msg );
 }

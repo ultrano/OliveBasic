@@ -74,3 +74,48 @@ void OvStringVal::Deserialize( OvObjectInputStream & input )
 	__super::Deserialize(input);
 	input.Read( val );
 }
+
+//////////////////////////////////////////////////////////////////////////
+OvRTTI_IMPL( OvVector2Val );
+OvFACTORY_OBJECT_IMPL(OvVector2Val);
+void OvVector2Val::Serialize( OvObjectOutputStream & output )
+{
+	__super::Serialize(output);
+	output.Write( val );
+}
+
+void OvVector2Val::Deserialize( OvObjectInputStream & input )
+{
+	__super::Deserialize(input);
+	input.Read( val );
+}
+
+//////////////////////////////////////////////////////////////////////////
+OvRTTI_IMPL( OvVector3Val );
+OvFACTORY_OBJECT_IMPL(OvVector3Val);
+void OvVector3Val::Serialize( OvObjectOutputStream & output )
+{
+	__super::Serialize(output);
+	output.Write( val );
+}
+
+void OvVector3Val::Deserialize( OvObjectInputStream & input )
+{
+	__super::Deserialize(input);
+	input.Read( val );
+}
+
+//////////////////////////////////////////////////////////////////////////
+OvRTTI_IMPL( OvObjectIDVal );
+OvFACTORY_OBJECT_IMPL(OvObjectIDVal);
+void OvObjectIDVal::Serialize( OvObjectOutputStream & output )
+{
+	__super::Serialize(output);
+	output.Write( val );
+}
+
+void OvObjectIDVal::Deserialize( OvObjectInputStream & input )
+{
+	__super::Deserialize(input);
+	input.Read( val );
+}

@@ -1,6 +1,8 @@
 #pragma once
 #include "OvObject.h"
 #include "OvRect.h"
+#include "OvVector2.h"
+#include "OvVector3.h"
 
 OvSmartPointer_Struct(OvValue);
 struct OvValue : public OvObject
@@ -91,4 +93,64 @@ public:
 	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
 
 	OvString val;
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+OvSmartPointer_Struct(OvVector2Val);
+struct OvVector2Val : public OvValue
+{
+	OvRTTI_DECL( OvVector2Val );
+	OvFACTORY_OBJECT_DECL(OvVector2Val);
+	OvVector2Val(factory){};
+public:
+
+	OvVector2Val() {};
+	OvVector2Val( const OvVector2& _val ) : val(_val){};
+
+	/// Stream
+	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;
+	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
+
+	OvVector2 val;
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+OvSmartPointer_Struct(OvVector3Val);
+struct OvVector3Val : public OvValue
+{
+	OvRTTI_DECL( OvVector3Val );
+	OvFACTORY_OBJECT_DECL(OvVector3Val);
+	OvVector3Val(factory){};
+public:
+
+	OvVector3Val() {};
+	OvVector3Val( const OvVector3& _val ) : val(_val){};
+
+	/// Stream
+	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;
+	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
+
+	OvVector3 val;
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+OvSmartPointer_Struct(OvObjectIDVal);
+struct OvObjectIDVal : public OvValue
+{
+	OvRTTI_DECL( OvObjectIDVal );
+	OvFACTORY_OBJECT_DECL(OvObjectIDVal);
+	OvObjectIDVal(factory){};
+public:
+
+	OvObjectIDVal() {};
+	OvObjectIDVal( const OvObjectID& _val ) : val(_val){};
+
+	/// Stream
+	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;
+	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
+
+	OvObjectID val;
 };
