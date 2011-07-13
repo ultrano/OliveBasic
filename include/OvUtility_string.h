@@ -16,5 +16,6 @@ namespace OU
 
 		OvString replace( const OvString& sentence, const OvString& oldone, const OvString& newone );
 
+		OvUInt	 rs_hash( const OvString& str );
 	}
 }
