@@ -12,14 +12,16 @@ OvActObject::OvActObject( factory )
 void OvActObject::Update( OvFloat elapsed )
 {
 	OvObjectSet components = m_components;
-	OvObjectSet component_msg = m_component_msg;
-	m_component_msg.clear();
-
-	for each( OvMessageSPtr msg in component_msg )
+	if ( m_component_msg.size() )
 	{
-		for each( OvComponentSPtr comp in components )
+		OvObjectSet component_msg = m_component_msg;
+		m_component_msg.clear();
+		for each( OvMessageSPtr msg in component_msg )
 		{
-			comp->OnComponentMsg( msg.GetRear() );
+			for each( OvComponentSPtr comp in components )
+			{
+				comp->OnComponentMsg( msg.GetRear() );
+			}
 		}
 	}
 

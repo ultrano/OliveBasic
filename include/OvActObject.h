@@ -17,19 +17,20 @@ public:
 
 	virtual void Update( OvFloat elapsed );
 
+	/// Component
 	void	GetComponentSet( OvObjectSet& components );
 	void	PostComponentMsg( OvMessageSPtr msg );
+	template<typename T> OvSmartPointer<T> FindComponent();
 
-	template<typename T>
-	OvSmartPointer<T> FindComponent();
 
+	/// Tree Node
 	void			GetChildrenSet( OvObjectSet& children );
 	void			AttachChild( OvActObjectSPtr child );
 	OvActObjectSPtr DettachChild( OvActObjectSPtr child );
 	void			ClearChildren();
-
 	void			SetParent( OvActObject* parent );
 	OvActObjectSPtr GetParent();
+
 
 	/// Stream
 	virtual void 	Serialize( OvObjectOutputStream & output ) OVERRIDE;
