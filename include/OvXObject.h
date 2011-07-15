@@ -2,7 +2,6 @@
 #include "OvObject.h"
 #include "OvValue.h"
 
-
 OvSmartPointer_Class(OvXObject);
 class OvXObject : public OvObject
 {
@@ -15,9 +14,9 @@ public:
 	~OvXObject();
 
 	/// Values
-	void			InsertValue( const OvString & key, OvValueSPtr val );
-	OvValueSPtr 	FindValue( const OvString & key );
-	OvValueSPtr 	RemoveValue( const OvString & key );
+	void			InsertProp( const OvString & key, OvValueSPtr val );
+	OvValueSPtr 	FindProp( const OvString & key );
+	OvValueSPtr 	RemoveProp( const OvString & key );
 
 	/// Stream
 	virtual void 	Serialize( OvObjectOutputStream & output ) OVERRIDE;
@@ -25,7 +24,6 @@ public:
 
 private:
 
-	typedef OvMap<OvString,OvValueSPtr> value_table;
-	value_table m_value_table;
+	OvPropertyMap m_value_table;
 
 };

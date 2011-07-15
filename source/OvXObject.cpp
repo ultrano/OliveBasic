@@ -17,7 +17,7 @@ void OvXObject::Serialize( OvObjectOutputStream & output )
 	__super::Serialize( output );
 
 	output.Write( m_value_table.size() );
-	for each ( const value_table::value_type & val in m_value_table )
+	for each ( const OvPropertyMap::value_type & val in m_value_table )
 	{
 		output.Write( val.first );
 		output.WriteObject( val.second );
@@ -43,15 +43,15 @@ void OvXObject::Deserialize( OvObjectInputStream & input )
 
 }
 
-void OvXObject::InsertValue( const OvString & key, OvValueSPtr val )
+void OvXObject::InsertProp( const OvString & key, OvValueSPtr val )
 {
 	m_value_table.insert( std::make_pair( key, val ) );
 }
 
-OvValueSPtr OvXObject::FindValue( const OvString & key )
+OvValueSPtr OvXObject::FindProp( const OvString & key )
 {
 	OvValueSPtr val = NULL;
-	value_table::iterator itor = m_value_table.find( key );
+	OvPropertyMap::iterator itor = m_value_table.find( key );
 	if ( itor != m_value_table.end() )
 	{
 		val = itor->second;
@@ -59,9 +59,9 @@ OvValueSPtr OvXObject::FindValue( const OvString & key )
 	return val;
 }
 
-OvValueSPtr OvXObject::RemoveValue( const OvString & key )
+OvValueSPtr OvXObject::RemoveProp( const OvString & key )
 {
-	OvValueSPtr val = FindValue( key );
+	OvValueSPtr val = FindProp( key );
 	m_value_table.erase( key );
 	return val;
 }

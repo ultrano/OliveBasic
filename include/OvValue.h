@@ -5,6 +5,8 @@
 #include "OvVector3.h"
 
 OvSmartPointer_Struct(OvValue);
+typedef OvMap<OvString,OvValueSPtr> OvPropertyMap;
+
 struct OvValue : public OvObject
 {
 	OvRTTI_DECL( OvValue );
