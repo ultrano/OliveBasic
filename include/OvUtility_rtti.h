@@ -184,7 +184,7 @@ namespace OU
 		template<typename Type_0, typename Type_1>
 		Type_0*	OvIsKindOf( Type_1 typePointer )
 		{
-			if( NULL == typePointer->_this_pointer() )
+			if( !typePointer || NULL == typePointer->_this_pointer() )
 				return NULL;
 
 			const OvRTTI* kpRTTI = typePointer->QueryRTTI();
@@ -197,7 +197,7 @@ namespace OU
 		template<typename Type_0, typename Type_1>
 		Type_0*	OvCastTo( Type_1 typePointer )
 		{
-			if( NULL == typePointer->_this_pointer() )
+			if( !typePointer || NULL == typePointer->_this_pointer() )
 				return NULL;
 
 			const OvRTTI* kpRTTI = typePointer->QueryRTTI();
