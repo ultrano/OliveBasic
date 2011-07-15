@@ -43,6 +43,7 @@ void OvActObject::_insert_component( OvComponentSPtr comp )
 	if ( comp )
 	{
 		m_components.insert( comp );
+		comp->Setup();
 	}
 }
 
@@ -50,6 +51,7 @@ void OvActObject::_remove_component( OvComponentSPtr comp )
 {
 	if ( comp )
 	{
+		comp->Teardown();
 		m_components.erase( comp );
 	}
 }

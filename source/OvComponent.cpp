@@ -21,14 +21,12 @@ void OvComponent::SetTarget( OvActObjectSPtr target )
 	{
 		if ( m_target )
 		{
-			Teardown();
 			m_target->_remove_component( this );
 		}
 
 		if ( m_target = target.GetRear() )
 		{
 			m_target->_insert_component( this );
-			Setup();
 		}
 	}
 }
