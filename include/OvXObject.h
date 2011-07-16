@@ -17,6 +17,7 @@ public:
 	void			InsertProp( const OvString & key, OvValueSPtr val );
 	OvValueSPtr 	FindProp( const OvString & key );
 	OvValueSPtr 	RemoveProp( const OvString & key );
+	void			GetPropTable( OvPropertyTable& prop_table );
 
 	/// Stream
 	virtual void 	Serialize( OvObjectOutputStream & output ) OVERRIDE;
@@ -24,6 +25,6 @@ public:
 
 private:
 
-	OvPropertyMap m_value_table;
+	OvPropertyTable m_prop_table;
 
 };

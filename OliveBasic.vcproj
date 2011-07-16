@@ -765,6 +765,18 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvScreenDrawer"
+				>
+				<File
+					RelativePath=".\source\OvScreenDrawer.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvScreenDrawer.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<File
 			RelativePath=".\ReadMe.txt"
