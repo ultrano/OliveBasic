@@ -5,7 +5,7 @@ OvVector3 OvVector3::AXIS_X(1,0,0);
 OvVector3 OvVector3::AXIS_Y(0,1,0);
 OvVector3 OvVector3::AXIS_Z(0,0,1);
 
-OvVector3 OvVector3::Normalize()
+OvVector3 OvVector3::Normalize() const
 {
 	OvFloat kfLength = Length();
 	return kfLength? OvVector3(x/kfLength,y/kfLength,z/kfLength) : *this;
@@ -14,13 +14,13 @@ OvFloat	OvVector3::DotProduct(const OvVector3& _rPt)
 {
 	return OvFloat(x*_rPt.x + y*_rPt.y + z*_rPt.z);
 }
-OvFloat	OvVector3::Length()
+OvFloat	OvVector3::Length() const
 {
 	return  Length3D(x,y,z,0,0,0);
 }
-OvFloat	OvVector3::Length(const OvVector3& _rTargetPoint)
+OvFloat	OvVector3::Length(const OvVector3& _rTargetPoint) const
 {
-	return OvVector3Length(*this,_rTargetPoint);
+	return Length3D(x,y,z,_rTargetPoint.x,_rTargetPoint.y,_rTargetPoint.z);
 }
 
 OvVector3 OvVector3::operator +(const OvVector3& _rPt) const
@@ -95,6 +95,19 @@ OvBool	OvVector3::operator !=(const OvVector3& _rPt) const
 {
 	return ((x != _rPt.x)&&(y != _rPt.y)&&(z != _rPt.z));
 }
+
+OvVector3& OvVector3::operator*=( OvFloat val )
+{
+	*this = *this * val;
+	return *this;
+}
+
+OvVector3& OvVector3::operator/=( OvFloat val )
+{
+	*this = *this / val;
+	return *this;
+}
+
 OvFloat	 OvVector3DotProduct(const OvVector3& _rPt0,const OvVector3& _rPt1)
 {
 	return OvFloat(_rPt0.x*_rPt1.x + _rPt0.y*_rPt1.y + _rPt0.z*_rPt1.z);
