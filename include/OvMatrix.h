@@ -25,11 +25,9 @@ public:
 
 	OvMatrix&	Identity();
 
-	OvMatrix&	Rotate( const OvVector3& vec, OvFloat radian );
-	OvMatrix&	Rotate( const OvQuaternion& quat );
-
-	OvMatrix&	Translate(OvFloat x,OvFloat y,OvFloat z);
-	OvMatrix&	Translate(const OvVector3& _crTraslate);
+	OvVector3	 GetScale();
+	OvQuaternion GetRotate();
+	OvVector3	 GetTranslate();
 
 	union
 	{
@@ -44,6 +42,8 @@ public:
 	};
 
 };
+
+OvMatrix&	OvMatrixIdentity( OvMatrix& out );
 
 OvMatrix&	OvMatrixScaling( OvMatrix& out, OvFloat total );
 OvMatrix&	OvMatrixScaling( OvMatrix& out, const OvVector3& total );

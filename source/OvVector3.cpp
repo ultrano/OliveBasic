@@ -10,14 +10,25 @@ OvVector3 OvVector3::Normalize() const
 	OvFloat kfLength = Length();
 	return kfLength? OvVector3(x/kfLength,y/kfLength,z/kfLength) : *this;
 }
-OvFloat	OvVector3::DotProduct(const OvVector3& _rPt)
+
+OvFloat	OvVector3::Dot(const OvVector3& p2)
 {
-	return OvFloat(x*_rPt.x + y*_rPt.y + z*_rPt.z);
+	return OvFloat(x*p2.x + y*p2.y + z*p2.z);
 }
+
+OvVector3 OvVector3::Cross( const OvVector3& p2 )
+{
+	return OvVector3
+		( y*p2.z - p2.y*z
+		, z*p2.x - p2.x*z
+		, x*p2.y - p2.y*x);
+}
+
 OvFloat	OvVector3::Length() const
 {
 	return  Length3D(x,y,z,0,0,0);
 }
+
 OvFloat	OvVector3::Length(const OvVector3& _rTargetPoint) const
 {
 	return Length3D(x,y,z,_rTargetPoint.x,_rTargetPoint.y,_rTargetPoint.z);
