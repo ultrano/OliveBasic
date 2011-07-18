@@ -12,9 +12,10 @@ OvQuaternion::OvQuaternion(const OvQuaternion& quat)
 	memcpy((void*)this,(void*)&quat,sizeof(OvQuaternion));
 }
 
-OvQuaternion::OvQuaternion( const OvVector3& axis, OvFloat radian )
+OvQuaternion::OvQuaternion( const OvVector3& _vec, OvFloat _w )
+: vec( _vec )
+, w( _w )
 {
-	OvQuaternionMake( *this, axis, radian );
 }
 
 OvQuaternion::OvQuaternion(  OvFloat fX, OvFloat fY, OvFloat fZ, OvFloat fW )
@@ -84,10 +85,10 @@ OvQuaternion OvQuaternion::operator - ( const OvQuaternion& quat) const
 OvQuaternion OvQuaternion::operator * ( const OvQuaternion& quat) const
 {
 	return OvQuaternion(
-		quat.vec.y * vec.z  -  quat.vec.z * vec.y  +  quat.vec.x * w  +  quat.w * vec.x,
-		quat.vec.z * vec.x  -  quat.vec.x * vec.z  +  quat.vec.y * w  +  quat.w * vec.y,
-		quat.vec.x * vec.y  -  quat.vec.y * vec.x  +  quat.vec.z * w  +  quat.w * vec.z,
-		quat.w * w  -  quat.vec.x * vec.x  -  quat.vec.y * vec.y  -  quat.vec.z * vec.z);
+		quat.y * z  -  quat.z * y  +  quat.x * w  +  quat.w * x,
+		quat.z * x  -  quat.x * z  +  quat.y * w  +  quat.w * y,
+		quat.x * y  -  quat.y * x  +  quat.z * w  +  quat.w * z,
+		quat.w * w  -  quat.x * x  -  quat.y * y  -  quat.z * z);
 }
 OvQuaternion OvQuaternion::operator * ( OvFloat val) const
 {
@@ -127,12 +128,13 @@ OvQuaternion OvQuaternion::Conjugate() const
 
 OvQuaternion		OvQuaternion::Inverse() const
 {
-	return Conjugate() / ( vec.x*vec.x + vec.y*vec.y + vec.z*vec.z + w*w );
+	OvFloat norm2 = ( x*x + y*y + z*z + w*w );
+	return OvQuaternion ( -vec / norm2, w  / norm2 );
 }
 
 OvFloat OvQuaternion::Norm() const
 {
-	return sqrtf( vec.x*vec.x + vec.y*vec.y + vec.z*vec.z + w*w );
+	return sqrtf( x*x + y*y + z*z + w*w );
 }
 
 OvQuaternion	OvEulerToQuaternion(OvFloat fX_Rotation,OvFloat fY_Rotation,OvFloat fZ_Rotation)
@@ -152,9 +154,9 @@ OvQuaternion	OvEulerToQuaternion(OvFloat fX_Rotation,OvFloat fY_Rotation,OvFloat
 	OvFloat cos_z = cosf( half_z );
 
 	kQuat.w		=	(+cos_x * cos_y * cos_z) - (sin_x * sin_y * sin_z);
-	kQuat.vec.x		=	(-sin_x * cos_y * cos_z) - (cos_x * sin_y * sin_z);
-	kQuat.vec.y		=	(+sin_x * cos_y * sin_z) - (cos_x * sin_y * cos_z);
-	kQuat.vec.z		=	(-cos_x * cos_y * sin_z) - (sin_x * sin_y * cos_z);
+	kQuat.x		=	(-sin_x * cos_y * cos_z) - (cos_x * sin_y * sin_z);
+	kQuat.y		=	(+sin_x * cos_y * sin_z) - (cos_x * sin_y * cos_z);
+	kQuat.z		=	(-cos_x * cos_y * sin_z) - (sin_x * sin_y * cos_z);
 
 	return kQuat;
 
@@ -167,7 +169,8 @@ OvQuaternion& OvQuaternionMake( OvQuaternion& out, OvFloat axisX,OvFloat axisY,O
 
 OvQuaternion& OvQuaternionMake( OvQuaternion& out, const OvVector3& axis,OvFloat radian )
 {
-	out.vec = axis.Normalize() * sinf(radian/2.0f);
-	out.w = cosf(radian/2.0f);
+	float theta = radian/2.0f;
+	out.vec = axis.Normalize() * sinf( theta );
+	out.w = cosf( theta );
 	return out;
 }

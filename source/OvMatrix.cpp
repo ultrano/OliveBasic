@@ -1,6 +1,7 @@
 #include "OvMatrix.h"
 #include "OvVector3.h"
 #include "OvQuaternion.h"
+#include <math.h>
 
 //! Constructor
 OvMatrix::OvMatrix()
@@ -65,11 +66,66 @@ OvMatrix operator * (OvFloat scalar, const OvMatrix& mat)
 
 OvMatrix& OvMatrix::Identity()
 {
-	memset( this, 0, sizeof(OvMatrix) );
+	return OvMatrixIdentity(*this);
+}
 
-	m[0][0] = m[1][1] = m[2][2] = m[3][3] = 1;
+OvVector3 OvMatrix::GetScale()
+{
+	OvVector3 out;
+	out.x = OvVector3( _11, _12, _13 ).Length();
+	out.y = OvVector3( _21, _22, _23 ).Length();
+	out.z = OvVector3( _31, _32, _33 ).Length();
+	return out;
+}
 
-	return *this;
+OvQuaternion OvMatrix::GetRotate()
+{
+	OvQuaternion out;
+
+	float tr = _11 + _22 + _33;
+
+	if (tr > 0) { 
+		float S = sqrtf(tr+1.0f) * 2; // S=4*out.w 
+		out.w = 0.25f * S;
+		out.x = (_32 - _23) / S;
+		out.y = (_13 - _31) / S; 
+		out.z = (_21 - _12) / S; 
+	} else if ((_11 > _22)&(_11 > _33)) { 
+		float S = sqrtf(1.0f + _11 - _22 - _33) * 2; // S=4*out.x 
+		out.w = (_32 - _23) / S;
+		out.x = 0.25f * S;
+		out.y = (_12 + _21) / S; 
+		out.z = (_13 + _31) / S; 
+	} else if (_22 > _33) { 
+		float S = sqrtf(1.0f + _22 - _11 - _33) * 2; // S=4*out.y
+		out.w = (_13 - _31) / S;
+		out.x = (_12 + _21) / S; 
+		out.y = 0.25f * S;
+		out.z = (_23 + _32) / S; 
+	} else { 
+		float S = sqrtf(1.0f + _33 - _11 - _22) * 2; // S=4*out.z
+		out.w = (_21 - _12) / S;
+		out.x = (_13 + _31) / S;
+		out.y = (_23 + _32) / S;
+		out.z = 0.25f * S;
+	}
+
+	return out;
+}
+
+OvVector3 OvMatrix::GetTranslate()
+{
+	OvVector3 out;
+	return out;
+}
+
+OvMatrix& OvMatrixIdentity( OvMatrix& out )
+{
+	memset( &out, 0, sizeof(OvMatrix) );
+
+	out._11 = out._22 = out._33 = out._44 = 1;
+
+	return out;
 }
 
 OvMatrix& OvMatrixScaling( OvMatrix& out, OvFloat total )
@@ -85,6 +141,7 @@ OvMatrix& OvMatrixScaling( OvMatrix& out, const OvVector3& total )
 OvMatrix& OvMatrixScaling( OvMatrix& out, OvFloat x,OvFloat y,OvFloat z )
 {
 	out.Identity();
+
 	out._11 = x;
 	out._22 = y;
 	out._33 = z;
@@ -104,18 +161,19 @@ OvMatrix& OvMatrixRotation( OvMatrix& out, const OvQuaternion& quat )
 
 	out.Identity();
 
-	out._11 = ax.vec.x;
-	out._21 = ax.vec.y;
-	out._31 = ax.vec.z;
+	out._11 = ax.x;
+	out._21 = ax.y;
+	out._31 = ax.z;
 
-	out._12 = ay.vec.x;
-	out._22 = ay.vec.y;
-	out._32 = ay.vec.z;
+	out._12 = ay.x;
+	out._22 = ay.y;
+	out._32 = ay.z;
 
-	out._13 = az.vec.x;
-	out._23 = az.vec.y;
-	out._33 = az.vec.z;
+	out._13 = az.x;
+	out._23 = az.y;
+	out._33 = az.z;
 
+	return out;
 }
 
 OvMatrix& OvMatrixRotation( OvMatrix& out, const OvVector3& axis, OvFloat radian )

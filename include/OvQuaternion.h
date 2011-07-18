@@ -7,7 +7,7 @@ class OvQuaternion : OvMemObject
 public:
 	OvQuaternion() ;
 	OvQuaternion(const OvQuaternion& );
-	OvQuaternion( const OvVector3& axis, OvFloat radian );
+	OvQuaternion( const OvVector3& _vec, OvFloat _w );
 	OvQuaternion( OvFloat fX, OvFloat fY, OvFloat fZ, OvFloat fW );
 
 	operator OvFloat* ();
@@ -43,7 +43,12 @@ public:
 public:
 
 	OvFloat w;
-	OvVector3 vec;
+	
+	union
+	{
+		struct { OvFloat x,y,z; };
+		struct { OvVector3 vec; };
+	};
 };
 
 //OvQuaternion	OvQuaternionSphericalInterpolate(OvFloat fRate,const OvQuaternion& crScr,const OvQuaternion& crDest );
