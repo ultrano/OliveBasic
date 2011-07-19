@@ -119,3 +119,33 @@ void OvObjectIDVal::Deserialize( OvObjectInputStream & input )
 	__super::Deserialize(input);
 	input.Read( val );
 }
+
+//////////////////////////////////////////////////////////////////////////
+OvRTTI_IMPL(OvQuaternionVal);
+OvFACTORY_OBJECT_IMPL(OvQuaternionVal);
+void OvQuaternionVal::Serialize( OvObjectOutputStream & output )
+{
+	__super::Serialize(output);
+	output.Write( val );
+}
+
+void OvQuaternionVal::Deserialize( OvObjectInputStream & input )
+{
+	__super::Deserialize(input);
+	input.Read( val );
+}
+
+//////////////////////////////////////////////////////////////////////////
+OvRTTI_IMPL(OvMatrixVal);
+OvFACTORY_OBJECT_IMPL(OvMatrixVal);
+void OvMatrixVal::Serialize( OvObjectOutputStream & output )
+{
+	__super::Serialize(output);
+	output.Write( val );
+}
+
+void OvMatrixVal::Deserialize( OvObjectInputStream & input )
+{
+	__super::Deserialize(input);
+	input.Read( val );
+}

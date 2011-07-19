@@ -3,6 +3,8 @@
 #include "OvRect.h"
 #include "OvVector2.h"
 #include "OvVector3.h"
+#include "OvQuaternion.h"
+#include "OvMatrix.h"
 
 OvSmartPointer_Struct(OvValue);
 typedef OvMap<OvString,OvValueSPtr> OvPropertyTable;
@@ -155,4 +157,44 @@ public:
 	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
 
 	OvObjectID val;
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+OvSmartPointer_Struct(OvQuaternionVal);
+struct OvQuaternionVal : public OvValue
+{
+	OvRTTI_DECL(OvQuaternionVal);
+	OvFACTORY_OBJECT_DECL(OvQuaternionVal);
+	OvQuaternionVal(factory){};
+public:
+
+	OvQuaternionVal() {};
+	OvQuaternionVal( const OvQuaternion& _val ) : val(_val){};
+
+	/// Stream
+	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;
+	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
+
+	OvQuaternion val;
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+OvSmartPointer_Struct(OvMatrixVal);
+struct OvMatrixVal : public OvValue
+{
+	OvRTTI_DECL(OvMatrixVal);
+	OvFACTORY_OBJECT_DECL(OvMatrixVal);
+	OvMatrixVal(factory){};
+public:
+
+	OvMatrixVal() {};
+	OvMatrixVal( const OvMatrix& _val ) : val(_val){};
+
+	/// Stream
+	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;
+	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
+
+	OvMatrix val;
 };
