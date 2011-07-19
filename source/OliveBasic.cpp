@@ -13,17 +13,17 @@ void OliveBasic::Startup()
 	OvObjectManager::Startup();
 
 	/// rising rtti
-	OvFloatVal			::RTTI();
-	OvIntVal			::RTTI();
-	OvRectVal			::RTTI();
-	OvStringVal			::RTTI();
-	OvVector2Val		::RTTI();
-	OvVector3Val		::RTTI();
-	OvObjectIDVal		::RTTI();
-	OvQuaternionVal		::RTTI();
-	OvMatrixVal			::RTTI();
-	OvActObject			::RTTI();
-	OvWinMsgComponent	::RTTI();
+	OvFloatVal			::FACTORY();
+	OvIntVal			::FACTORY();
+	OvRectVal			::FACTORY();
+	OvStringVal			::FACTORY();
+	OvVector2Val		::FACTORY();
+	OvVector3Val		::FACTORY();
+	OvObjectIDVal		::FACTORY();
+	OvQuaternionVal		::FACTORY();
+	OvMatrixVal			::FACTORY();
+	OvActObject			::FACTORY();
+	OvWinMsgComponent	::FACTORY();
 	////
 }
 

@@ -21,6 +21,7 @@ struct OvFactoryMemberDeclarer
 
 #define OvFACTORY_OBJECT_DECL( type_name ) \
 	friend OvObject* _construct_function_##type_name();\
+	public: static OvFactoryMemberDeclarer* FACTORY() { return &_static_factory_declarer; };\
 private: static OvObject* _construct_function_(){ return OvNew type_name(factory()); };\
 	private: static OvFactoryMemberDeclarer _static_factory_declarer;
 
