@@ -37,7 +37,7 @@ Type_0*	OvCastTo( Type_1 typePointer );
 private:\
 	static const OvRTTI msh_OvRTTI;\
 public:\
-	static const OvRTTI*	GetRTTI(){return &classname::msh_OvRTTI;};\
+	static const OvRTTI*	RTTI(){return &classname::msh_OvRTTI;};\
 	virtual const OvRTTI* QueryRTTI()const{return &msh_OvRTTI;};\
 	classname*				_this_pointer(){ return this; };\
 	typedef classname __this_class;
@@ -55,8 +55,8 @@ public:\
 private:\
 	static const OvRTTI msh_OvRTTI;\
 public:\
-	static const OvRTTI*	GetRTTI(){return &classname::msh_OvRTTI;};\
-	static const OvRTTI*	GetBaseRTTI(){return __super::GetRTTI();};\
+	static const OvRTTI*	RTTI(){return &classname::msh_OvRTTI;};\
+	static const OvRTTI*	GetBaseRTTI(){return __super::RTTI();};\
 	virtual const OvRTTI*	QueryRTTI()const{return &classname::msh_OvRTTI;};\
 	classname*				_this_pointer(){ return this; };\
 	typedef classname __this_class;
@@ -71,9 +71,9 @@ public:\
 private:\
 	static const OvRTTI msh_OvRTTI;\
 public:\
-	static const OvRTTI*	GetRTTI(){return &classname::msh_OvRTTI;};\
-	static const OvRTTI*	GetBaseRTTI1(){return baseclass1::GetRTTI();};\
-	static const OvRTTI*	GetBaseRTTI2(){return baseclass2::GetRTTI();};\
+	static const OvRTTI*	RTTI(){return &classname::msh_OvRTTI;};\
+	static const OvRTTI*	GetBaseRTTI1(){return baseclass1::RTTI();};\
+	static const OvRTTI*	GetBaseRTTI2(){return baseclass2::RTTI();};\
 	virtual const OvRTTI*	QueryRTTI()const{return &classname::msh_OvRTTI;};\
 	classname*				_this_pointer(){ return this; };\
 	typedef classname __this_class;
@@ -121,7 +121,7 @@ Type_0*	_TraverseTypeTree(const OvRTTI* typeInfo)
 	{
 		return (Type_0*)false;
 	}
-	if ( Type_0::GetRTTI() == typeInfo )
+	if ( Type_0::RTTI() == typeInfo )
 	{
 		return (Type_0*)true;
 	}
@@ -172,7 +172,7 @@ namespace OU
 		template<typename Type_0, typename Type_1>
 		Type_0*	OvIsTypeOf(const Type_1 typePointer)
 		{
-			if ( NULL != typePointer->_this_pointer() && Type_0::GetRTTI() == typePointer->QueryRTTI() )
+			if ( NULL != typePointer->_this_pointer() && Type_0::RTTI() == typePointer->QueryRTTI() )
 			{
 				return static_cast<Type_0*>( typePointer->_this_pointer() );
 			}
