@@ -149,3 +149,18 @@ void OvMatrixVal::Deserialize( OvObjectInputStream & input )
 	__super::Deserialize(input);
 	input.Read( val );
 }
+
+//////////////////////////////////////////////////////////////////////////
+OvRTTI_IMPL(OvBoolVal);
+OvFACTORY_OBJECT_IMPL(OvBoolVal);
+void OvBoolVal::Serialize( OvObjectOutputStream & output )
+{
+	__super::Serialize(output);
+	output.Write( val );
+}
+
+void OvBoolVal::Deserialize( OvObjectInputStream & input )
+{
+	__super::Deserialize(input);
+	input.Read( val );
+}

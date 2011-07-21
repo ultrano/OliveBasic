@@ -198,3 +198,24 @@ public:
 
 	OvMatrix val;
 };
+
+//////////////////////////////////////////////////////////////////////////
+
+OvSmartPointer_Struct(OvBoolVal);
+struct OvBoolVal : public OvValue
+{
+	OvRTTI_DECL(OvBoolVal);
+	OvFACTORY_OBJECT_DECL(OvBoolVal);
+	OvBoolVal(factory){};
+public:
+
+	OvBoolVal() {};
+	OvBoolVal( const OvBool& _val ) : val(_val){};
+
+	/// Stream
+	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;
+	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
+
+	OvBool val;
+};
+
