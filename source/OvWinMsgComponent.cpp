@@ -76,7 +76,6 @@ LRESULT CALLBACK OvWinMsgNotify( HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		{
 			comp->OnMsgNotified( msg );
 		}
-		return 1;
 	}
-	return 0;
+	return DefWindowProc( hWnd, message, wParam, lParam );
 }
