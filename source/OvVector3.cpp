@@ -5,18 +5,18 @@ OvVector3 OvVector3::AXIS_X(1,0,0);
 OvVector3 OvVector3::AXIS_Y(0,1,0);
 OvVector3 OvVector3::AXIS_Z(0,0,1);
 
-OvVector3 OvVector3::Normalize() const
+OvVector3 OvVector3::Normal() const
 {
 	OvFloat kfLength = Length();
 	return kfLength? OvVector3(x/kfLength,y/kfLength,z/kfLength) : *this;
 }
 
-OvFloat	OvVector3::Dot(const OvVector3& p2)
+OvFloat	OvVector3::Dot(const OvVector3& p2) const
 {
 	return OvFloat(x*p2.x + y*p2.y + z*p2.z);
 }
 
-OvVector3 OvVector3::Cross( const OvVector3& p2 )
+OvVector3 OvVector3::Cross( const OvVector3& p2 ) const
 {
 	return OvVector3
 		( y*p2.z - p2.y*z

@@ -201,3 +201,46 @@ OvMatrix& OvMatrixTranslation( OvMatrix& out, OvFloat x,OvFloat y,OvFloat z )
 	return out;
 }
 
+OvMatrix& OvMatrixProjectLH( OvMatrix& out, OvFloat fov, OvFloat aspect, OvFloat Zf, OvFloat Zn )
+{
+
+	OvFloat w = 1.0f/tanf(fov/2.0f);
+	OvFloat h = w * aspect;
+	OvFloat Q = Zf / (Zf - Zn);
+
+	//////////////////////////////////////////////////////////////////////////
+	out._11 = w;	out._12 = 0;	out._13 = 0;	 out._14 = 0;
+
+	out._21 = 0;	out._22 = h;	out._23 = 0;	 out._24 = 0;
+
+	out._31 = 0;	out._32 = 0;	out._33 = Q;	 out._34 = 1;
+
+	out._41 = 0;	out._42 = 0;	out._43 = -Zn*Q; out._44 = 0;
+	//////////////////////////////////////////////////////////////////////////
+	return out;
+}
+
+OvMatrix& OvMatrixView( OvMatrix& out, const OvVector3& look, const OvVector3& up, const OvVector3& pos )
+{
+	OvVector3 looknorm = look.Normal();
+	OvVector3 upnorm = up.Normal();
+	OvVector3 rightnrom = look.Cross(up).Normal();
+
+	//////////////////////////////////////////////////////////////////////////
+	out._11 = rightnrom.x;	out._12 = upnorm.x;	out._13 = looknorm.x;	 out._14 = 0;
+															  			
+	out._21 = rightnrom.y;	out._22 = upnorm.y;	out._23 = looknorm.y;	 out._24 = 0;
+															  			
+	out._31 = rightnrom.z;	out._32 = upnorm.z;	out._33 = looknorm.z;	 out._34 = 0;
+
+	//////////////////////////////////////////////////////////////////////////
+	
+	out._41 = -rightnrom.Dot( pos );
+	out._42 = -upnorm.Dot( pos );
+	out._43 = -looknorm.Dot( pos );
+	out._44 = 1;
+
+	//////////////////////////////////////////////////////////////////////////
+
+	return out;
+}

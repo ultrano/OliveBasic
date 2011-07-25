@@ -11,9 +11,9 @@ public :
 	OvVector3() {x = 0; y = 0; z = 0; };
 	OvVector3(OvFloat _fX,OvFloat _fY,OvFloat _fZ) { x = _fX; y = _fY; z = _fZ;  };
 
-	OvVector3	Normalize() const;
-	OvFloat		Dot(const OvVector3& p2);
-	OvVector3	Cross(const OvVector3& p2);
+	OvVector3	Normal() const;
+	OvFloat		Dot(const OvVector3& p2) const;
+	OvVector3	Cross(const OvVector3& p2) const;
 	OvFloat		Length() const;
 	OvFloat		Length(const OvVector3& _rTargetPoint) const;
 

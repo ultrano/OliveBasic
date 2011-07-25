@@ -54,3 +54,6 @@ OvMatrix&	OvMatrixRotation( OvMatrix& out, const OvVector3& axis, OvFloat radian
 
 OvMatrix&	OvMatrixTranslation( OvMatrix& out, const OvVector3& pos );
 OvMatrix&	OvMatrixTranslation( OvMatrix& out, OvFloat x,OvFloat y,OvFloat z );
+
+OvMatrix&	OvMatrixProjectLH( OvMatrix& out, OvFloat fov, OvFloat aspect, OvFloat Zf, OvFloat Zn );
+OvMatrix&	OvMatrixView( OvMatrix& out, const OvVector3& look, const OvVector3& up, const OvVector3& pos );

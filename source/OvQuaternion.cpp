@@ -170,7 +170,7 @@ OvQuaternion& OvQuaternionMake( OvQuaternion& out, OvFloat axisX,OvFloat axisY,O
 OvQuaternion& OvQuaternionMake( OvQuaternion& out, const OvVector3& axis,OvFloat radian )
 {
 	float theta = radian/2.0f;
-	out.vec = axis.Normalize() * sinf( theta );
+	out.vec = axis.Normal() * sinf( theta );
 	out.w = cosf( theta );
 	return out;
 }
