@@ -9,6 +9,27 @@ OvActObject::OvActObject( factory )
 
 }
 
+
+OvBool OvActObject::InsertProp( const OvString & key, OvValueSPtr val )
+{
+	if ( __super::InsertProp( key, val ) )
+	{
+		PostComponentMsg( OvNew OvPropNotifyMsg( OvPropNotifyMsg::Prop_Insert, key, val ) );
+		return true;
+	}
+	return false;
+}
+
+OvValueSPtr OvActObject::RemoveProp( const OvString & key )
+{
+	OvValueSPtr val = __super::RemoveProp( key );
+	if ( val )
+	{
+		PostComponentMsg( OvNew OvPropNotifyMsg( OvPropNotifyMsg::Prop_Remove, key, val ) );
+	}
+	return val;
+}
+
 void OvActObject::Update( OvFloat elapsed )
 {
 	OvObjectSet components = m_components;

@@ -17,6 +17,10 @@ public:
 
 	virtual void Update( OvFloat elapsed );
 
+	/// Values
+	virtual OvBool			InsertProp( const OvString & key, OvValueSPtr val );
+	virtual OvValueSPtr 	RemoveProp( const OvString & key );
+
 	/// Component
 	void	GetComponentSet( OvObjectSet& components );
 	void	PostComponentMsg( OvMessageSPtr msg );

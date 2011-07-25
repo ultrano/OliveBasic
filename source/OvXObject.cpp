@@ -43,9 +43,14 @@ void OvXObject::Deserialize( OvObjectInputStream & input )
 
 }
 
-void OvXObject::InsertProp( const OvString & key, OvValueSPtr val )
+OvBool OvXObject::InsertProp( const OvString & key, OvValueSPtr val )
 {
-	m_prop_table.insert( std::make_pair( key, val ) );
+	if ( FindProp( key ) == NULL )
+	{
+		m_prop_table.insert( std::make_pair( key, val ) );
+		return true;
+	}
+	return false;
 }
 
 OvValueSPtr OvXObject::FindProp( const OvString & key )
