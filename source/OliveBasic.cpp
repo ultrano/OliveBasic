@@ -7,7 +7,7 @@
 #include "OvActObject.h"
 #include "OvWinMsgComponent.h"
 
-void OliveBasic::Startup()
+OliveBasic::OliveBasic()
 {
 	OvMemoryMgr::Startup();
 	OvObjectManager::Startup();
@@ -17,7 +17,7 @@ void OliveBasic::Startup()
 	OvIntVal			::FACTORY();
 	OvRectVal			::FACTORY();
 	OvStringVal			::FACTORY();
-	OvVector2Val		::FACTORY();
+	OvVector2Val		::FACTORY();;
 	OvVector3Val		::FACTORY();
 	OvObjectIDVal		::FACTORY();
 	OvQuaternionVal		::FACTORY();
@@ -27,7 +27,7 @@ void OliveBasic::Startup()
 	////
 }
 
-void OliveBasic::Cleanup()
+OliveBasic::~OliveBasic()
 {
 	OvObjectManager::Cleanup();
 	OvMemoryMgr::Cleanup();
