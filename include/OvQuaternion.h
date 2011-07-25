@@ -51,6 +51,8 @@ public:
 	};
 };
 
+typedef OvQuaternion	OvVector4;
+
 //OvQuaternion	OvQuaternionSphericalInterpolate(OvFloat fRate,const OvQuaternion& crScr,const OvQuaternion& crDest );
 OvQuaternion	OvEulerToQuaternion(OvFloat fX_Rotation,OvFloat fY_Rotation,OvFloat fZ_Rotation);
 
