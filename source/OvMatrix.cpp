@@ -29,21 +29,7 @@ OvMatrix::OvMatrix
 OvMatrix	OvMatrix::operator * (const OvMatrix& mat) const
 {
 	OvMatrix	out;
-	const OvMatrix&	p1 = *this;
-	const OvMatrix&	p2 = mat;
-
-	for ( OvByte row = 0 ; row < 4 ; ++row )
-	{
-		for ( OvByte col = 0 ; col < 4 ; ++col )
-		{
-			out.m[row][col] 
-			= p1.m[row][0] * p2.m[0][col]
-			+ p1.m[row][1] * p2.m[1][col]
-			+ p1.m[row][2] * p2.m[2][col]
-			+ p1.m[row][3] * p2.m[3][col];
-		}
-	}
-	
+	OvMatrixMultiply( out, *this, mat );
 	return out;
 }
 
@@ -122,11 +108,42 @@ OvVector3 OvMatrix::GetTranslate()
 	return out;
 }
 
+const OvMatrix& OvMatrix::operator=( const OvMatrix& mat )
+{
+	memcpy((void*)this,(void*)&mat,sizeof(OvMatrix));
+	return *this;
+}
+
+const OvMatrix& OvMatrix::operator*=( const OvMatrix& mat )
+{
+	(*this) = (*this) * mat;
+	return *this;
+}
+
+
 OvMatrix& OvMatrixIdentity( OvMatrix& out )
 {
 	memset( &out, 0, sizeof(OvMatrix) );
 
 	out._11 = out._22 = out._33 = out._44 = 1;
+
+	return out;
+}
+
+OvMatrix& OvMatrixMultiply( OvMatrix& out, const OvMatrix& m1, const OvMatrix& m2 )
+{
+
+	for ( OvByte row = 0 ; row < 4 ; ++row )
+	{
+		for ( OvByte col = 0 ; col < 4 ; ++col )
+		{
+			out.m[row][col] 
+			= m1.m[row][0] * m2.m[0][col]
+			+ m1.m[row][1] * m2.m[1][col]
+			+ m1.m[row][2] * m2.m[2][col]
+			+ m1.m[row][3] * m2.m[3][col];
+		}
+	}
 
 	return out;
 }

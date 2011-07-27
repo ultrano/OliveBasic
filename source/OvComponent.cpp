@@ -15,25 +15,23 @@ OvComponent::~OvComponent()
 
 }
 
-void OvComponent::SetTarget( OvActObjectSPtr target )
+void OvComponent::_set_target( OvActObjectSPtr target )
 {
-	if ( m_target != target )
-	{
-		if ( m_target )
-		{
-			m_target->_remove_component( this );
-		}
-
-		if ( m_target = target.GetRear() )
-		{
-			m_target->_insert_component( this );
-		}
-	}
+	m_target = target.GetRear();
 }
 
 OvActObjectSPtr OvComponent::GetTarget() const
 {
 	return m_target;
+}
+
+void OvComponent::RemoveFromTarget()
+{
+	if ( m_target )
+	{
+		m_target->RemoveComponent( this );
+		m_target = NULL;
+	}
 }
 
 void OvComponent::OnComponentMsg( OvMessage* msg )

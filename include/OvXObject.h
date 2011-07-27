@@ -14,8 +14,8 @@ public:
 	~OvXObject();
 
 	/// Values
-	virtual OvBool			InsertProp( const OvString & key, OvValueSPtr val );
-	virtual OvValueSPtr 	RemoveProp( const OvString & key );
+	OvBool			InsertProp( const OvString & key, OvValueSPtr val );
+	OvValueSPtr 	RemoveProp( const OvString & key );
 
 	OvValueSPtr 	FindProp( const OvString & key );
 	void			GetPropTable( OvPropertyTable& prop_table );

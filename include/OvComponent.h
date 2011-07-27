@@ -8,6 +8,7 @@ OvSmartPointer_Class(OvComponent);
 class OvComponent : public OvXObject
 {
 	OvRTTI_DECL(OvComponent);
+	friend class OvActObject;
 public:
 
 	OvComponent();
@@ -23,9 +24,11 @@ public:
 
 	virtual void	Update( OvTimeTick elapsed ) = 0;
 
-	void		 SetTarget( OvActObjectSPtr target );
 	OvActObjectSPtr GetTarget() const;
+	void			RemoveFromTarget();
 
+private:
+	void		 _set_target( OvActObjectSPtr target );
 private:
 
 	OvActObject* m_target;

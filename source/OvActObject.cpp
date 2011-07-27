@@ -9,27 +9,6 @@ OvActObject::OvActObject( factory )
 
 }
 
-
-OvBool OvActObject::InsertProp( const OvString & key, OvValueSPtr val )
-{
-	if ( __super::InsertProp( key, val ) )
-	{
-		PostComponentMsg( OvNew OvPropNotifyMsg( OvPropNotifyMsg::Prop_Insert, key, val ) );
-		return true;
-	}
-	return false;
-}
-
-OvValueSPtr OvActObject::RemoveProp( const OvString & key )
-{
-	OvValueSPtr val = __super::RemoveProp( key );
-	if ( val )
-	{
-		PostComponentMsg( OvNew OvPropNotifyMsg( OvPropNotifyMsg::Prop_Remove, key, val ) );
-	}
-	return val;
-}
-
 void OvActObject::Update( OvFloat elapsed )
 {
 	OvObjectSet components = m_components;
@@ -59,21 +38,23 @@ void OvActObject::Update( OvFloat elapsed )
 	}
 }
 
-void OvActObject::_insert_component( OvComponentSPtr comp )
+void OvActObject::InsertComponent( OvComponentSPtr comp )
 {
 	if ( comp )
 	{
+		comp->_set_target( this );
 		m_components.insert( comp );
 		comp->Setup();
 	}
 }
 
-void OvActObject::_remove_component( OvComponentSPtr comp )
+void OvActObject::RemoveComponent( OvComponentSPtr comp )
 {
 	if ( comp )
 	{
 		comp->Teardown();
 		m_components.erase( comp );
+		comp->_set_target( NULL );
 	}
 }
 

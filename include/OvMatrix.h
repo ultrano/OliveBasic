@@ -19,9 +19,8 @@ public:
 
 	OvMatrix	operator * (const OvMatrix&) const;
 	OvMatrix	operator * (OvFloat ) const;
-
-	friend OvMatrix operator * (OvFloat, const OvMatrix& );
-	friend OvMatrix operator * (const OvMatrix&, const OvMatrix& );
+	const OvMatrix&	operator = (const OvMatrix&);
+	const OvMatrix&	operator *=( const OvMatrix& mat ) ;
 
 	OvMatrix&	Identity();
 
@@ -44,6 +43,7 @@ public:
 };
 
 OvMatrix&	OvMatrixIdentity( OvMatrix& out );
+OvMatrix&	OvMatrixMultiply( OvMatrix& out, const OvMatrix& m1, const OvMatrix& m2 );
 
 OvMatrix&	OvMatrixScaling( OvMatrix& out, OvFloat total );
 OvMatrix&	OvMatrixScaling( OvMatrix& out, const OvVector3& total );

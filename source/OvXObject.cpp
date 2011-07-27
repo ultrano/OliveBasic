@@ -16,6 +16,8 @@ void OvXObject::Serialize( OvObjectOutputStream & output )
 {
 	__super::Serialize( output );
 
+	output.Write(1);
+
 	output.Write( m_prop_table.size() );
 	for each ( const OvPropertyTable::value_type & val in m_prop_table )
 	{
@@ -29,16 +31,26 @@ void OvXObject::Deserialize( OvObjectInputStream & input )
 {
 	__super::Deserialize( input );
 
-	OvUInt count = 0;
+	OvUInt class_version = 0;
+	input.Read(class_version);
 
-	count = 0;
-	input.Read( count );
-	while ( count-- )
+	switch ( class_version )
 	{
-		OvString key;
-		input.Read( key );
-		OvValueSPtr val = (OvValue*)input.ReadObject();
-		m_prop_table.insert( std::make_pair( key, val ) );
+	case 1:
+		{
+			OvUInt count = 0;
+
+			count = 0;
+			input.Read( count );
+			while ( count-- )
+			{
+				OvString key;
+				input.Read( key );
+				OvValueSPtr val = (OvValue*)input.ReadObject();
+				m_prop_table.insert( std::make_pair( key, val ) );
+			}
+		}
+		break;
 	}
 
 }

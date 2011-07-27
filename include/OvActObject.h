@@ -17,11 +17,9 @@ public:
 
 	virtual void Update( OvFloat elapsed );
 
-	/// Values
-	virtual OvBool			InsertProp( const OvString & key, OvValueSPtr val );
-	virtual OvValueSPtr 	RemoveProp( const OvString & key );
-
 	/// Component
+	void	InsertComponent( OvComponentSPtr comp );
+	void	RemoveComponent( OvComponentSPtr comp );
 	void	GetComponentSet( OvObjectSet& components );
 	void	PostComponentMsg( OvMessageSPtr msg );
 	template<typename T> OvSmartPointer<T> FindComponent();
@@ -39,11 +37,6 @@ public:
 	/// Stream
 	virtual void 	Serialize( OvObjectOutputStream & output ) OVERRIDE;
 	virtual void 	Deserialize( OvObjectInputStream & input ) OVERRIDE;
-
-private:
-
-	void	_insert_component( OvComponentSPtr comp );
-	void	_remove_component( OvComponentSPtr comp );
 
 private:
 

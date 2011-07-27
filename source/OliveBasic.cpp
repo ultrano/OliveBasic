@@ -17,7 +17,7 @@ OliveBasic::OliveBasic()
 	OvIntVal			::FACTORY();
 	OvRectVal			::FACTORY();
 	OvStringVal			::FACTORY();
-	OvVector2Val		::FACTORY();;
+	OvVector2Val		::FACTORY();
 	OvVector3Val		::FACTORY();
 	OvObjectIDVal		::FACTORY();
 	OvQuaternionVal		::FACTORY();
