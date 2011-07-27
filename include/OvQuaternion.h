@@ -42,13 +42,13 @@ public:
 
 public:
 
-	OvFloat w;
-	
 	union
 	{
 		struct { OvFloat x,y,z; };
 		struct { OvVector3 vec; };
 	};
+	OvFloat w;
+
 };
 
 typedef OvQuaternion	OvVector4;

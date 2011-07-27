@@ -148,6 +148,19 @@ OvMatrix& OvMatrixMultiply( OvMatrix& out, const OvMatrix& m1, const OvMatrix& m
 	return out;
 }
 
+OvMatrix&		OvMatrixTranspose( OvMatrix& out, const OvMatrix& m1)
+{
+	for ( OvByte row = 0 ; row < 4 ; ++row )
+	{
+		for ( OvByte col = 0 ; col < 4 ; ++col )
+		{
+			out.m[col][row] = m1.m[row][col];
+		}
+	}
+
+	return out;
+}
+
 OvMatrix& OvMatrixScaling( OvMatrix& out, OvFloat total )
 {
 	return OvMatrixScaling( out, total, total, total );
@@ -218,12 +231,12 @@ OvMatrix& OvMatrixTranslation( OvMatrix& out, OvFloat x,OvFloat y,OvFloat z )
 	return out;
 }
 
-OvMatrix& OvMatrixProjectLH( OvMatrix& out, OvFloat fov, OvFloat aspect, OvFloat Zf, OvFloat Zn )
+OvMatrix& OvMatrixProjectLH( OvMatrix& out, OvFloat fov, OvFloat Znear, OvFloat Zfar, OvFloat aspect )
 {
 
 	OvFloat w = 1.0f/tanf(fov/2.0f);
 	OvFloat h = w * aspect;
-	OvFloat Q = Zf / (Zf - Zn);
+	OvFloat Q = Zfar / (Zfar - Znear);
 
 	//////////////////////////////////////////////////////////////////////////
 	out._11 = w;	out._12 = 0;	out._13 = 0;	 out._14 = 0;
@@ -232,7 +245,7 @@ OvMatrix& OvMatrixProjectLH( OvMatrix& out, OvFloat fov, OvFloat aspect, OvFloat
 
 	out._31 = 0;	out._32 = 0;	out._33 = Q;	 out._34 = 1;
 
-	out._41 = 0;	out._42 = 0;	out._43 = -Zn*Q; out._44 = 0;
+	out._41 = 0;	out._42 = 0;	out._43 = -Znear*Q; out._44 = 0;
 	//////////////////////////////////////////////////////////////////////////
 	return out;
 }

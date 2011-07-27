@@ -11,9 +11,10 @@ class OvActObject :  public OvXObject
 	OvFACTORY_OBJECT_DECL(OvActObject);
 
 	friend class OvComponent;
+	OvActObject(factory);
 public:
 
-	OvActObject(factory);
+	OvActObject();;
 
 	virtual void Update( OvFloat elapsed );
 
@@ -30,6 +31,8 @@ public:
 	void			AttachChild( OvActObjectSPtr child );
 	OvActObjectSPtr DettachChild( OvActObjectSPtr child );
 	void			ClearChildren();
+
+	/// Get/Set Parent
 	void			SetParent( OvActObject* parent );
 	OvActObjectSPtr GetParent();
 

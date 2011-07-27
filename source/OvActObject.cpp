@@ -9,6 +9,11 @@ OvActObject::OvActObject( factory )
 
 }
 
+OvActObject::OvActObject()
+{
+
+}
+
 void OvActObject::Update( OvFloat elapsed )
 {
 	OvObjectSet components = m_components;
