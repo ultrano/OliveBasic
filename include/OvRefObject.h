@@ -55,4 +55,3 @@ private:
 	OvInt	m_ref_count;
 	OvCriticalSection m_cs;
 };
-

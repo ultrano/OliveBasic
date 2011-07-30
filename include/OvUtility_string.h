@@ -11,7 +11,7 @@ namespace OU
 		OvString trim_right (const OvString & s, const OvString & t = SPACES);
 		OvString trim_left (const OvString & s, const OvString & t = SPACES);
 		OvString trim (const OvString & s, const OvString & t = SPACES);
-		OvString split ( OvString & s, const OvString & delim = " ", const bool trim_spaces = true);
+		OvString split( const OvString & s, OvString & left, OvString & right, const OvString & delim = " ", const bool trim_space = true);
 		OvString format( const OvChar* form, ...);
 
 		OvString replace( const OvString& sentence, const OvString& oldone, const OvString& newone );

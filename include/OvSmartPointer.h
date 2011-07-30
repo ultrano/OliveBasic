@@ -41,3 +41,17 @@ private:
 	Type_0*	m_pReferenceTarget;
 };
 #include "OvSmartPointer.inl"
+
+
+//////////////////////////////////////////////////////////////////////////
+
+template<typename Type_0, typename Type_1>
+OvSmartPointer<Type_0>	OvCastTo( OvSmartPointer<Type_1> typePointer )
+{
+	if( !typePointer.GetRear() )
+		return NULL;
+
+	const OvRTTI* kpRTTI = typePointer->QueryRTTI();
+
+	return ( _TraverseTypeTree<Type_0>(kpRTTI) )? typePointer:NULL;
+}

@@ -27,33 +27,36 @@ namespace OU
 			OvString d (s); 
 			return trim_left (trim_right (d, t), t) ; 
 		}  // end of trim
-		OvString split (	OvString & s, 
+		OvString split ( const OvString & s, 
+			OvString & left, 
+			OvString & right, 
 			const OvString & delim,
-			const bool trim_spaces )
+			const bool trim_space )
 		{
 
+			right = s;
 			// find delimiter  
-			OvString::size_type i (s.find (delim));
+			OvString::size_type i (right.find (delim));
 
 			// split into before and after delimiter
-			OvString w (s.substr (0, i));
+			left = (right.substr (0, i));
 
 			// if no delimiter, remainder is empty
 			if (i == OvString::npos)
-				s.erase ();
+				right.erase ();
 			else
 				// erase up to the delimiter
-				s.erase (0, i + delim.size ());
+				right.erase (0, i + delim.size ());
 
 			// trim spaces if required
-			if (trim_spaces)
+			if (trim_space)
 			{
-				w = trim (w);
-				s = trim (s);
+				left = trim (left, SPACES);
+				right = trim (right, SPACES);
 			}
 
 			// return first word in line
-			return w;
+			return left;
 
 		}
 		OvString format( const OvChar* form, ...)
@@ -80,9 +83,10 @@ namespace OU
 		{
 			OvVector<OvString> extras;
 			OvString target = sentence;
+			OvString left;
 			while ( ! target.empty() )
 			{
-				extras.push_back( OU::string::split( target, oldone ) );
+				extras.push_back( OU::string::split( target, left, target, oldone ) );
 			}
 
 			for each ( const OvString& val in extras )

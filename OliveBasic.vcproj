@@ -565,6 +565,18 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvColor"
+				>
+				<File
+					RelativePath=".\source\OvColor.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvColor.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Refernce"
@@ -670,6 +682,18 @@
 				>
 				<File
 					RelativePath=".\include\OvUtility_thread.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvUtility_dataconvert"
+				>
+				<File
+					RelativePath=".\source\OvUtility_dataconvert.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvUtility_dataconvert.h"
 					>
 				</File>
 			</Filter>

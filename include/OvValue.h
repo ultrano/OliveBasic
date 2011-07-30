@@ -5,6 +5,7 @@
 #include "OvVector3.h"
 #include "OvQuaternion.h"
 #include "OvMatrix.h"
+#include "OvColor.h"
 
 OvSmartPointer_Struct(OvValue);
 typedef OvMap<OvString,OvValueSPtr> OvPropertyTable;
@@ -217,5 +218,25 @@ public:
 	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
 
 	OvBool val;
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+OvSmartPointer_Struct(OvColorVal);
+struct OvColorVal : public OvValue
+{
+	OvRTTI_DECL(OvColorVal);
+	OvFACTORY_OBJECT_DECL(OvColorVal);
+	OvColorVal(factory){};
+public:
+
+	OvColorVal() {};
+	OvColorVal( const OvColor& _val ) : val(_val){};
+
+	/// Stream
+	virtual void Serialize( OvObjectOutputStream & output ) OVERRIDE;
+	virtual void Deserialize( OvObjectInputStream & input ) OVERRIDE;
+
+	OvColor val;
 };
 

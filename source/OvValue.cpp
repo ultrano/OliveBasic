@@ -164,3 +164,18 @@ void OvBoolVal::Deserialize( OvObjectInputStream & input )
 	__super::Deserialize(input);
 	input.Read( val );
 }
+
+//////////////////////////////////////////////////////////////////////////
+OvRTTI_IMPL(OvColorVal);
+OvFACTORY_OBJECT_IMPL(OvColorVal);
+void OvColorVal::Serialize( OvObjectOutputStream & output )
+{
+	__super::Serialize(output);
+	output.Write( val );
+}
+
+void OvColorVal::Deserialize( OvObjectInputStream & input )
+{
+	__super::Deserialize(input);
+	input.Read( val );
+}

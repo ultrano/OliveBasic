@@ -15,6 +15,7 @@
 #include "OvUtility_path.h"
 #include "OvUtility_rtti.h"
 #include "OvUtility_thread.h"
+#include "OvUtility_dataconvert.h"
 //////////////////////////////////////////////////////////////////////////
 
 #ifndef max

@@ -139,73 +139,66 @@ Type_0*	_TraverseTypeTree(const OvRTTI* typeInfo)
 }
 
 //////////////////////////////////////////////////////////////////////////
-namespace OU
+template<typename Type_0>
+const OvString&	OvTypeName( Type_0 typePointer )
 {
-	namespace rtti
+	if (typePointer)
 	{
-		template<typename Type_0>
-		const OvString&	OvTypeName( Type_0 typePointer )
-		{
-			if (typePointer)
-			{
-				return (const_cast<OvRTTI*>(typePointer->QueryRTTI()))->TypeName();
-			}
-			static OvString emptyName = "";
-			return emptyName;
-		}
-
-		//////////////////////////////////////////////////////////////////////////
-
-		//////////////////////////////////////////////////////////////////////////
-
-		template<typename Type_0, typename Type_1>
-		OvBool	OvIsSame( Type_1 typePointer0, Type_1 typePointer1 )
-		{
-			if ( typePointer0 && typePointer1 )
-			{
-				return typePointer0->QueryRTTI() == typePointer1->QueryRTTI();
-			}
-			return false;
-		}
-
-		//////////////////////////////////////////////////////////////////////////
-		template<typename Type_0, typename Type_1>
-		Type_0*	OvIsTypeOf(const Type_1 typePointer)
-		{
-			if ( NULL != typePointer->_this_pointer() && Type_0::RTTI() == typePointer->QueryRTTI() )
-			{
-				return static_cast<Type_0*>( typePointer->_this_pointer() );
-			}
-			return NULL;
-		}
-		//////////////////////////////////////////////////////////////////////////
-
-
-		template<typename Type_0, typename Type_1>
-		Type_0*	OvIsKindOf( Type_1 typePointer )
-		{
-			if( !typePointer || NULL == typePointer->_this_pointer() )
-				return NULL;
-
-			const OvRTTI* kpRTTI = typePointer->QueryRTTI();
-
-			return _TraverseTypeTree<Type_0>(kpRTTI);
-
-		}
-		//////////////////////////////////////////////////////////////////////////
-
-		template<typename Type_0, typename Type_1>
-		Type_0*	OvCastTo( Type_1 typePointer )
-		{
-			if( !typePointer || NULL == typePointer->_this_pointer() )
-				return NULL;
-
-			const OvRTTI* kpRTTI = typePointer->QueryRTTI();
-
-			return ( _TraverseTypeTree<Type_0>(kpRTTI) )? (Type_0*)typePointer->_this_pointer():NULL;
-		}
+		return (const_cast<OvRTTI*>(typePointer->QueryRTTI()))->TypeName();
 	}
+	static OvString emptyName = "";
+	return emptyName;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////
+
+template<typename Type_0, typename Type_1>
+OvBool	OvIsSame( Type_1 typePointer0, Type_1 typePointer1 )
+{
+	if ( typePointer0 && typePointer1 )
+	{
+		return typePointer0->QueryRTTI() == typePointer1->QueryRTTI();
+	}
+	return false;
+}
+
+//////////////////////////////////////////////////////////////////////////
+template<typename Type_0, typename Type_1>
+OvBool	OvIsTypeOf(const Type_1 typePointer)
+{
+	if ( NULL != typePointer->_this_pointer() )
+	{
+		return Type_0::RTTI() == typePointer->QueryRTTI();
+	}
+	return false;
+}
+//////////////////////////////////////////////////////////////////////////
+
+
+template<typename Type_0, typename Type_1>
+OvBool	OvIsKindOf( Type_1 typePointer )
+{
+	if( !typePointer || NULL == typePointer->_this_pointer() )
+		return NULL;
+
+	const OvRTTI* kpRTTI = typePointer->QueryRTTI();
+
+	return !!_TraverseTypeTree<Type_0>(kpRTTI);
+
+}
+//////////////////////////////////////////////////////////////////////////
+
+template<typename Type_0, typename Type_1>
+Type_0*	OvCastTo( Type_1* typePointer )
+{
+	if( !typePointer )
+		return NULL;
+
+	const OvRTTI* kpRTTI = typePointer->QueryRTTI();
+
+	return ( _TraverseTypeTree<Type_0>(kpRTTI) )? (Type_0*)typePointer:NULL;
 }
 
 //! 자주 사용하므로 기본 네임스페이스로 지정해놓자.
-using namespace OU::rtti;
