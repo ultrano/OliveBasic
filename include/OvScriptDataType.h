@@ -19,18 +19,22 @@ class OvScriptFloatType : public OvScriptDataType
 };
 class OvScriptVector2Type : public OvScriptDataType
 {
+	virtual void		 Method( OvScriptState& env, const OvString& method ) OVERRIDE;
 	virtual OvObjectSPtr NewInstance() OVERRIDE;
 };
 class OvScriptVector3Type : public OvScriptDataType
 {
+	virtual void		 Method( OvScriptState& env, const OvString& method ) OVERRIDE;
 	virtual OvObjectSPtr NewInstance() OVERRIDE;
 };
 class OvScriptStringType : public OvScriptDataType
 {
+	virtual void		 Method( OvScriptState& env, const OvString& method ) OVERRIDE;
 	virtual OvObjectSPtr NewInstance() OVERRIDE;
 };
 class OvScriptColorType : public OvScriptDataType
 {
+	virtual void		 Method( OvScriptState& env, const OvString& method ) OVERRIDE;
 	virtual OvObjectSPtr NewInstance() OVERRIDE;
 };
 
@@ -40,5 +44,7 @@ class OvScriptActorType : public OvScriptDataType
 public:
 	OvPropertyTable properties;
 	OvSet<OvString>	components;
+
+	virtual void		 Method( OvScriptState& env, const OvString& method ) OVERRIDE;
 	virtual OvObjectSPtr NewInstance() OVERRIDE;
 };
