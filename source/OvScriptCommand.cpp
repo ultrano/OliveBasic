@@ -3,18 +3,16 @@
 #include "OvScriptState.h"
 #include "OvUtility.h"
 
-void OvNewCommand::CmpProc( OvScriptState& env, const OvString& parameters ) 
+void OvNewCommand::CmpProc( OvScriptState& env, const OvCmdArgs& args ) 
 {
-	OvString type;
-	OvString init;
-	OvString dummy;
-	OU::string::split( parameters, type, init );
-	OU::string::split( init, init, dummy );
 
-	if ( !type.empty() )
+	if ( !args.empty() )
 	{
+		OvString init;
+		if ( args.size() >= 2 ) init = args.at(1);
+
 		OvObjectSPtr obj = NULL;
-		if ( OvScriptDataType* datatype = env.FindDataType( type ) )
+		if ( OvScriptDataType* datatype = env.FindDataType( args.at(0) ) )
 		{
 			obj = datatype->NewInstance();
 			env.PushStack( OvNew OvStringVal( init ) );
@@ -24,53 +22,50 @@ void OvNewCommand::CmpProc( OvScriptState& env, const OvString& parameters )
 	}
 }
 
-void OvSetCommand::CmpProc( OvScriptState& env, const OvString& parameters ) 
+void OvSetCommand::CmpProc( OvScriptState& env, const OvCmdArgs& args ) 
 {
-	OvString name;
-	OvString dummy;
-	OU::string::split( parameters, name, dummy );
-
-	if ( !name.empty() )
+	if ( !args.empty() )
 	{
-		env.SetVariable( name, env.PopStack() );
+		env.SetVariable( args.at(0), env.PopStack() );
 	}
 }
 
-void OvRemoveCommand::CmpProc( OvScriptState& env, const OvString& parameters ) 
+void OvRemoveCommand::CmpProc( OvScriptState& env, const OvCmdArgs& args ) 
 {
-	OvString name;
-	OvString dummy;
-	OU::string::split( parameters, name, dummy );
-	if ( !name.empty() )
+	if ( !args.empty() )
 	{
-		env.RemoveVariable( name );
+		env.RemoveVariable( args.at(0) );
 	}
 }
 
-void OvStakupCommand::CmpProc( OvScriptState& env, const OvString& parameters )
+void OvStakupCommand::CmpProc( OvScriptState& env, const OvCmdArgs& args )
 {
-	OvString name;
-	OvString dummy;
-	OU::string::split( parameters, name, dummy );
-	if ( !name.empty() )
+	if ( !args.empty() )
 	{
-		env.PushStack( env.GetVariable( name ) );
+		env.PushStack( env.GetVariable( args.at(0) ) );
 	}
 }
 
-void OvMethodCommand::CmpProc( OvScriptState& env, const OvString& parameters ) 
+void OvMethodCommand::CmpProc( OvScriptState& env, const OvCmdArgs& args ) 
 {
-	OvString type;
-	OvString method;
-	OvString dummy;
-	OU::string::split( parameters, type, method );
-	OU::string::split( method, method, dummy );
-
-	if ( !type.empty() && !method.empty() )
+	if ( args.size() >= 2 )
 	{
-		if ( OvScriptDataType* datatype = env.FindDataType( type ) )
+		if ( OvScriptDataType* datatype = env.FindDataType( args.at(0) ) )
 		{
-			datatype->Method( env, method );
+			datatype->Method( env, args.at(1) );
+		}
+	}
+}
+
+void OvStateCommand::CmpProc( OvScriptState& env, const OvCmdArgs& args ) 
+{
+	if ( !args.empty() )
+	{
+		const OvString& func = args.at(0);
+
+		if ( func == "clear" )
+		{
+			env.Clear();
 		}
 	}
 }

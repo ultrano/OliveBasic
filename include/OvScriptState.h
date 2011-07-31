@@ -33,9 +33,10 @@ public:
 	void				PushStack( OvObjectSPtr obj );
 	OvObjectSPtr		PopStack();
 	OvSize				StackSize();
+
+	void				Clear();
 private:
 	
-	OvString m_version;
 	script_data_type_table	m_type_table;
 	script_command_table	m_cmp_table;
 	local_variables			m_variables;

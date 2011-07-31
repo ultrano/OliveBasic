@@ -7,7 +7,6 @@
 
 OvScriptState::OvScriptState()
 {
-	m_version = "v1.0";
 
 	RegisterDataType( "float", OvNew OvScriptFloatType );
 	RegisterDataType( "vector2", OvNew OvScriptVector2Type );
@@ -48,15 +47,50 @@ void OvScriptState::DoFile( const OvString& filepath )
 	fclose( file );
 }
 
+void ParsingArgs( OvCmdArgs& args, const OvString& params )
+{
+	OvString left;
+	OvString right;
+	if ( params.find( "\"" ) != OvString::npos )
+	{
+		OvString strarg;
+		OvInt beginquot = params.find( "\"" );
+		OvInt endquot = params.find( "\"", beginquot + 1 );
+
+		left = params.substr( 0, beginquot );
+		strarg = params.substr( beginquot, endquot );
+		right = params.substr( endquot + 1, params.size() );
+
+		if ( !left.empty() ) ParsingArgs( args, left );
+		args.push_back( strarg );
+		if ( !right.empty() ) ParsingArgs( args, right );
+	}
+	else
+	{
+		OU::string::split( params, left, right );
+		args.push_back( left );
+		if ( !right.empty() )
+		{
+			ParsingArgs( args, OU::string::trim( right ) );
+		}
+	}
+
+}
+
 void OvScriptState::DoCommand( const OvString& cmdline )
 {
 	OvString cmdname;
 	OvString parameters;
 	OU::string::split( cmdline, cmdname, parameters );
 
+	OvCmdArgs args;
+	OvString arg;
+
 	if ( OvScriptCommand* cmd = FindCommand( cmdname ) )
 	{
-		cmd->CmpProc( *this, parameters );
+		args.clear();
+		ParsingArgs( args, parameters );
+		cmd->CmpProc( *this, args );
 	}
 }
 
@@ -149,4 +183,10 @@ OvScriptCommand* OvScriptState::FindCommand( const OvString& cmdname )
 		return cmd.GetRear();
 	}
 	return NULL;
+}
+
+void OvScriptState::Clear()
+{
+	m_stack.clear();
+	m_variables.clear();
 }
