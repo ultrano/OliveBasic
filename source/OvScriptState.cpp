@@ -57,9 +57,9 @@ void ParsingArgs( OvCmdArgs& args, const OvString& params )
 		OvInt beginquot = params.find( "\"" );
 		OvInt endquot = params.find( "\"", beginquot + 1 );
 
-		left = params.substr( 0, beginquot );
-		strarg = params.substr( beginquot, endquot );
-		right = params.substr( endquot + 1, params.size() );
+		left = OU::string::trim( params.substr( 0, beginquot ) );
+		strarg = params.substr( beginquot, endquot - beginquot + 1 );
+		right = OU::string::trim(params.substr( endquot + 1, params.size() - endquot + 1));
 
 		if ( !left.empty() ) ParsingArgs( args, left );
 		args.push_back( strarg );
