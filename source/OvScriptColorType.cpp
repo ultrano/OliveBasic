@@ -11,7 +11,6 @@ void OvScriptColorType::Method( OvScriptState& env, const OvString& method )
 	{
 		OvColorValSPtr arg1 = OvCastTo<OvColorVal>(env.PopStack());
 		OvStringValSPtr arg2 = OvCastTo<OvStringVal>(env.PopStack());
-		env.PushStack( arg1 );
 		if ( arg1 && arg2 )
 		{
 			arg1->val = OvFromString<OvColor>( arg2->val );

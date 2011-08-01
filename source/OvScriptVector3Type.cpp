@@ -11,7 +11,6 @@ void OvScriptVector3Type::Method( OvScriptState& env, const OvString& method )
 	{
 		OvVector3ValSPtr arg1 = OvCastTo<OvVector3Val>(env.PopStack());
 		OvStringValSPtr arg2 = OvCastTo<OvStringVal>(env.PopStack());
-		env.PushStack( arg1 );
 		if ( arg1 && arg2 )
 		{
 			arg1->val = OvFromString<OvVector3>( arg2->val );

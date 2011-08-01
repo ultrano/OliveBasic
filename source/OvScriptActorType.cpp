@@ -23,9 +23,8 @@ void OvScriptActorType::Method( OvScriptState& env, const OvString& method )
 	{
 		OvColorValSPtr arg1 = OvCastTo<OvColorVal>(env.PopStack());
 		OvStringValSPtr arg2 = OvCastTo<OvStringVal>(env.PopStack());
-		env.PushStack( arg1 );
 	}
-	else if ( method == "findprop" )
+	else if ( method == "prop" )
 	{
 		OvActObjectSPtr arg1 = OvCastTo<OvActObject>(env.PopStack());
 		OvStringValSPtr arg2 = OvCastTo<OvStringVal>(env.PopStack());

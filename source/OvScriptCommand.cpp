@@ -18,6 +18,7 @@ void OvNewCommand::CmpProc( OvScriptState& env, const OvCmdArgs& args )
 			env.PushStack( OvNew OvStringVal( init ) );
 			env.PushStack( obj );
 			datatype->Method( env, "_construct" );
+			env.PushStack( obj );
 		}
 	}
 }

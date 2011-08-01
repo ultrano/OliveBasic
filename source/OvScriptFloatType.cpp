@@ -11,7 +11,6 @@ void OvScriptFloatType::Method( OvScriptState& env, const OvString& method )
 	{
 		OvFloatValSPtr arg1 = OvCastTo<OvFloatVal>(env.PopStack());
 		OvStringValSPtr arg2 = OvCastTo<OvStringVal>(env.PopStack());
-		env.PushStack( arg1 );
 		if ( arg1 && arg2 )
 		{
 			arg1->val = OvFromString<OvFloat>( arg2->val );
