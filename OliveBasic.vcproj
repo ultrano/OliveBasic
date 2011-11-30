@@ -147,66 +147,6 @@
 	</References>
 	<Files>
 		<Filter
-			Name="OliveScript"
-			>
-			<Filter
-				Name="OvScriptDataType"
-				>
-				<File
-					RelativePath=".\source\OvScriptActorType.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\source\OvScriptColorType.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvScriptDataType.h"
-					>
-				</File>
-				<File
-					RelativePath=".\source\OvScriptFloatType.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\source\OvScriptStringType.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\source\OvScriptVector2Type.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\source\OvScriptVector3Type.cpp"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="OvScriptCommand"
-				>
-				<File
-					RelativePath=".\source\OvScriptCommand.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvScriptCommand.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="OvScriptState"
-				>
-				<File
-					RelativePath=".\source\OvScriptState.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvScriptState.h"
-					>
-				</File>
-			</Filter>
-		</Filter>
-		<Filter
 			Name="OliveBasic"
 			>
 			<File
@@ -692,6 +632,18 @@
 						</File>
 					</Filter>
 				</Filter>
+			</Filter>
+			<Filter
+				Name="OvSolidString"
+				>
+				<File
+					RelativePath=".\source\OvSolidString.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvSolidString.h"
+					>
+				</File>
 			</Filter>
 		</Filter>
 		<Filter
