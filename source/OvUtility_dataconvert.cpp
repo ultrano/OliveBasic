@@ -71,6 +71,22 @@ OvString			OvToString( const OvFloat& val )
 	return OvString( OU::string::format( "%f", val ) );
 }
 
+/// OvReal
+//////////////////////////////////////////////////////////////////////////
+template<>
+OvReal			OvFromString( const OvString& str )
+{
+	OvFloat ret;
+	sscanf_s( str.c_str(), "%f", &ret );
+	return ret;
+}
+
+template<>
+OvString			OvToString( const OvReal& val )
+{
+	return OvString( OU::string::format( "%f", val ) );
+}
+
 /// OvVector2
 //////////////////////////////////////////////////////////////////////////
 template<>

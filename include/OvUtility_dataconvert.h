@@ -35,6 +35,12 @@ OvFloat	OvFromString( const OvString& str );
 template<>
 OvString OvToString( const OvFloat& val );
 
+/// OvReal
+template<>
+OvReal	OvFromString( const OvString& str );
+template<>
+OvString OvToString( const OvReal& val );
+
 /// OvVector2
 template<>
 OvVector2	OvFromString( const OvString& str );

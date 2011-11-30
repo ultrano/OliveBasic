@@ -633,6 +633,18 @@
 					</Filter>
 				</Filter>
 			</Filter>
+			<Filter
+				Name="OvSolidString"
+				>
+				<File
+					RelativePath=".\source\OvSolidString.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvSolidString.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Utility"

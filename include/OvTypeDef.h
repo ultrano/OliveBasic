@@ -21,6 +21,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 typedef float				OvFloat;
+typedef double				OvReal;
 typedef int					OvInt;
 typedef unsigned int		OvUInt;
 typedef size_t				OvSize;

@@ -11,8 +11,10 @@ OvSize OvFileInputStream::ReadBytes( OvByte * dest, OvSize dest_size )
 	FILE* file = m_file->GetHandle();
 	if ( file && dest && dest_size )
 	{
-		fread( dest, dest_size, 1, file );
-		return dest_size;
+		if ( fread( dest, dest_size, 1, file ) )
+		{
+			return dest_size;
+		}
 	}
 	return 0;
 }
