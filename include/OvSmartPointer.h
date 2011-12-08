@@ -38,7 +38,7 @@ public:
 	OvSmartPointer&		operator = (const OvSmartPointer<Type_1>& _copy);
 
 private:
-	Type_0*	m_pReferenceTarget;
+	Type_0*	m_ref;
 };
 #include "OvSmartPointer.inl"
 

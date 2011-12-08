@@ -32,6 +32,7 @@ typedef double				OvDouble;
 typedef char				OvChar;
 typedef unsigned char		OvUChar;
 typedef unsigned char		OvByte;
+typedef unsigned int		OvHash32;
 
 typedef float				OvTimeTick;
 

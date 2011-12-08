@@ -41,7 +41,6 @@
 //
 //! 이녀석은 Assert로 바꾸자
 #define OvError(__add_msg)		OvErrorMsgBox(__FILE__,__FUNCTION__,__LINE__,__add_msg)
-#define OvAssert(__exp__) ((!!(__exp__)) || (OvErrorMsgBox(__FILE__,__FUNCTION__,__LINE__,#__exp__),0))
 //
 //-------------------------------------------------------------------
 //

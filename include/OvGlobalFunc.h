@@ -8,6 +8,8 @@ void	OvMessageBox(const OvChar* _msg,const OvChar* _caption);
 
 void	OvErrorMsgBox(const OvChar* _file,const OvChar* _block, const OvUInt _line, const OvChar* _msg = NULL );
 
+#define OvAssert(__exp__) ((!!(__exp__)) || (OvErrorMsgBox(__FILE__,__FUNCTION__,__LINE__,#__exp__),0))
+
 OvBool	OvStringAllocator(LPTSTR* _lpp_dest,LPCTSTR lp_src);
 
 OvString	OvGetDirectoryInFullFilePath(const OvString& strFileFullPath);

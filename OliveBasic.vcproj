@@ -645,6 +645,30 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvRefable"
+				>
+				<File
+					RelativePath=".\source\OvRefable.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvRefable.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="OvRefCounter"
+				>
+				<File
+					RelativePath=".\source\OvRefCounter.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvRefCounter.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Utility"
