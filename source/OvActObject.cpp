@@ -73,7 +73,7 @@ void OvActObject::GetChildrenSet( OvObjectSet& children )
 	children = m_children;
 }
 
-void OvActObject::AttachChild( OvActObjectSPtr child )
+void OvActObject::AttachChild( OvActObjectWRef child )
 {
 	if ( OvIsKindOf<OvActObject>(child) )
 	{
@@ -85,7 +85,7 @@ void OvActObject::AttachChild( OvActObjectSPtr child )
 	}
 }
 
-OvActObjectSPtr OvActObject::DettachChild( OvActObjectSPtr child )
+OvActObjectSPtr OvActObject::DettachChild( OvActObjectWRef child )
 {
 	OvActObjectSPtr ret = NULL;
 	if ( child )
@@ -110,7 +110,7 @@ OvActObjectSPtr OvActObject::GetParent()
 	return m_parent;
 }
 
-void OvActObject::SetParent( OvActObject* parent )
+void OvActObject::SetParent( OvActObjectWRef parent )
 {
 	if ( m_parent != parent )
 	{
@@ -165,7 +165,7 @@ void OvActObject::Deserialize( OvObjectInputStream & input )
 		m_children.insert( input.ReadObject() );
 	}
 
-	m_parent = (OvActObject*)input.ReadObject();
+	m_parent = input.ReadObject();
 }
 
 void OvActObject::PostComponentMsg( OvMessageSPtr msg )

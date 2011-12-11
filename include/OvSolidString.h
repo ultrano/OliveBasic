@@ -1,9 +1,9 @@
 #pragma once
-#include "OvRefObject.h"
+#include "OvRefable.h"
 
 class OvSolidString : OvMemObject
 {
-	struct Data : OvRefObject
+	struct Data : OvRefable
 	{
 		Data( const OvString &s ) : str( s ) {};
 		const OvString str;
@@ -36,7 +36,7 @@ public:
 	void clear();
 
 private:
-	OvSmartPointer<OvSolidString::Data> m_data;
+	OvSPtr<OvSolidString::Data> m_data;
 };
 
 OvBool operator == ( const OvString &arg1, const OvSolidString &arg2 ) ;

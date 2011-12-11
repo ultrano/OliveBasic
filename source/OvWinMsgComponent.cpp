@@ -32,7 +32,7 @@ void OvWinMsgComponent::Update( OvTimeTick elapsed )
 
 void OvWinMsgComponent::OnMsgNotified( OvMessageSPtr msg )
 {
-	if ( OvActObject* target = GetTarget().GetRear() )
+	if ( OvActObject* target = GetTarget().get_real() )
 	{
 		target->PostComponentMsg( msg );
 	}

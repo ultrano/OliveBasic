@@ -2,8 +2,8 @@
 #include "OvInputStream.h"
 
 class OvObjectID;
-OvSmartPointer_Class(OvObject);
-OvSmartPointer_Class(OvObjectInputStream);
+OvDescSPtr(class,OvObject);
+OvDescSPtr(class,OvObjectInputStream);
 class OvObjectInputStream : public OvInputStream
 {
 public:
@@ -13,9 +13,9 @@ public:
 
 	virtual OvSize ReadBytes( OvByte * dest, OvSize dest_size ) OVERRIDE;
 
-	OvObject* ReadObject();
+	OvObjectWRef ReadObject();
 
-	OvObject*	Deserialize();
+	OvObjectWRef Deserialize();
 
 private:
 

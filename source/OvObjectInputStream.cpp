@@ -21,7 +21,7 @@ OvSize OvObjectInputStream::ReadBytes( OvByte * dest, OvSize dest_size )
 	return 0;
 }
 
-OvObject* OvObjectInputStream::ReadObject()
+OvObjectWRef OvObjectInputStream::ReadObject()
 {
 	OvObjectID	oldID;
 	OvString	type_name;
@@ -59,12 +59,12 @@ OvObject* OvObjectInputStream::ReadObject()
 			}
 		}
 	}
-	return obj.GetRear();
+	return obj;
 }
 
-OvObject* OvObjectInputStream::Deserialize()
+OvObjectWRef OvObjectInputStream::Deserialize()
 {
-	OvObject* root = ReadObject();
+	OvObjectWRef root = ReadObject();
 
 	id_obj_list copy_table;
 	while ( m_deserialized_yet.size() )

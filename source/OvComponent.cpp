@@ -15,12 +15,12 @@ OvComponent::~OvComponent()
 
 }
 
-void OvComponent::_set_target( OvActObjectSPtr target )
+void OvComponent::_set_target( OvActObjectWRef target )
 {
-	m_target = target.GetRear();
+	m_target = target;
 }
 
-OvActObjectSPtr OvComponent::GetTarget() const
+OvActObjectWRef OvComponent::GetTarget() const
 {
 	return m_target;
 }
@@ -51,6 +51,6 @@ void OvComponent::Deserialize( OvObjectInputStream & input )
 {
 	__super::Deserialize(input);
 
-	m_target = (OvActObject*)input.ReadObject();
+	m_target = input.ReadObject();
 
 }

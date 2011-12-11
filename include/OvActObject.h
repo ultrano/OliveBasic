@@ -1,10 +1,10 @@
 #pragma once
 #include "OvXObject.h"
 
-OvSmartPointer_Class(OvComponent);
+OvDescSPtr(class,OvComponent);
 OvDescSPtr(struct,OvMessage);
 
-OvSmartPointer_Class(OvActObject);
+OvDescSPtr(class,OvActObject);
 class OvActObject :  public OvXObject
 {
 	typedef OvList<OvMessageSPtr> list_msg;
@@ -24,17 +24,16 @@ public:
 	void	RemoveComponent( OvComponentSPtr comp );
 	void	GetComponentSet( OvObjectSet& components );
 	void	PostComponentMsg( OvMessageSPtr msg );
-	template<typename T> OvSmartPointer<T> FindComponent();
 
 
 	/// Tree Node
 	void			GetChildrenSet( OvObjectSet& children );
-	void			AttachChild( OvActObjectSPtr child );
-	OvActObjectSPtr DettachChild( OvActObjectSPtr child );
+	void			AttachChild( OvActObjectWRef child );
+	OvActObjectSPtr DettachChild( OvActObjectWRef child );
 	void			ClearChildren();
 
 	/// Get/Set Parent
-	void			SetParent( OvActObject* parent );
+	void			SetParent( OvActObjectWRef parent );
 	OvActObjectSPtr GetParent();
 
 
@@ -47,19 +46,6 @@ private:
 	list_msg m_msg_list;
 	OvObjectSet m_components;
 	OvObjectSet m_children;
-	OvActObject* m_parent;
+	OvActObjectWRef m_parent;
 
 };
-
-template<typename T>
-OvSmartPointer<T> OvActObject::FindComponent()
-{
-	for each ( OvObjectSPtr comp in m_components )
-	{
-		if ( OvIsTypeOf<T>(comp) )
-		{
-			return comp;
-		}
-	}
-	return NULL;
-}

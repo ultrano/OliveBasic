@@ -3,8 +3,8 @@
 #include "OvMessage.h"
 
 OvDescSPtr(struct,OvMessage);
-OvSmartPointer_Class(OvActObject);
-OvSmartPointer_Class(OvComponent);
+OvDescSPtr(class,OvActObject);
+OvDescSPtr(class,OvComponent);
 class OvComponent : public OvXObject
 {
 	OvRTTI_DECL(OvComponent);
@@ -24,14 +24,14 @@ public:
 
 	virtual void	Update( OvTimeTick elapsed ) = 0;
 
-	OvActObjectSPtr GetTarget() const;
+	OvActObjectWRef GetTarget() const;
 	void			RemoveFromTarget();
 
 private:
-	void		 _set_target( OvActObjectSPtr target );
+	void		 _set_target( OvActObjectWRef target );
 private:
 
-	OvActObject* m_target;
+	OvActObjectWRef m_target;
 
 };
 

@@ -1,13 +1,12 @@
 #pragma once
 #include "OvMemObject.h"
-#include "OvRefObject.h"
+#include "OvRefable.h"
 #include "OvObjectID.h"
 using namespace std;
-OvSmartPointer_Class(OvObject);
+OvDescSPtr(class,OvObject);
 
 
 OvBool			OvIsObjectCreatable( const OvString& type_name );
-OvObject*		OvCreateObject_Ptr( const OvString& type_name );
 OvObjectSPtr	OvCreateObject( const OvString& type_name );
 OvObjectSPtr	OvCopyObject( OvObjectSPtr origin );
 

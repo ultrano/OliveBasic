@@ -322,18 +322,6 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvValue"
-				>
-				<File
-					RelativePath=".\source\OvValue.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvValue.h"
-					>
-				</File>
-			</Filter>
-			<Filter
 				Name="OvRect"
 				>
 				<File

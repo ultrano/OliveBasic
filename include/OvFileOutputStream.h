@@ -1,8 +1,8 @@
 #pragma once
 #include "OvOutputStream.h"
 
-OvSmartPointer_Class(OvFile);
-OvSmartPointer_Class(OvFileOutputStream);
+OvDescSPtr(class,OvFile);
+OvDescSPtr(class,OvFileOutputStream);
 class OvFileOutputStream : public OvOutputStream
 {
 private:

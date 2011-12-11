@@ -1,10 +1,10 @@
 #pragma once
-#include "OvRefObject.h"
+#include "OvRefable.h"
 #include "OvBufferInputStream.h"
 #include "OvBufferOutputStream.h"
 
-OvSmartPointer_Class(OvBuffer);
-class OvBuffer : public OvRefObject
+OvDescSPtr(class,OvBuffer);
+class OvBuffer : public OvRefable
 {
 	OvRTTI_DECL(OvBuffer);
 public:

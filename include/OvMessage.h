@@ -1,6 +1,5 @@
 #pragma once
 #include "OvRefable.h"
-#include "OvValue.h"
 
 enum
 {
@@ -38,20 +37,5 @@ struct OvKeyboardMsg : public OvMessage
 	{
 		type = Msg_Keyboard;
 		key = 0;
-	}
-};
-
-struct OvPropNotifyMsg : public OvMessage
-{
-	enum PropNotify { Prop_Insert, Prop_Remove };
-
-	PropNotify notify;
-	const OvString& key;
-	OvValueSPtr val;
-
-	OvPropNotifyMsg( PropNotify _notify, const OvString& _key, OvValueSPtr _val )
-		: notify( _notify ), key( _key ), val( _val )
-	{
-		type = Msg_PropNotify;
 	}
 };

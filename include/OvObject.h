@@ -1,7 +1,6 @@
 #pragma once
 #include "OvUtility.h"
 #include "OvRefable.h"
-#include "OvRefObject.h"
 #include "OvAutoPtr.h"
 #include "OvObjectFactory.h"
 #include "OvObjectID.h"
@@ -9,13 +8,12 @@
 #include "OvObjectInputStream.h"
 
 class OvStorage;
-class OvObjectProperties;
 
-OvSmartPointer_Class(OvObject);
+OvDescSPtr(class,OvObject);
 typedef OvSet<OvObjectSPtr> OvObjectSet;
 typedef OvList<OvObjectSPtr> OvObjectList;
 
-class OvObject : public OvRefObject
+class OvObject : public OvRefable
 {
 	OvRTTI_DECL(OvObject);
 private:
@@ -27,10 +25,6 @@ public:
 
 	OvObject();
 	virtual ~OvObject(); 
-
-	//! Clone Object
-	OvObjectSPtr		 Clone();
-	virtual OvObjectSPtr CustomClone();
 
 	//! Stream
 	virtual void Serialize( OvObjectOutputStream & output );
@@ -44,6 +38,3 @@ private:
 	OvObjectID		m_idObjectID;
 
 };
-
-void ExtractProperties( OvObject* obj, OvObjectProperties& prop );
-void InjectProperties( OvObject* obj, OvObjectProperties& prop );

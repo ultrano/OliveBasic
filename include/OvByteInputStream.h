@@ -1,7 +1,7 @@
 #pragma once
 #include "OvInputStream.h"
 
-OvSmartPointer_Class(OvByteInputStream);
+OvDescSPtr(class,OvByteInputStream);
 class OvByteInputStream : public OvInputStream
 {
 public:

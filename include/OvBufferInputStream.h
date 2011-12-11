@@ -1,8 +1,8 @@
 #pragma once
 #include "OvInputStream.h"
 
-OvSmartPointer_Class(OvBuffer);
-OvSmartPointer_Class(OvBufferInputStream);
+OvDescSPtr( class, OvBuffer );
+OvDescSPtr( class, OvBufferInputStream );
 class OvBufferInputStream : public OvInputStream
 {
 	OvRTTI_DECL( OvBufferInputStream );

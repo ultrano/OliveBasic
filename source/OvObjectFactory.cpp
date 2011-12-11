@@ -21,12 +21,6 @@ OvBool OvIsObjectCreatable( const OvString& type_name )
 	return ( itor != GetFactory().factory_table.end() );
 }
 
-OvObject* OvCreateObject_Ptr( const OvString& type_name )
-{
-	construct_function func = GetFactory().factory_table[ type_name ];
-	return ( func )? ( func() ) : ( 0 );
-}
-
 OvObjectSPtr OvCreateObject( const OvString& type_name )
 {
 	construct_function func = GetFactory().factory_table[ type_name ];
