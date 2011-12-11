@@ -2,6 +2,7 @@
 #include "OvMemObject.h"
 #include "OvTypeDef.h"
 #include "OvRefCounter.h"
+#include "OvGlobalFunc.h"
 
 class OvRefable : public OvMemObject
 {
@@ -30,7 +31,11 @@ public:
 	const OvWRef & operator = ( const T * ref );
 	const OvWRef & operator = ( const OvWRef & ref );
 
-	reftype *	operator ()() const { return (reftype *)refcnt; };
+	reftype *	operator ()() const 
+	{
+		OvAssert( (refcnt? refcnt->getref() : NULL) );
+		return (reftype *) (refcnt? refcnt->getref() : NULL);
+	};
 
 private:
 	OvRefCounter * refcnt;
@@ -55,7 +60,11 @@ public:
 	const OvSPtr & operator = ( const T * ref );
 	const OvSPtr & operator = ( const OvSPtr & ref );
 
-	reftype *	operator ->() const { return (reftype *) (refcnt? refcnt->getref() : NULL); }
+	reftype *	operator ->() const 
+	{
+		OvAssert( (refcnt? refcnt->getref() : NULL) );
+		return (reftype *) (refcnt? refcnt->getref() : NULL);
+	}
 
 private:
 	OvRefCounter * refcnt;

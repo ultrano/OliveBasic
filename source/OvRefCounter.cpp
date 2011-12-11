@@ -18,13 +18,11 @@ OvRefCounter::~OvRefCounter()
 
 void OvRefCounter::inc_strong()
 {
-	OvAssert( scnt >= 0 && ref );
 	if ( scnt >= 0 && ref ) ++scnt;
 }
 
 void OvRefCounter::dec_strong()
 {
-	OvAssert( scnt > 0 );
 	if ( scnt > 0 ) --scnt;
 
 	REF_LIFE_CHECK();
