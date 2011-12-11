@@ -2,11 +2,12 @@
 #include "OvXObject.h"
 
 OvSmartPointer_Class(OvComponent);
-OvSmartPointer_Struct(OvMessage);
+OvDescSPtr(struct,OvMessage);
 
 OvSmartPointer_Class(OvActObject);
 class OvActObject :  public OvXObject
 {
+	typedef OvList<OvMessageSPtr> list_msg;
 	OvRTTI_DECL(OvActObject);
 	OvFACTORY_OBJECT_DECL(OvActObject);
 
@@ -43,7 +44,7 @@ public:
 
 private:
 
-	OvObjectSet m_component_msg;
+	list_msg m_msg_list;
 	OvObjectSet m_components;
 	OvObjectSet m_children;
 	OvActObject* m_parent;

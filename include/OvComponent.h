@@ -2,7 +2,7 @@
 #include "OvXObject.h"
 #include "OvMessage.h"
 
-OvSmartPointer_Struct(OvMessage);
+OvDescSPtr(struct,OvMessage);
 OvSmartPointer_Class(OvActObject);
 OvSmartPointer_Class(OvComponent);
 class OvComponent : public OvXObject
@@ -20,7 +20,7 @@ public:
 
 	virtual void	Setup() {};
 	virtual void	Teardown() {};
-	virtual void	OnComponentMsg( OvMessage* msg );
+	virtual void	OnComponentMsg( OvMessageWRef msg );
 
 	virtual void	Update( OvTimeTick elapsed ) = 0;
 

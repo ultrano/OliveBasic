@@ -34,7 +34,7 @@ void OvComponent::RemoveFromTarget()
 	}
 }
 
-void OvComponent::OnComponentMsg( OvMessage* msg )
+void OvComponent::OnComponentMsg( OvMessageWRef msg )
 {
 
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include "OvRefObject.h"
+#include "OvRefable.h"
 #include "OvValue.h"
 
 enum
@@ -10,8 +10,8 @@ enum
 	Msg_PropNotify,
 };
 
-OvSmartPointer_Struct(OvMessage);
-struct OvMessage : public OvRefObject
+OvDescSPtr(struct,OvMessage);
+struct OvMessage : public OvRefable
 {
 	OvInt	type;
 };

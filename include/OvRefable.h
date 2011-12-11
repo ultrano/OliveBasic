@@ -4,6 +4,9 @@
 #include "OvRefCounter.h"
 #include "OvGlobalFunc.h"
 
+#define OvDescWRef(type,name) type name; typedef OvWRef<name> name##WRef;
+#define OvDescSPtr(type,name) type name; typedef OvSPtr<name> name##SPtr;OvDescWRef(type,name);
+
 class OvRefable : public OvMemObject
 {
 public:
@@ -27,7 +30,7 @@ public:
 
 	reftype* get_real() const { return (reftype*) (refcnt? refcnt->getref():NULL); };
 
-	operator OvBool() { return !!get_real(); };
+	operator OvBool() const { return !!get_real(); };
 	const OvWRef & operator = ( const T * ref );
 	const OvWRef & operator = ( const OvWRef & ref );
 
@@ -56,7 +59,7 @@ public:
 
 	reftype* get_real() const { return (reftype*)refcnt->getref(); };
 
-	operator OvBool() { return !!get_real(); };
+	operator OvBool() const { return !!get_real(); };
 	const OvSPtr & operator = ( const T * ref );
 	const OvSPtr & operator = ( const OvSPtr & ref );
 

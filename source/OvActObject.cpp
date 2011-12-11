@@ -17,15 +17,15 @@ OvActObject::OvActObject()
 void OvActObject::Update( OvFloat elapsed )
 {
 	OvObjectSet components = m_components;
-	if ( m_component_msg.size() )
+	if ( m_msg_list.size() )
 	{
-		OvObjectSet component_msg = m_component_msg;
-		m_component_msg.clear();
+		list_msg component_msg = m_msg_list;
+		m_msg_list.clear();
 		for each( OvMessageSPtr msg in component_msg )
 		{
 			for each( OvComponentSPtr comp in components )
 			{
-				comp->OnComponentMsg( msg.GetRear() );
+				comp->OnComponentMsg( msg.get_real() );
 			}
 		}
 	}
@@ -170,5 +170,5 @@ void OvActObject::Deserialize( OvObjectInputStream & input )
 
 void OvActObject::PostComponentMsg( OvMessageSPtr msg )
 {
-	m_component_msg.insert( msg );
+	m_msg_list.push_back( msg );
 }
