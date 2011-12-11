@@ -28,7 +28,9 @@ public:
 	void			RemoveFromTarget();
 
 private:
+
 	void		 _set_target( OvActObjectWRef target );
+
 private:
 
 	OvActObjectWRef m_target;
