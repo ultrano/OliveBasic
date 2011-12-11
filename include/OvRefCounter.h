@@ -16,7 +16,7 @@ public:
 	void	inc();
 	void	dec();
 
-	void	dumpsref();
+	void	dumping();
 
 	OvInt	getscnt() { return scnt; };
 	OvInt	getwcnt() { return wcnt; };

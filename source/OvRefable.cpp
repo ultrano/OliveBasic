@@ -9,5 +9,5 @@ OvRefable::OvRefable() : refcnt(OvNew OvRefCounter(this))
 OvRefable::~OvRefable()
 {
 	refcnt->dec_weak();
-	refcnt->dumpsref();
+	refcnt->dumping();
 }

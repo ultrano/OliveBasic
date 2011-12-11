@@ -55,9 +55,9 @@ void OvRefCounter::dec()
 	dec_weak();
 }
 
-void OvRefCounter::dumpsref()
+void OvRefCounter::dumping()
 {
 	scnt = 0;
-	REF_LIFE_CHECK();
+	ref	 = NULL;
 	CNT_LIFE_CHECK();
 }
