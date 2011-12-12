@@ -629,6 +629,18 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvScreenDrawer"
+				>
+				<File
+					RelativePath=".\source\OvScreenDrawer.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvScreenDrawer.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Utility"
@@ -710,6 +722,18 @@
 			Name="InProgress"
 			>
 			<Filter
+				Name="MnScript"
+				>
+				<File
+					RelativePath=".\source\MnScript.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\MnScript.h"
+					>
+				</File>
+			</Filter>
+			<Filter
 				Name="OvStringTable"
 				>
 				<File
@@ -718,18 +742,6 @@
 				</File>
 				<File
 					RelativePath=".\include\OvStringTable.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="OvScreenDrawer"
-				>
-				<File
-					RelativePath=".\source\OvScreenDrawer.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvScreenDrawer.h"
 					>
 				</File>
 			</Filter>
