@@ -32,7 +32,7 @@ OvObjectWRef OvObjectInputStream::ReadObject()
 	if ( oldID != OvObjectID::INVALID )
 	{
 
-		for each ( id_obj_list::value_type val in m_deserialized_yet )
+		for each ( id_obj_list::value_type val in m_yet )
 		{
 			if ( val.first == oldID )
 			{
@@ -43,9 +43,8 @@ OvObjectWRef OvObjectInputStream::ReadObject()
 
 		if ( ! obj )
 		{
-
-			id_obj_table::iterator done = m_deserialized_done.find( oldID );
-			if ( done != m_deserialized_done.end() )
+			id_obj_table::iterator done = m_done.find( oldID );
+			if ( done != m_done.end() )
 			{
 				obj = done->second;
 			}
@@ -54,7 +53,7 @@ OvObjectWRef OvObjectInputStream::ReadObject()
 				Read( type_name );
 				if ( obj = OvCreateObject( type_name ) )
 				{
-					m_deserialized_yet.push_back( make_pair( oldID, obj ) );
+					m_yet.push_back( make_pair( oldID, obj ) );
 				}
 			}
 		}
@@ -67,10 +66,10 @@ OvObjectWRef OvObjectInputStream::Deserialize()
 	OvObjectWRef root = ReadObject();
 
 	id_obj_list copy_table;
-	while ( m_deserialized_yet.size() )
+	while ( m_yet.size() )
 	{
-		copy_table = m_deserialized_yet;
-		m_deserialized_yet.clear();
+		copy_table = m_yet;
+		m_yet.clear();
 		for each ( id_obj_list::value_type val in copy_table )
 		{
 			OvObjectID oldID = val.first;
@@ -78,7 +77,7 @@ OvObjectWRef OvObjectInputStream::Deserialize()
 			if ( oldID != OvObjectID::INVALID && obj )
 			{
 				obj->Deserialize( *this );
-				m_deserialized_done[ oldID ] = obj;
+				m_done[ oldID ] = obj;
 			}
 		}
 	}

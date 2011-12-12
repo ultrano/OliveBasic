@@ -22,9 +22,9 @@ private:
 	OvInputStream* m_input;
 
 	typedef OvMap<OvObjectID,OvObjectSPtr> id_obj_table;
-	id_obj_table	m_deserialized_done;
+	id_obj_table	m_done;
 
 	typedef OvList<OvPair<OvObjectID,OvObjectSPtr>> id_obj_list;
-	id_obj_list m_deserialized_yet;
+	id_obj_list m_yet;
 
 };

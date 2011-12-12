@@ -28,12 +28,12 @@ OvBool OvObjectOutputStream::WriteObject( OvObjectSPtr obj )
 	if ( obj )
 	{
 		objID = obj->GetObjectID();
-		OvSet<OvObjectSPtr>::iterator done = m_serialized_done.find( obj );	//< 완료 목록
-		OvList<OvObjectSPtr>::iterator yet  = OU::container::find( m_serialized_yet, obj );		//< 대기 목록
-		if (( done == m_serialized_done.end() ) && ( yet == m_serialized_yet.end() ))
+		OvSet<OvObjectSPtr>::iterator done = m_done.find( obj );	//< 완료 목록
+		OvList<OvObjectSPtr>::iterator yet  = OU::container::find( m_yet, obj );		//< 대기 목록
+		if (( done == m_done.end() ) && ( yet == m_yet.end() ))
 		{
 			type_name = OvTypeName( obj );
-			m_serialized_yet.push_back( obj );
+			m_yet.push_back( obj );
 		}
 	}
 	Write( objID );
@@ -49,14 +49,14 @@ OvBool OvObjectOutputStream::Serialize( OvObjectSPtr obj )
 	WriteObject( obj );
 
 	OvList<OvObjectSPtr> copy_targets;
-	while ( m_serialized_yet.size() )
+	while ( m_yet.size() )
 	{
-		copy_targets = m_serialized_yet;
-		m_serialized_yet.clear();
+		copy_targets = m_yet;
+		m_yet.clear();
 		for each( OvObjectSPtr target in copy_targets )
 		{
 			target->Serialize( *this );
-			m_serialized_done.insert( target );
+			m_done.insert( target );
 		}
 	}
 	return true;

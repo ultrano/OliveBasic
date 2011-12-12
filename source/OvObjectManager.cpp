@@ -6,11 +6,12 @@
 OvObjectManager::OvObjectManager()
 {
 }
+
 OvObjectManager::~OvObjectManager()
 {
 }
 
-OvObjectID		OvObjectManager::AllocObjectID(OvObject* _pObject)
+OvObjectID		OvObjectManager::AllocObjectID(OvObjectWRef _pObject)
 {
 	OvSectionLock lock;
 	m_maxID.core++;
@@ -19,13 +20,14 @@ OvObjectID		OvObjectManager::AllocObjectID(OvObject* _pObject)
 	return m_maxID;
 }
 
-void		OvObjectManager::RecallObjectID(OvObject* _pObject)
+void		OvObjectManager::RecallObjectID(OvObjectWRef _pObject)
 {
 	OvSectionLock lock;
 	//! 오브젝트는 오브젝트 테이블에서 삭제한다.
 	m_objectTable.erase(_pObject->GetObjectID());
 }
-OvObject*			OvObjectManager::FindObject(const OvObjectID& rObjHandle)
+
+OvObjectWRef			OvObjectManager::FindObject(const OvObjectID& rObjHandle)
 {
 	OvSectionLock lock;
 	if (m_objectTable.find(rObjHandle) != m_objectTable.end())

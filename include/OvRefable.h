@@ -130,6 +130,30 @@ const OvWRef<T> & OvWRef<T>::operator=( const OvWRef<ST> & ref )
 	return *this;
 }
 
+template<typename T, typename ST>
+OvBool operator == ( const T *t1, const OvWRef<ST> &t2 )
+{
+	return t1 == t2.get_real();
+}
+
+template<typename T, typename ST>
+OvBool operator == ( const OvWRef<ST> &t1, const T *t2 )
+{
+	return t2.get_real() == t1;
+}
+
+template<typename T, typename ST>
+OvBool operator != ( const T *t1, const OvWRef<ST> &t2 )
+{
+	return t1 != t2.get_real();
+}
+
+template<typename T, typename ST>
+OvBool operator != ( const OvWRef<ST> &t1, const T *t2 )
+{
+	return t2.get_real() != t1;
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 template<typename T>

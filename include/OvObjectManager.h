@@ -2,27 +2,28 @@
 #include "OvSingleton.h"
 #include "OvUtility.h"
 #include "OvObjectID.h"
-#include "OvUtility.h"
+#include "OvRefable.h"
 #include <map>
 
+OvDescSPtr(class,OvObject);
 
 class OvObjectManager : public OvSingleton< OvObjectManager >, public OvThreadSyncer< OvObjectManager >
 {
 	OvSINGLETON(OvObjectManager);
 	friend class OvObject;
-	typedef std::map<OvObjectID,OvObject*>			object_table;
+	typedef std::map<OvObjectID,OvObjectWRef> object_table;
 
 public:
 
 	OvObjectManager();
 	~OvObjectManager();
 
-	OvObject*			FindObject(const OvObjectID& rObjHandle);
+	OvObjectWRef	FindObject(const OvObjectID& rObjHandle);
 
 protected:
 
-	OvObjectID			AllocObjectID(OvObject* _pObject);
-	void				RecallObjectID(OvObject* _pObject);
+	OvObjectID		AllocObjectID(OvObjectWRef _pObject);
+	void			RecallObjectID(OvObjectWRef _pObject);
 
 private:
 	OvObjectID		m_maxID;

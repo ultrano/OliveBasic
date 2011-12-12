@@ -19,7 +19,7 @@ private:
 
 	OvOutputStream* m_output;
 
-	OvSet<OvObjectSPtr>	 m_serialized_done;
-	OvList<OvObjectSPtr> m_serialized_yet;
+	OvSet<OvObjectSPtr>	 m_done;
+	OvList<OvObjectSPtr> m_yet;
 
 };
