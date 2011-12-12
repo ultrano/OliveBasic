@@ -3,9 +3,6 @@
 #include "OvMemoryMgr.h"
 #include "OvObjectManager.h"
 
-#include "OvActObject.h"
-#include "OvWinMsgComponent.h"
-
 OliveBasic::OliveBasic()
 {
 	OvMemoryMgr::Startup();

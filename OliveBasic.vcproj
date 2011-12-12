@@ -394,50 +394,6 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="OvRefObject"
-				>
-				<Filter
-					Name="OvAutoPtr"
-					>
-					<File
-						RelativePath=".\include\OvArrayAutoPtr.inl"
-						>
-					</File>
-					<File
-						RelativePath=".\include\OvAutoPtr.h"
-						>
-					</File>
-					<File
-						RelativePath=".\include\OvAutoPtr.inl"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="OvSmartPointer"
-					>
-					<File
-						RelativePath=".\include\OvSmartPointer.h"
-						>
-					</File>
-					<File
-						RelativePath=".\include\OvSmartPointer.inl"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="OvRefObject"
-					>
-					<File
-						RelativePath=".\source\OvRefObject.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\include\OvRefObject.h"
-						>
-					</File>
-				</Filter>
-			</Filter>
-			<Filter
 				Name="Memory"
 				>
 				<Filter
@@ -657,6 +613,22 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="OvAutoPtr"
+				>
+				<File
+					RelativePath=".\include\OvArrayAutoPtr.inl"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvAutoPtr.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\OvAutoPtr.inl"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Utility"
@@ -737,54 +709,6 @@
 		<Filter
 			Name="InProgress"
 			>
-			<Filter
-				Name="OvActObject"
-				>
-				<File
-					RelativePath=".\source\OvActObject.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvActObject.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="OvComponent"
-				>
-				<File
-					RelativePath=".\source\OvComponent.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvComponent.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="OvMessage"
-				>
-				<File
-					RelativePath=".\source\OvMessage.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvMessage.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="OvWinMsgComponent"
-				>
-				<File
-					RelativePath=".\source\OvWinMsgComponent.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\include\OvWinMsgComponent.h"
-					>
-				</File>
-			</Filter>
 			<Filter
 				Name="OvStringTable"
 				>
