@@ -1,7 +1,7 @@
 #include "OvObjectInputStream.h"
 #include "OvObject.h"
 
-OvObjectInputStream::OvObjectInputStream( OvInputStream* input )
+OvObjectInputStream::OvObjectInputStream( OvInputStreamWRef input )
 : m_input( input )
 {
 
@@ -82,4 +82,11 @@ OvObjectWRef OvObjectInputStream::Deserialize()
 		}
 	}
 	return root;
+}
+
+void OvObjectInputStream::Flush()
+{
+	m_input = NULL;
+	m_done.clear();
+	m_yet.clear();
 }

@@ -34,7 +34,7 @@ public:
 	template<typename ST> OvWRef( const OvSPtr<ST> &ref );
 	template<typename ST> OvWRef( const OvWRef<ST> &ref );
 
-	~OvWRef() { if (refcnt) refcnt->dec_weak(); };
+	~OvWRef() { if (refcnt) refcnt->dec_weak(); refcnt = NULL; };
 
 	reftype* get_real() const { return (reftype*) (refcnt? refcnt->getref():NULL); };
 
@@ -66,7 +66,7 @@ public:
 	template<typename ST> OvSPtr( const OvSPtr<ST> & ref );
 	template<typename ST> OvSPtr( const OvWRef<ST> & ref );
 
-	~OvSPtr() { if (refcnt) refcnt->dec(); }
+	~OvSPtr() { if (refcnt) refcnt->dec(); refcnt = NULL; }
 
 	reftype* get_real() const { return (reftype*)refcnt->getref(); };
 

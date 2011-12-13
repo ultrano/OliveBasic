@@ -1,7 +1,7 @@
 #include "OvObjectOutputStream.h"
 #include "OvObject.h"
 
-OvObjectOutputStream::OvObjectOutputStream( OvOutputStream* output )
+OvObjectOutputStream::OvObjectOutputStream( OvOutputStreamWRef output )
 : m_output( output )
 {
 

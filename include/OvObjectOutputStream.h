@@ -6,7 +6,7 @@ class OvObjectOutputStream : public OvOutputStream
 {
 public:
 
-	OvObjectOutputStream( OvOutputStream* output );
+	OvObjectOutputStream( OvOutputStreamWRef output );
 	~OvObjectOutputStream();
 
 	virtual OvSize WriteBytes( OvByte * write_buf, OvSize write_size ) OVERRIDE;
@@ -17,7 +17,7 @@ public:
 
 private:
 
-	OvOutputStream* m_output;
+	OvOutputStreamWRef m_output;
 
 	OvSet<OvObjectSPtr>	 m_done;
 	OvList<OvObjectSPtr> m_yet;

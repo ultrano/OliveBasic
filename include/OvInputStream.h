@@ -3,7 +3,7 @@
 #include "OvUtility_RTTI.h"
 #include "OvRefable.h"
 
-OvDescSPtr( class, OvInputStream );
+OvDescSPtr( interface_class , OvInputStream );
 interface_class OvInputStream : public OvRefable
 {
 	OvRTTI_DECL_ROOT(OvInputStream);
