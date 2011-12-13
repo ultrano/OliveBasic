@@ -22,7 +22,21 @@ class MnState : public OvObject
 
 class MnObject : public OvRefable
 {
-	MnObjType type;
+public:
+	
+	MnObject( MnState & s ) : state(s) {};
+
+	/* field */
+	MnState&	state;
+	MnObjType	type;
+	MnObject*	next;
+	MnObject*	prev;
+
+	/* we use "mark and sweep" GC algorithm*/
+	OvByte		mark;
+
+	virtual void marking() = 0;
+	virtual void cleanup() = 0;
 };
 
 OvDescSPtr( class, MnHold );
