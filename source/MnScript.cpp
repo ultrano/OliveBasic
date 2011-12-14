@@ -1,5 +1,6 @@
 #include "MnScript.h"
 
+class MnObject;
 enum MnObjType
 {
 	MOT_NIL,
@@ -15,20 +16,42 @@ enum MnObjType
 	MOT_USER,
 };
 
+#define MnIsString( v ) ((v).h->type == MOT_STRING)
+#define MnIsTable( v ) ((v).h->type == MOT_TABLE)
+#define MnIsArray( v ) ((v).h->type == MOT_ARRAY)
+#define MnIsStringTable( v ) ((v).h->type == MOT_STRINGTABLE)
+#define MnIsFuncProto( v ) ((v).h->type == MOT_FUNCPROTO)
+#define MnIsOClosure( v ) ((v).h->type == MOT_OCLOSURE)
+#define MnIsCClosure( v ) ((v).h->type == MOT_CCLOSURE)
+#define MnIsObj( v ) \
+	( \
+	MnIsString((v)) ||  \
+	MnIsArray((v)) ||  \
+	MnIsStringTable((v)) ||  \
+	MnIsFuncProto((v)) ||  \
+	MnIsOClosure((v)) ||  \
+	MnIsCClosure((v)) ||  \
+	MnIsTable((v)) \
+	)
+
+//////////////////////////////////////////////////////////////////////////
 class MnState : public OvObject
 {
-
+public:
+	MnObject* heap;
 };
-
+//////////////////////////////////////////////////////////////////////////
 class MnObject : public OvRefable
 {
 public:
 	
-	MnObject( MnState & s ) : state(s) {};
+	MnObject( MnState & s );
+	~MnObject();
 
 	/* field */
 	MnState&	state;
 	MnObjType	type;
+
 	MnObject*	next;
 	MnObject*	prev;
 
@@ -39,47 +62,80 @@ public:
 	virtual void cleanup() = 0;
 };
 
-OvDescSPtr( class, MnHold );
-class MnHold : public OvRefable
+MnObject::MnObject( MnState & s ) 
+: state(s)
+, next(NULL)
+, prev(NULL)
+{
+	if ( state.heap ) state.heap->prev = this;
+
+	next = state.heap;
+	state.heap = this;
+}
+
+MnObject::~MnObject()
+{
+	if (next) next->prev = prev;
+	if (prev) prev->next = next;
+	else state.heap = next;
+}
+//////////////////////////////////////////////////////////////////////////
+OvDescSPtr( class, MnHolder );
+class MnHolder : public OvRefable
 {
 public:
-	MnHold() {};
 	MnObjType type;
 	union
 	{
+		OvRefCounter* refcnt;
+		OvReal num;
 	} u;
 };
-
+//////////////////////////////////////////////////////////////////////////
 struct MnValue : OvMemObject
 {
-	MnHoldSPtr hold;
+	MnHolderSPtr h;
 
 	MnValue();
-	MnValue( MnHoldSPtr v ); // value share
+	MnValue( MnHolderSPtr v ); // value share
 	MnValue( const MnValue &v );
-	//OsValue( MnObjType vt, OsCollectable * obj );
 	~MnValue();
 };
 
 MnValue::MnValue()
-: hold( OvNew MnHold )
+: h( OvNew MnHolder )
 {
 
 }
 
-MnValue::MnValue( MnHoldSPtr v )
-: hold( v )
+MnValue::MnValue( MnHolderSPtr v )
+: h( v )
 {
+	if ( MnIsObj(*this) )
+	{
+		h->u.refcnt->inc();
+	}
 }
 
 MnValue::MnValue( const MnValue &v )
-: hold( OvNew MnHold )
+: h( OvNew MnHolder )
 {
-	hold->type = v.hold->type;
-	hold->u	   = v.hold->u;
+	h->type = v.h->type;
+	h->u	= v.h->u;
+
+	if ( MnIsObj(*this) )
+	{
+		h->u.refcnt->inc();
+	}
 }
 
 MnValue::~MnValue()
 {
-	hold = NULL;
+	if ( MnIsObj(*this) )
+	{
+		h->u.refcnt->dec();
+	}
+	h = NULL;
 }
+
+//////////////////////////////////////////////////////////////////////////

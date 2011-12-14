@@ -1,5 +1,7 @@
 #pragma once
 
+/* 이름을 레퍼가더로 바꿀까? */
+
 class OvRefable;
 class OvRefCounter : public OvMemObject
 {
