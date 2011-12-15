@@ -1,4 +1,5 @@
 #include "MnScript.h"
+#include "OvSolidString.h"
 
 class MnObject;
 class MnValue;
@@ -43,10 +44,12 @@ enum MnObjType
 class MnState : public OvObject
 {
 	typedef OvMap<OvHash32,MnValue> map_hash_val;
+	typedef OvMap<OvHash32,OvSolidString> map_hash_str;
 public:
 
 	MnObject* heap;
 	map_hash_val global;
+	map_hash_str strtable;
 
 };
 
@@ -89,6 +92,43 @@ MnObject::~MnObject()
 	if (next) next->prev = prev;
 	if (prev) prev->next = next;
 	else state.heap = next;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+class MnString : public MnObject
+{
+public:
+
+	MnString( MnState& s, const OvString& sstr );
+
+	const OvString& get_str() { return str.str(); };
+
+	virtual void marking();
+	virtual void cleanup();
+private:
+	OvSolidString str;
+};
+
+MnString::MnString( MnState& s, const OvString& sstr )
+: MnObject(s)
+{
+	OvHash32 hash = OU::string::rs_hash( sstr );
+	if ( s.strtable.find(hash) == s.strtable.end() )
+	{
+		s.strtable.insert( make_pair(hash,sstr) );
+	}
+	str = s.strtable[hash];
+}
+
+void MnString::marking()
+{
+
+}
+
+void MnString::cleanup()
+{
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -138,5 +178,7 @@ MnValue::~MnValue()
 {
 	MnRefDec(*this);
 }
+
+//////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////
