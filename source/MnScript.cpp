@@ -45,11 +45,13 @@ class MnState : public OvObject
 {
 	typedef OvMap<OvHash32,MnValue> map_hash_val;
 	typedef OvMap<OvHash32,OvSolidString> map_hash_str;
+	typedef OvVector<MnValue>	vec_stack;
 public:
 
-	MnObject* heap;
+	MnObject*	 heap;
 	map_hash_val global;
 	map_hash_str strtable;
+	vec_stack	 stack;
 
 };
 
