@@ -1,6 +1,8 @@
 #include "MnScript.h"
 
 class MnObject;
+class MnValue;
+
 enum MnObjType
 {
 	MOT_NIL,
@@ -16,13 +18,15 @@ enum MnObjType
 	MOT_USER,
 };
 
-#define MnIsString( v ) ((v).h->type == MOT_STRING)
-#define MnIsTable( v ) ((v).h->type == MOT_TABLE)
-#define MnIsArray( v ) ((v).h->type == MOT_ARRAY)
-#define MnIsStringTable( v ) ((v).h->type == MOT_STRINGTABLE)
-#define MnIsFuncProto( v ) ((v).h->type == MOT_FUNCPROTO)
-#define MnIsOClosure( v ) ((v).h->type == MOT_OCLOSURE)
-#define MnIsCClosure( v ) ((v).h->type == MOT_CCLOSURE)
+//////////////////////////////////////////////////////////////////////////
+
+#define MnIsString( v ) ((v).type == MOT_STRING)
+#define MnIsTable( v ) ((v).type == MOT_TABLE)
+#define MnIsArray( v ) ((v).type == MOT_ARRAY)
+#define MnIsStringTable( v ) ((v).type == MOT_STRINGTABLE)
+#define MnIsFuncProto( v ) ((v).type == MOT_FUNCPROTO)
+#define MnIsOClosure( v ) ((v).type == MOT_OCLOSURE)
+#define MnIsCClosure( v ) ((v).type == MOT_CCLOSURE)
 #define MnIsObj( v ) \
 	( \
 	MnIsString((v)) ||  \
@@ -35,12 +39,19 @@ enum MnObjType
 	)
 
 //////////////////////////////////////////////////////////////////////////
+
 class MnState : public OvObject
 {
+	typedef OvMap<OvHash32,MnValue> map_hash_val;
 public:
+
 	MnObject* heap;
+	map_hash_val global;
+
 };
+
 //////////////////////////////////////////////////////////////////////////
+
 class MnObject : public OvRefable
 {
 public:
@@ -79,9 +90,10 @@ MnObject::~MnObject()
 	if (prev) prev->next = next;
 	else state.heap = next;
 }
+
 //////////////////////////////////////////////////////////////////////////
-OvDescSPtr( class, MnHolder );
-class MnHolder : public OvRefable
+
+class MnValue : public OvMemObject
 {
 public:
 	MnObjType type;
@@ -90,52 +102,41 @@ public:
 		OvRefCounter* refcnt;
 		OvReal num;
 	} u;
-};
-//////////////////////////////////////////////////////////////////////////
-struct MnValue : OvMemObject
-{
-	MnHolderSPtr h;
 
 	MnValue();
-	MnValue( MnHolderSPtr v ); // value share
 	MnValue( const MnValue &v );
+	MnValue( MnObjType t, const MnObject* o );
 	~MnValue();
 };
 
 MnValue::MnValue()
-: h( OvNew MnHolder )
+: type(MOT_NIL)
 {
 
 }
 
-MnValue::MnValue( MnHolderSPtr v )
-: h( v )
-{
-	if ( MnIsObj(*this) )
-	{
-		h->u.refcnt->inc();
-	}
-}
+#define MnRefInc(v) if ( MnIsObj((v)) ) (v).u.refcnt->inc();
+#define MnRefDec(v) if ( MnIsObj((v)) ) (v).u.refcnt->dec();
 
 MnValue::MnValue( const MnValue &v )
-: h( OvNew MnHolder )
+: type(MOT_NIL)
 {
-	h->type = v.h->type;
-	h->u	= v.h->u;
+	type = v.type;
+	u	 = v.u;
 
-	if ( MnIsObj(*this) )
-	{
-		h->u.refcnt->inc();
-	}
+	MnRefInc(*this);
+}
+
+MnValue::MnValue( MnObjType t, const MnObject* o )
+{
+	type	 = t;
+	u.refcnt = o->refcnt;
+	MnRefInc(*this);
 }
 
 MnValue::~MnValue()
 {
-	if ( MnIsObj(*this) )
-	{
-		h->u.refcnt->dec();
-	}
-	h = NULL;
+	MnRefDec(*this);
 }
 
 //////////////////////////////////////////////////////////////////////////
