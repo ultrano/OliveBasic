@@ -2,6 +2,7 @@
 #include "OvSolidString.h"
 
 class MnObject;
+class MnString;
 class MnValue;
 
 enum MnObjType
@@ -20,6 +21,10 @@ enum MnObjType
 };
 
 //////////////////////////////////////////////////////////////////////////
+
+#define MARKED (1)
+#define UNMARKED (0)
+#define DYING (-1)
 
 #define MnIsString( v ) ((v).type == MOT_STRING)
 #define MnIsTable( v ) ((v).type == MOT_TABLE)
@@ -44,7 +49,7 @@ enum MnObjType
 class MnState : public OvObject
 {
 	typedef OvMap<OvHash32,MnValue> map_hash_val;
-	typedef OvMap<OvHash32,OvSolidString> map_hash_str;
+	typedef OvMap<OvHash32,OvWRef<MnString>> map_hash_str;
 	typedef OvVector<MnValue>	vec_stack;
 public:
 
@@ -54,6 +59,8 @@ public:
 	vec_stack	 stack;
 
 };
+
+OvSPtr<MnString> MnGetString( MnState& s, const OvString& str );
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -102,35 +109,33 @@ class MnString : public MnObject
 {
 public:
 
-	MnString( MnState& s, const OvString& sstr );
+	MnString( MnState& s, OvHash32 hash, const OvString& sstr );
 
-	const OvString& get_str() { return str.str(); };
+	OvHash32		get_hash() { return hash; };
+	const OvString& get_str() { return str; };
 
 	virtual void marking();
 	virtual void cleanup();
 private:
-	OvSolidString str;
+	OvHash32 hash;
+	OvString str;
 };
 
-MnString::MnString( MnState& s, const OvString& sstr )
+MnString::MnString( MnState& s, OvHash32 hash,const OvString& sstr )
 : MnObject(s)
+, hash( hash )
+, str( sstr )
 {
-	OvHash32 hash = OU::string::rs_hash( sstr );
-	if ( s.strtable.find(hash) == s.strtable.end() )
-	{
-		s.strtable.insert( make_pair(hash,sstr) );
-	}
-	str = s.strtable[hash];
 }
 
 void MnString::marking()
 {
-
+	mark = MARKED;
 }
 
 void MnString::cleanup()
 {
-
+	state.strtable.erase( hash );
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -147,7 +152,7 @@ public:
 
 	MnValue();
 	MnValue( const MnValue &v );
-	MnValue( MnObjType t, const MnObject* o );
+	MnValue( MnObjType t, OvSPtr<MnObject> o );
 	~MnValue();
 };
 
@@ -169,10 +174,10 @@ MnValue::MnValue( const MnValue &v )
 	MnRefInc(*this);
 }
 
-MnValue::MnValue( MnObjType t, const MnObject* o )
+MnValue::MnValue( MnObjType t, OvSPtr<MnObject> o )
 {
 	type	 = t;
-	u.refcnt = o->refcnt;
+	u.refcnt = o.refcnt;
 	MnRefInc(*this);
 }
 
@@ -183,4 +188,19 @@ MnValue::~MnValue()
 
 //////////////////////////////////////////////////////////////////////////
 
+OvSPtr<MnString> MnGetString( MnState& s, const OvString& str )
+{
+	OvSPtr<MnString> ret;
+
+	OvHash32 hash = OU::string::rs_hash(str);
+	if ( s.strtable.find(hash) == s.strtable.end() )
+	{
+		s.strtable.insert( make_pair( hash, OvNew MnString(s, hash, str) ) );
+	}
+	ret = s.strtable[hash];
+	return ret;
+}
+
 //////////////////////////////////////////////////////////////////////////
+
+// DOTO: 컴파일러 만들자.
