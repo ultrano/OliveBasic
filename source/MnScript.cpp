@@ -54,7 +54,7 @@ class MnState : public OvObject
 public:
 
 	MnObject*	 heap;
-	map_hash_val global;
+	map_hash_val field;
 	map_hash_str strtable;
 	vec_stack	 stack;
 
@@ -199,6 +199,11 @@ OvSPtr<MnString> MnGetString( MnState& s, const OvString& str )
 	}
 	ret = s.strtable[hash];
 	return ret;
+}
+
+OvBool mn_isfield( MnState* s, const OvString& name )
+{
+
 }
 
 //////////////////////////////////////////////////////////////////////////
