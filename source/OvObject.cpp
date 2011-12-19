@@ -2,23 +2,31 @@
 #include "OvObjectManager.h"
 #include "OvUtility.h"
 #include "OvBuffer.h"
+#include "MnScript.h"
 
 using namespace std;
 
 OvRTTI_IMPL(OvObject);
 
 OvObject::OvObject()
+: m_state( mn_open_state() )
 {
 	m_idObjectID = OvObjectManager::GetInstance()->AllocObjectID(this);
 }
 OvObject::~OvObject()
 {
+	mn_close_state( m_state );
 	OvObjectManager::GetInstance()->RecallObjectID(this);
 }
 
 OvObjectID		OvObject::GetObjectID()
 {
 	return m_idObjectID;
+}
+
+OvWRef<MnState> OvObject::GetState()
+{
+	return m_state;
 }
 
 void OvObject::Serialize( OvObjectOutputStream & output )

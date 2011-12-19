@@ -46,12 +46,12 @@ enum MnObjType
 
 //////////////////////////////////////////////////////////////////////////
 
-class MnState : public OvObject
+class MnState : public OvRefable
 {
+public:
 	typedef OvMap<OvHash32,MnValue> map_hash_val;
 	typedef OvMap<OvHash32,OvWRef<MnString>> map_hash_str;
 	typedef OvVector<MnValue>	vec_stack;
-public:
 
 	MnObject*	 heap;
 	map_hash_val field;
@@ -60,7 +60,9 @@ public:
 
 };
 
-OvSPtr<MnString> MnGetString( MnState& s, const OvString& str );
+OvSPtr<MnString> mn_new_string( OvWRef<MnState> s, const OvString& str );
+
+void	mn_push( OvWRef<MnState> s, const MnValue& v );
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -68,11 +70,11 @@ class MnObject : public OvRefable
 {
 public:
 	
-	MnObject( MnState & s );
+	MnObject( OvWRef<MnState> s );
 	~MnObject();
 
 	/* field */
-	MnState&	state;
+	OvWRef<MnState> state;
 	MnObjType	type;
 
 	MnObject*	next;
@@ -85,22 +87,22 @@ public:
 	virtual void cleanup() = 0;
 };
 
-MnObject::MnObject( MnState & s ) 
+MnObject::MnObject( OvWRef<MnState> s ) 
 : state(s)
 , next(NULL)
 , prev(NULL)
 {
-	if ( state.heap ) state.heap->prev = this;
+	if ( state->heap ) state->heap->prev = this;
 
-	next = state.heap;
-	state.heap = this;
+	next = state->heap;
+	state->heap = this;
 }
 
 MnObject::~MnObject()
 {
 	if (next) next->prev = prev;
 	if (prev) prev->next = next;
-	else state.heap = next;
+	else state->heap = next;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -109,7 +111,7 @@ class MnString : public MnObject
 {
 public:
 
-	MnString( MnState& s, OvHash32 hash, const OvString& sstr );
+	MnString( OvWRef<MnState> s, OvHash32 hash, const OvString& sstr );
 
 	OvHash32		get_hash() { return hash; };
 	const OvString& get_str() { return str; };
@@ -121,7 +123,7 @@ private:
 	OvString str;
 };
 
-MnString::MnString( MnState& s, OvHash32 hash,const OvString& sstr )
+MnString::MnString( OvWRef<MnState> s, OvHash32 hash,const OvString& sstr )
 : MnObject(s)
 , hash( hash )
 , str( sstr )
@@ -135,7 +137,7 @@ void MnString::marking()
 
 void MnString::cleanup()
 {
-	state.strtable.erase( hash );
+	state->strtable.erase( hash );
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -152,6 +154,7 @@ public:
 
 	MnValue();
 	MnValue( const MnValue &v );
+	MnValue( OvReal n );
 	MnValue( MnObjType t, OvSPtr<MnObject> o );
 	~MnValue();
 };
@@ -174,6 +177,12 @@ MnValue::MnValue( const MnValue &v )
 	MnRefInc(*this);
 }
 
+MnValue::MnValue( OvReal n )
+{
+	type = MOT_NUMBER;
+	u.num = n;
+}
+
 MnValue::MnValue( MnObjType t, OvSPtr<MnObject> o )
 {
 	type	 = t;
@@ -188,22 +197,66 @@ MnValue::~MnValue()
 
 //////////////////////////////////////////////////////////////////////////
 
-OvSPtr<MnString> MnGetString( MnState& s, const OvString& str )
+OvSPtr<MnState> mn_open_state()
+{
+	return OvNew MnState;
+}
+
+void mn_close_state( OvWRef<MnState> s )
+{
+	if ( s )
+	{
+		OvDelete s.get_real();
+	}
+}
+
+void mn_add_field( OvWRef<MnState> s, const OvString& name )
+{
+	OvHash32 hash = OU::string::rs_hash(name);
+	s->field.insert( make_pair( hash, MnValue() ) );
+}
+
+OvSPtr<MnString> mn_new_string( OvWRef<MnState> s, const OvString& str )
 {
 	OvSPtr<MnString> ret;
 
 	OvHash32 hash = OU::string::rs_hash(str);
-	if ( s.strtable.find(hash) == s.strtable.end() )
+	if ( s->strtable.find(hash) == s->strtable.end() )
 	{
-		s.strtable.insert( make_pair( hash, OvNew MnString(s, hash, str) ) );
+		s->strtable.insert( make_pair( hash, OvNew MnString(s, hash, str) ) );
 	}
-	ret = s.strtable[hash];
+	ret = s->strtable[hash];
 	return ret;
 }
 
-OvBool mn_isfield( MnState* s, const OvString& name )
+void mn_push_field( OvWRef<MnState> s, const OvString& name )
 {
+	OvHash32 hash = OU::string::rs_hash(name);
+	MnState::map_hash_val::iterator itor = s->field.find( hash );
+	
+	if ( itor != s->field.end() )
+	{
+		mn_push( s, itor->second );
+	}
+	else
+	{
+		mn_push( s, MnValue() );
+	}
+}
 
+void mn_push( OvWRef<MnState> s, const MnValue& v )
+{
+	s->stack.push_back( v );
+}
+
+void mn_push_number( OvWRef<MnState> s, OvReal v )
+{
+	mn_push( s, MnValue( v ) );
+}
+
+void mn_push_string( OvWRef<MnState> s, const OvString& v )
+{
+	mn_push( s, MnValue( MOT_STRING, mn_new_string( s, v ) ) );
 }
 
 //////////////////////////////////////////////////////////////////////////

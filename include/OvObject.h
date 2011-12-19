@@ -7,6 +7,7 @@
 #include "OvObjectOutputStream.h"
 #include "OvObjectInputStream.h"
 
+class MnState;
 class OvStorage;
 
 OvDescSPtr(class,OvObject);
@@ -33,8 +34,13 @@ public:
 	//! ID of Object
 	OvObjectID		GetObjectID();
 
+	//! object state
+	OvWRef<MnState> GetState();
+
 private:
 
 	OvObjectID		m_idObjectID;
+
+	OvSPtr<MnState>	m_state;
 
 };

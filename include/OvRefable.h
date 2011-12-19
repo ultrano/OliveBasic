@@ -30,25 +30,21 @@ public:
 
 	OvWRef() : refcnt(NULL) {};
 	OvWRef( const T * ref ) : refcnt( ref? ref->refcnt:NULL ) { if (refcnt) refcnt->inc_weak(); }
-
-	template<typename ST> OvWRef( const OvSPtr<ST> &ref );
+	OvWRef( const OvWRef& ref ) : refcnt( ref? ref.refcnt:NULL ) { if (refcnt) refcnt->inc_weak(); }
 	template<typename ST> OvWRef( const OvWRef<ST> &ref );
+	template<typename ST> OvWRef( const OvSPtr<ST> &ref );
 
 	~OvWRef() { if (refcnt) refcnt->dec_weak(); refcnt = NULL; };
 
-	reftype* get_real() const { return (reftype*) (refcnt? refcnt->getref():NULL); };
-
-	operator OvBool() const { return !!get_real(); };
 	const OvWRef & operator = ( const T * ref );
-
-	template<typename ST> const OvWRef & operator = ( const OvSPtr<ST> & ref );
+	const OvWRef & operator = ( const OvWRef& ref );
 	template<typename ST> const OvWRef & operator = ( const OvWRef<ST> & ref );
+	template<typename ST> const OvWRef & operator = ( const OvSPtr<ST> & ref );
 
-	reftype *	operator ->() const 
-	{
-		OvAssert( (refcnt? refcnt->getref() : NULL) );
-		return (reftype *) (refcnt? refcnt->getref() : NULL);
-	}
+	reftype *	operator ->() const;
+
+	reftype* get_real() const { return (reftype*) (refcnt? refcnt->getref():NULL); };
+	operator OvBool() const { return !!get_real(); };
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -61,44 +57,39 @@ public:
 	OvRefCounter * refcnt;
 
 	OvSPtr() : refcnt(NULL) {};
-	OvSPtr( const reftype * ref ) : refcnt( ref? ref->refcnt:NULL ) { if (refcnt) refcnt->inc(); }
-
-	template<typename ST> OvSPtr( const OvSPtr<ST> & ref );
+	OvSPtr( const T * ref ) : refcnt( ref? ref->refcnt:NULL ) { if (refcnt) refcnt->inc(); }
+	OvSPtr( const OvSPtr& ref ) : refcnt( ref? ref.refcnt:NULL ) { if (refcnt) refcnt->inc(); }
 	template<typename ST> OvSPtr( const OvWRef<ST> & ref );
+	template<typename ST> OvSPtr( const OvSPtr<ST> & ref );
 
 	~OvSPtr() { if (refcnt) refcnt->dec(); refcnt = NULL; }
 
-	reftype* get_real() const { return (reftype*)refcnt->getref(); };
-
-	operator OvBool() const { return !!get_real(); };
 	const OvSPtr & operator = ( const T * ref );
-
-	template<typename ST> const OvSPtr & operator = ( const OvSPtr<ST> & ref );
+	const OvSPtr & operator = ( const OvSPtr& ref );
 	template<typename ST> const OvSPtr & operator = ( const OvWRef<ST> & ref );
+	template<typename ST> const OvSPtr & operator = ( const OvSPtr<ST> & ref );
 
-	reftype *	operator ->() const 
-	{
-		OvAssert( (refcnt? refcnt->getref() : NULL) );
-		return (reftype *) (refcnt? refcnt->getref() : NULL);
-	}
+	T*	operator ->() const;
+
+	reftype* get_real() const { return (reftype*)refcnt->getref(); };
+	operator OvBool() const { return !!get_real(); };
 
 };
 
 //////////////////////////////////////////////////////////////////////////
 
+template<typename T>
+template<typename ST>
+OvWRef<T>::OvWRef( const OvWRef<ST> &ref ) : refcnt( ref? ref.refcnt:NULL )
+{
+	if (refcnt) refcnt->inc_weak();
+}
 
 template<typename T>
 template<typename ST>
 OvWRef<T>::OvWRef( const OvSPtr<ST> &ref ) : refcnt( ref? ref.refcnt:NULL )
 {
-	if (refcnt) refcnt->inc();
-}
-
-template<typename T>
-template<typename ST>
-OvWRef<T>::OvWRef( const OvWRef<ST> &ref ) : refcnt( ref? ref.refcnt:NULL )
-{
-	if (refcnt) refcnt->inc();
+	if (refcnt) refcnt->inc_weak();
 }
 
 template<typename T>
@@ -111,12 +102,11 @@ const OvWRef<T> & OvWRef<T>::operator=( const T * ref )
 }
 
 template<typename T>
-template<typename ST>
-const OvWRef<T> & OvWRef<T>::operator=( const OvSPtr<ST> & ref )
+const OvWRef<T> & OvWRef<T>::operator=( const OvWRef& ref )
 {
-	if (refcnt) refcnt->dec();
+	if (refcnt) refcnt->dec_weak();
 	refcnt = ref? ref.refcnt:NULL;
-	if (refcnt) refcnt->inc();
+	if (refcnt) refcnt->inc_weak();
 	return *this;
 }
 
@@ -124,10 +114,27 @@ template<typename T>
 template<typename ST>
 const OvWRef<T> & OvWRef<T>::operator=( const OvWRef<ST> & ref )
 {
-	if (refcnt) refcnt->dec();
+	if (refcnt) refcnt->dec_weak();
 	refcnt = ref? ref.refcnt:NULL;
-	if (refcnt) refcnt->inc();
+	if (refcnt) refcnt->inc_weak();
 	return *this;
+}
+
+template<typename T>
+template<typename ST>
+const OvWRef<T> & OvWRef<T>::operator=( const OvSPtr<ST> & ref )
+{
+	if (refcnt) refcnt->dec_weak();
+	refcnt = ref? ref.refcnt:NULL;
+	if (refcnt) refcnt->inc_weak();
+	return *this;
+}
+
+template<typename T>
+T* OvWRef<T>::operator->() const
+{
+	OvAssert( (refcnt? refcnt->getref() : NULL) );
+	return (reftype *) (refcnt? refcnt->getref() : NULL);
 }
 
 template<typename T, typename ST>
@@ -158,18 +165,17 @@ OvBool operator != ( const OvWRef<ST> &t1, const T *t2 )
 
 template<typename T>
 template<typename ST>
-OvSPtr<T>::OvSPtr( const OvSPtr<ST> & ref ) : refcnt( ref? ref.refcnt:NULL )
+OvSPtr<T>::OvSPtr( const OvWRef<ST> & ref ) : refcnt( ref? ref.refcnt:NULL )
 {
 	if (refcnt) refcnt->inc();
 }
 
 template<typename T>
 template<typename ST>
-OvSPtr<T>::OvSPtr( const OvWRef<ST> & ref ) : refcnt( ref? ref.refcnt:NULL )
+OvSPtr<T>::OvSPtr( const OvSPtr<ST> & ref ) : refcnt( ref? ref.refcnt:NULL )
 {
 	if (refcnt) refcnt->inc();
 }
-
 
 template<typename T>
 const OvSPtr<T> & OvSPtr<T>::operator=( const T * ref )
@@ -181,8 +187,7 @@ const OvSPtr<T> & OvSPtr<T>::operator=( const T * ref )
 }
 
 template<typename T>
-template<typename ST>
-const OvSPtr<T> & OvSPtr<T>::operator=( const OvSPtr<ST> & ref )
+const OvSPtr<T> & OvSPtr<T>::operator=( const OvSPtr& ref )
 {
 	if (refcnt) refcnt->dec();
 	refcnt = ref? ref.refcnt:NULL;
@@ -199,6 +204,24 @@ const OvSPtr<T> & OvSPtr<T>::operator=( const OvWRef<ST> & ref )
 	if (refcnt) refcnt->inc();
 	return *this;
 }
+
+template<typename T>
+template<typename ST>
+const OvSPtr<T> & OvSPtr<T>::operator=( const OvSPtr<ST> & ref )
+{
+	if (refcnt) refcnt->dec();
+	refcnt = ref? ref.refcnt:NULL;
+	if (refcnt) refcnt->inc();
+	return *this;
+}
+
+template<typename T>
+T*	OvSPtr<T>::operator->() const
+{
+	OvAssert( (refcnt? refcnt->getref() : NULL) );
+	return (reftype *) (refcnt? refcnt->getref() : NULL);
+}
+
 
 template<typename T, typename ST>
 OvBool operator == ( const T *t1, const OvSPtr<ST> &t2 )
