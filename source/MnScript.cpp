@@ -11,6 +11,7 @@ enum MnObjType
 	MOT_BOOLEAN,
 	MOT_NUMBER,
 	MOT_STRING,
+
 	MOT_TABLE,
 	MOT_ARRAY,
 	MOT_FUNCPROTO,
@@ -42,6 +43,7 @@ enum MnObjType
 	)
 
 
+#define MnToBoolean( v ) ((MnIsBoolean(v)? (v).u.bln : false))
 #define MnToNumber( v ) ((MnIsNumber(v)? (v).u.num : 0))
 #define MnToString( v ) ((MnString*)(MnIsString(v)? (v).u.refcnt->getref() : NULL))
 //////////////////////////////////////////////////////////////////////////
@@ -67,7 +69,7 @@ MnValue			 mn_stack_val( OvWRef<MnState> s, MnIndex idx );
 MnValue			 mn_field_val( OvWRef<MnState> s, OvHash32 hash );
 OvBool			 mn_isfield( OvWRef<MnState> s, OvHash32 hash );
 
-void	mn_push( OvWRef<MnState> s, const MnValue& v );
+void	mn_push_value( OvWRef<MnState> s, const MnValue& v );
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -155,10 +157,12 @@ public:
 	{
 		OvRefCounter* refcnt;
 		OvReal num;
+		OvBool bln;
 	} u;
 
 	MnValue();
 	MnValue( const MnValue &v );
+	MnValue( OvBool b );
 	MnValue( OvReal n );
 	MnValue( MnObjType t, OvSPtr<MnObject> o );
 	~MnValue();
@@ -180,6 +184,12 @@ MnValue::MnValue( const MnValue &v )
 	u	 = v.u;
 
 	MnRefInc(*this);
+}
+
+MnValue::MnValue( OvBool b )
+{
+	type = MOT_BOOLEAN;
+	u.bln = b;
 }
 
 MnValue::MnValue( OvReal n )
@@ -221,13 +231,14 @@ void mn_close_state( OvWRef<MnState> s )
 
 MnValue mn_stack_val( OvWRef<MnState> s, MnIndex idx )
 {
-	if (idx < 0 && (s->top + idx) >= 0 )
+	MnIndex top = mn_get_top(s);
+	if (idx < 0 && (top + idx) >= 0 )
 	{
-		return s->stack.at( s->top + idx );
+		return s->stack.at( top + idx );
 	}
-	else if (idx > 0 && (s->top - idx) >= 0 )
+	else if (idx > 0 && top >= idx )
 	{
-		return s->stack.at( idx );
+		return s->stack.at( idx - 1 );
 	}
 	else
 	{
@@ -267,11 +278,11 @@ void mn_get_field( OvWRef<MnState> s, MnIndex idx )
 
 	if ( MnIsString(name) )
 	{
-		mn_push( s, mn_field_val( s, MnToString(name)->get_hash() ) );
+		mn_push_value( s, mn_field_val( s, MnToString(name)->get_hash() ) );
 	}
 	else
 	{
-		mn_push( s, MnValue() );
+		mn_push_value( s, MnValue() );
 	}
 }
 
@@ -288,25 +299,57 @@ OvSPtr<MnString> mn_new_string( OvWRef<MnState> s, const OvString& str )
 	return ret;
 }
 
+///////////////////////* get/set top *///////////////////////
+
+void mn_set_top( OvWRef<MnState> s, MnIndex idx )
+{
+	MnIndex top = mn_get_top(s);
+	MnIndex newtop = top;
+	if (idx < 0 && (top + idx) >= 0 )
+	{
+		newtop += idx + 1;
+	}
+	else if (idx >= 0 && top >= idx )
+	{
+		newtop = idx;
+	}
+	s->top = newtop;
+}
+
+MnIndex mn_get_top( OvWRef<MnState> s )
+{
+	return s->top;
+}
+
 ///////////////////////*   kind of push    *//////////////////////
 
-void mn_push( OvWRef<MnState> s, const MnValue& v )
+void mn_push_value( OvWRef<MnState> s, const MnValue& v )
 {
 	s->stack.push_back( v );
-	++s->top;
+	mn_set_top( s, mn_get_top(s) + 1 );
+}
+
+void mn_push_boolean( OvWRef<MnState> s, OvBool v )
+{
+	mn_push_value( s, MnValue( (OvBool)v ) );
 }
 
 void mn_push_number( OvWRef<MnState> s, OvReal v )
 {
-	mn_push( s, MnValue( v ) );
+	mn_push_value( s, MnValue( (OvReal)v ) );
 }
 
 void mn_push_string( OvWRef<MnState> s, const OvString& v )
 {
-	mn_push( s, MnValue( MOT_STRING, mn_new_string( s, v ) ) );
+	mn_push_value( s, MnValue( MOT_STRING, mn_new_string( s, v ) ) );
 }
 
-/////////////////////*  all kinds of is    *///////////////////////////
+/////////////////////*  all kinds of "is"    *///////////////////////////
+
+OvBool mn_is_boolean( OvWRef<MnState> s, MnIndex idx )
+{
+	return MnIsBoolean( mn_stack_val( s, idx ) );
+}
 
 OvBool mn_is_number( OvWRef<MnState> s, MnIndex idx )
 {
@@ -318,7 +361,17 @@ OvBool mn_is_string( OvWRef<MnState> s, MnIndex idx )
 	return MnIsString( mn_stack_val( s, idx ) );
 }
 
-/////////////////////*  all kinds of to    *///////////////////////////
+/////////////////////*  all kinds of "to"    *///////////////////////////
+
+OvBool mn_to_boolean( OvWRef<MnState> s, MnIndex idx )
+{
+	MnValue val = mn_stack_val( s, idx );
+	if ( MnIsBoolean(val) )
+	{
+		return MnToBoolean(val);
+	}
+	return false;
+}
 
 OvReal mn_to_number( OvWRef<MnState> s, MnIndex idx )
 {
