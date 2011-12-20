@@ -13,10 +13,8 @@ enum MnObjType
 	MOT_STRING,
 	MOT_TABLE,
 	MOT_ARRAY,
-	MOT_STRINGTABLE,
 	MOT_FUNCPROTO,
-	MOT_OCLOSURE,
-	MOT_CCLOSURE,
+	MOT_CLOSURE,
 	MOT_USER,
 };
 
@@ -26,24 +24,26 @@ enum MnObjType
 #define UNMARKED (0)
 #define DYING (-1)
 
+#define MnIsNil( v ) ((v).type == MOT_NIL)
+#define MnIsBoolean( v ) ((v).type == MOT_BOOLEAN)
+#define MnIsNumber( v ) ((v).type == MOT_NUMBER)
 #define MnIsString( v ) ((v).type == MOT_STRING)
 #define MnIsTable( v ) ((v).type == MOT_TABLE)
 #define MnIsArray( v ) ((v).type == MOT_ARRAY)
-#define MnIsStringTable( v ) ((v).type == MOT_STRINGTABLE)
 #define MnIsFuncProto( v ) ((v).type == MOT_FUNCPROTO)
-#define MnIsOClosure( v ) ((v).type == MOT_OCLOSURE)
-#define MnIsCClosure( v ) ((v).type == MOT_CCLOSURE)
+#define MnIsClosure( v ) ((v).type == MOT_CLOSURE)
 #define MnIsObj( v ) \
 	( \
 	MnIsString((v)) ||  \
 	MnIsArray((v)) ||  \
-	MnIsStringTable((v)) ||  \
 	MnIsFuncProto((v)) ||  \
-	MnIsOClosure((v)) ||  \
-	MnIsCClosure((v)) ||  \
+	MnIsClosure((v)) ||  \
 	MnIsTable((v)) \
 	)
 
+
+#define MnToNumber( v ) ((MnIsNumber(v)? (v).u.num : 0))
+#define MnToString( v ) ((MnString*)(MnIsString(v)? (v).u.refcnt->getref() : NULL))
 //////////////////////////////////////////////////////////////////////////
 
 class MnState : public OvRefable
@@ -57,10 +57,15 @@ public:
 	map_hash_val field;
 	map_hash_str strtable;
 	vec_stack	 stack;
+	MnIndex		 top;
 
 };
 
 OvSPtr<MnString> mn_new_string( OvWRef<MnState> s, const OvString& str );
+
+MnValue			 mn_stack_val( OvWRef<MnState> s, MnIndex idx );
+MnValue			 mn_field_val( OvWRef<MnState> s, OvHash32 hash );
+OvBool			 mn_isfield( OvWRef<MnState> s, OvHash32 hash );
 
 void	mn_push( OvWRef<MnState> s, const MnValue& v );
 
@@ -195,11 +200,13 @@ MnValue::~MnValue()
 	MnRefDec(*this);
 }
 
-//////////////////////////////////////////////////////////////////////////
+////////////////////*    open and close    *///////////////////
 
 OvSPtr<MnState> mn_open_state()
 {
-	return OvNew MnState;
+	OvSPtr<MnState> s = OvNew MnState;
+	s->top = 0;
+	return s;
 }
 
 void mn_close_state( OvWRef<MnState> s )
@@ -210,33 +217,57 @@ void mn_close_state( OvWRef<MnState> s )
 	}
 }
 
-void mn_add_field( OvWRef<MnState> s, const OvString& name )
-{
-	OvHash32 hash = OU::string::rs_hash(name);
-	s->field.insert( make_pair( hash, MnValue() ) );
-}
+////////////////////////*    get/set stack, field    */////////////////////////////////
 
-OvSPtr<MnString> mn_new_string( OvWRef<MnState> s, const OvString& str )
+MnValue mn_stack_val( OvWRef<MnState> s, MnIndex idx )
 {
-	OvSPtr<MnString> ret;
-
-	OvHash32 hash = OU::string::rs_hash(str);
-	if ( s->strtable.find(hash) == s->strtable.end() )
+	if (idx < 0 && (s->top + idx) >= 0 )
 	{
-		s->strtable.insert( make_pair( hash, OvNew MnString(s, hash, str) ) );
+		return s->stack.at( s->top + idx );
 	}
-	ret = s->strtable[hash];
-	return ret;
+	else if (idx > 0 && (s->top - idx) >= 0 )
+	{
+		return s->stack.at( idx );
+	}
+	else
+	{
+		return MnValue();
+	}
 }
 
-void mn_push_field( OvWRef<MnState> s, const OvString& name )
+MnValue mn_field_val( OvWRef<MnState> s, OvHash32 hash )
 {
-	OvHash32 hash = OU::string::rs_hash(name);
 	MnState::map_hash_val::iterator itor = s->field.find( hash );
-	
 	if ( itor != s->field.end() )
 	{
-		mn_push( s, itor->second );
+		return itor->second;
+	}
+	return MnValue();
+}
+
+OvBool mn_isfield( OvWRef<MnState> s, OvHash32 hash )
+{
+	return ( s->field.find( hash ) != s->field.end() );
+}
+
+void mn_set_field( OvWRef<MnState> s, MnIndex idx )
+{
+	MnValue name = mn_stack_val( s, idx );
+	MnValue val  = mn_stack_val( s, idx + 1 );
+
+	if ( MnIsString(name) )
+	{
+		s->field.insert( make_pair( MnToString(name)->get_hash(), val ) );
+	}
+}
+
+void mn_get_field( OvWRef<MnState> s, MnIndex idx )
+{
+	MnValue name = mn_stack_val( s, idx );
+
+	if ( MnIsString(name) )
+	{
+		mn_push( s, mn_field_val( s, MnToString(name)->get_hash() ) );
 	}
 	else
 	{
@@ -244,9 +275,25 @@ void mn_push_field( OvWRef<MnState> s, const OvString& name )
 	}
 }
 
+OvSPtr<MnString> mn_new_string( OvWRef<MnState> s, const OvString& str )
+{
+	OvSPtr<MnString> ret;
+
+	OvHash32 hash = OU::string::rs_hash(str);
+	if ( !mn_isfield( s, hash ) )
+	{
+		s->strtable.insert( make_pair( hash, OvNew MnString(s, hash, str) ) );
+	}
+	ret = s->strtable[hash];
+	return ret;
+}
+
+///////////////////////*   kind of push    *//////////////////////
+
 void mn_push( OvWRef<MnState> s, const MnValue& v )
 {
 	s->stack.push_back( v );
+	++s->top;
 }
 
 void mn_push_number( OvWRef<MnState> s, OvReal v )
@@ -257,6 +304,42 @@ void mn_push_number( OvWRef<MnState> s, OvReal v )
 void mn_push_string( OvWRef<MnState> s, const OvString& v )
 {
 	mn_push( s, MnValue( MOT_STRING, mn_new_string( s, v ) ) );
+}
+
+/////////////////////*  all kinds of is    *///////////////////////////
+
+OvBool mn_is_number( OvWRef<MnState> s, MnIndex idx )
+{
+	return MnIsNumber( mn_stack_val( s, idx ) );
+}
+
+OvBool mn_is_string( OvWRef<MnState> s, MnIndex idx )
+{
+	return MnIsString( mn_stack_val( s, idx ) );
+}
+
+/////////////////////*  all kinds of to    *///////////////////////////
+
+OvReal mn_to_number( OvWRef<MnState> s, MnIndex idx )
+{
+	MnValue val = mn_stack_val( s, idx );
+	if ( MnIsNumber(val) )
+	{
+		return MnToNumber(val);
+	}
+	return 0;
+}
+
+const OvString& mn_to_string( OvWRef<MnState> s, MnIndex idx )
+{
+	MnValue val = mn_stack_val( s, idx );
+	if ( MnIsString(val) )
+	{
+		return MnToString(val)->get_str();
+	}
+
+	static OvString empty;
+	return empty;
 }
 
 //////////////////////////////////////////////////////////////////////////
