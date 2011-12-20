@@ -56,7 +56,7 @@ public:
 	typedef OvVector<MnValue>	vec_stack;
 
 	MnObject*	 heap;
-	map_hash_val field;
+	map_hash_val global;
 	map_hash_str strtable;
 	vec_stack	 stack;
 	MnIndex		 top;
@@ -65,9 +65,10 @@ public:
 
 OvSPtr<MnString> mn_new_string( OvWRef<MnState> s, const OvString& str );
 
-MnValue			 mn_stack_val( OvWRef<MnState> s, MnIndex idx );
-MnValue			 mn_field_val( OvWRef<MnState> s, OvHash32 hash );
-OvBool			 mn_isfield( OvWRef<MnState> s, OvHash32 hash );
+void			 mn_set_stack( OvWRef<MnState> s, MnIndex idx, const MnValue& val );
+MnValue			 mn_get_stack( OvWRef<MnState> s, MnIndex idx );
+MnValue			 mn_global_val( OvWRef<MnState> s, OvHash32 hash );
+OvBool			 mn_is_global( OvWRef<MnState> s, OvHash32 hash );
 
 void	mn_push_value( OvWRef<MnState> s, const MnValue& v );
 
@@ -166,6 +167,9 @@ public:
 	MnValue( OvReal n );
 	MnValue( MnObjType t, OvSPtr<MnObject> o );
 	~MnValue();
+
+	const MnValue& operator =( const MnValue& v );
+
 };
 
 MnValue::MnValue()
@@ -182,7 +186,6 @@ MnValue::MnValue( const MnValue &v )
 {
 	type = v.type;
 	u	 = v.u;
-
 	MnRefInc(*this);
 }
 
@@ -210,6 +213,15 @@ MnValue::~MnValue()
 	MnRefDec(*this);
 }
 
+const MnValue& MnValue::operator=( const MnValue& v )
+{
+	MnRefDec(*this);
+	type = v.type;
+	u	 = v.u;
+	MnRefInc(*this);
+	return *this;
+}
+
 ////////////////////*    open and close    *///////////////////
 
 OvSPtr<MnState> mn_open_state()
@@ -229,7 +241,20 @@ void mn_close_state( OvWRef<MnState> s )
 
 ////////////////////////*    get/set stack, field    */////////////////////////////////
 
-MnValue mn_stack_val( OvWRef<MnState> s, MnIndex idx )
+void mn_set_stack( OvWRef<MnState> s, MnIndex idx, const MnValue& val )
+{
+	MnIndex top = mn_get_top(s);
+	if (idx < 0 && (top + idx) >= 0 )
+	{
+		s->stack[top + idx] = val;
+	}
+	else if (idx > 0 && top >= idx )
+	{
+		s->stack[idx - 1] = val;
+	}
+}
+
+MnValue mn_get_stack( OvWRef<MnState> s, MnIndex idx )
 {
 	MnIndex top = mn_get_top(s);
 	if (idx < 0 && (top + idx) >= 0 )
@@ -246,44 +271,40 @@ MnValue mn_stack_val( OvWRef<MnState> s, MnIndex idx )
 	}
 }
 
-MnValue mn_field_val( OvWRef<MnState> s, OvHash32 hash )
+MnValue mn_global_val( OvWRef<MnState> s, OvHash32 hash )
 {
-	MnState::map_hash_val::iterator itor = s->field.find( hash );
-	if ( itor != s->field.end() )
+	MnState::map_hash_val::iterator itor = s->global.find( hash );
+	if ( itor != s->global.end() )
 	{
 		return itor->second;
 	}
 	return MnValue();
 }
 
-OvBool mn_isfield( OvWRef<MnState> s, OvHash32 hash )
+OvBool mn_is_global( OvWRef<MnState> s, OvHash32 hash )
 {
-	return ( s->field.find( hash ) != s->field.end() );
+	return ( s->global.find( hash ) != s->global.end() );
 }
 
-void mn_set_field( OvWRef<MnState> s, MnIndex idx )
+void mn_set_global( OvWRef<MnState> s, const OvString& name )
 {
-	MnValue name = mn_stack_val( s, idx );
-	MnValue val  = mn_stack_val( s, idx + 1 );
+	MnValue val  = mn_get_stack( s, -1 );
 
-	if ( MnIsString(name) )
+	mn_pop(s,1);
+
+	if ( MnIsNil(val) )
 	{
-		s->field.insert( make_pair( MnToString(name)->get_hash(), val ) );
-	}
-}
-
-void mn_get_field( OvWRef<MnState> s, MnIndex idx )
-{
-	MnValue name = mn_stack_val( s, idx );
-
-	if ( MnIsString(name) )
-	{
-		mn_push_value( s, mn_field_val( s, MnToString(name)->get_hash() ) );
+		s->global.erase( OU::string::rs_hash( name ) );
 	}
 	else
 	{
-		mn_push_value( s, MnValue() );
+		s->global.insert( make_pair( OU::string::rs_hash( name ), val ) );
 	}
+}
+
+void mn_get_global( OvWRef<MnState> s, const OvString& name )
+{
+	mn_push_value( s, mn_global_val( s, OU::string::rs_hash( name ) ) );
 }
 
 OvSPtr<MnString> mn_new_string( OvWRef<MnState> s, const OvString& str )
@@ -291,7 +312,7 @@ OvSPtr<MnString> mn_new_string( OvWRef<MnState> s, const OvString& str )
 	OvSPtr<MnString> ret;
 
 	OvHash32 hash = OU::string::rs_hash(str);
-	if ( !mn_isfield( s, hash ) )
+	if ( !mn_is_global( s, hash ) )
 	{
 		s->strtable.insert( make_pair( hash, OvNew MnString(s, hash, str) ) );
 	}
@@ -303,14 +324,15 @@ OvSPtr<MnString> mn_new_string( OvWRef<MnState> s, const OvString& str )
 
 void mn_set_top( OvWRef<MnState> s, MnIndex idx )
 {
-	MnIndex top = mn_get_top(s);
-	MnIndex newtop = top;
-	if (idx < 0 && (top + idx) >= 0 )
+	MnIndex newtop = mn_get_top(s);
+	if ( idx < 0 )
 	{
 		newtop += idx + 1;
+		newtop = (newtop<0)? 0:newtop;
 	}
-	else if (idx >= 0 && top >= idx )
+	else if ( idx >= 0 )
 	{
+		if ( idx > s->stack.size() ) s->stack.resize(idx);
 		newtop = idx;
 	}
 	s->top = newtop;
@@ -325,8 +347,9 @@ MnIndex mn_get_top( OvWRef<MnState> s )
 
 void mn_push_value( OvWRef<MnState> s, const MnValue& v )
 {
-	s->stack.push_back( v );
-	mn_set_top( s, mn_get_top(s) + 1 );
+	MnIndex top = mn_get_top(s);
+	mn_set_top( s, ++top );
+	mn_set_stack( s, top, v );
 }
 
 void mn_push_boolean( OvWRef<MnState> s, OvBool v )
@@ -348,24 +371,24 @@ void mn_push_string( OvWRef<MnState> s, const OvString& v )
 
 OvBool mn_is_boolean( OvWRef<MnState> s, MnIndex idx )
 {
-	return MnIsBoolean( mn_stack_val( s, idx ) );
+	return MnIsBoolean( mn_get_stack( s, idx ) );
 }
 
 OvBool mn_is_number( OvWRef<MnState> s, MnIndex idx )
 {
-	return MnIsNumber( mn_stack_val( s, idx ) );
+	return MnIsNumber( mn_get_stack( s, idx ) );
 }
 
 OvBool mn_is_string( OvWRef<MnState> s, MnIndex idx )
 {
-	return MnIsString( mn_stack_val( s, idx ) );
+	return MnIsString( mn_get_stack( s, idx ) );
 }
 
 /////////////////////*  all kinds of "to"    *///////////////////////////
 
 OvBool mn_to_boolean( OvWRef<MnState> s, MnIndex idx )
 {
-	MnValue val = mn_stack_val( s, idx );
+	MnValue val = mn_get_stack( s, idx );
 	if ( MnIsBoolean(val) )
 	{
 		return MnToBoolean(val);
@@ -375,7 +398,7 @@ OvBool mn_to_boolean( OvWRef<MnState> s, MnIndex idx )
 
 OvReal mn_to_number( OvWRef<MnState> s, MnIndex idx )
 {
-	MnValue val = mn_stack_val( s, idx );
+	MnValue val = mn_get_stack( s, idx );
 	if ( MnIsNumber(val) )
 	{
 		return MnToNumber(val);
@@ -385,7 +408,7 @@ OvReal mn_to_number( OvWRef<MnState> s, MnIndex idx )
 
 const OvString& mn_to_string( OvWRef<MnState> s, MnIndex idx )
 {
-	MnValue val = mn_stack_val( s, idx );
+	MnValue val = mn_get_stack( s, idx );
 	if ( MnIsString(val) )
 	{
 		return MnToString(val)->get_str();
