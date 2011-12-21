@@ -10,6 +10,7 @@ void			mn_close_state( OvWRef<MnState> s );
 void			mn_set_global( OvWRef<MnState> s, const OvString& name );
 void			mn_get_global( OvWRef<MnState> s, const OvString& name );
 
+void			mn_new_table( OvWRef<MnState> s );
 void			mn_set_table( OvWRef<MnState> s, MnIndex idx );
 void			mn_get_table( OvWRef<MnState> s, MnIndex idx );
 

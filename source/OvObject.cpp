@@ -16,7 +16,7 @@ OvObject::OvObject()
 OvObject::~OvObject()
 {
 	mn_close_state( m_state );
-	OvObjectManager::GetInstance()->RecallObjectID(this);
+	OvObjectManager::GetInstance()->RecallObjectID( GetObjectID() );
 }
 
 OvObjectID		OvObject::GetObjectID()

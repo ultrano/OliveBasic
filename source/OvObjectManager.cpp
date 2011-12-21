@@ -20,11 +20,11 @@ OvObjectID		OvObjectManager::AllocObjectID(OvObjectWRef _pObject)
 	return m_maxID;
 }
 
-void		OvObjectManager::RecallObjectID(OvObjectWRef _pObject)
+void		OvObjectManager::RecallObjectID(const OvObjectID& objid)
 {
 	OvSectionLock lock;
 	//! 오브젝트는 오브젝트 테이블에서 삭제한다.
-	m_objectTable.erase(_pObject->GetObjectID());
+	m_objectTable.erase(objid);
 }
 
 OvObjectWRef			OvObjectManager::FindObject(const OvObjectID& rObjHandle)

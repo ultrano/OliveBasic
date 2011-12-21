@@ -23,7 +23,7 @@ public:
 protected:
 
 	OvObjectID		AllocObjectID(OvObjectWRef _pObject);
-	void			RecallObjectID(OvObjectWRef _pObject);
+	void			RecallObjectID(const OvObjectID& objid);
 
 private:
 	OvObjectID		m_maxID;
