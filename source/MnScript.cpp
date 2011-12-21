@@ -42,10 +42,11 @@ enum MnObjType
 	MnIsTable((v)) \
 	)
 
-
-#define MnToBoolean( v ) ((MnIsBoolean(v)? (v).u.bln : false))
-#define MnToNumber( v ) ((MnIsNumber(v)? (v).u.num : 0))
-#define MnToString( v ) ((MnString*)(MnIsString(v)? (v).u.refcnt->getref() : NULL))
+#define MnBadConvert()	(NULL)
+#define MnToBoolean( v ) ((MnIsBoolean(v)? (v).u.bln : MnBadConvert()))
+#define MnToNumber( v ) ((MnIsNumber(v)? (v).u.num : MnBadConvert()))
+#define MnToString( v ) ((MnString*)(MnIsString(v)? (v).u.refcnt->getref() : MnBadConvert()))
+#define MnToTable( v ) ((MnTable*)(MnIsTable(v)? (v).u.refcnt->getref() : MnBadConvert()))
 //////////////////////////////////////////////////////////////////////////
 
 class MnState : public OvRefable
@@ -59,11 +60,15 @@ public:
 	map_hash_val global;
 	map_hash_str strtable;
 	vec_stack	 stack;
+
+	MnIndex		 base;
 	MnIndex		 top;
 
 };
 
 OvSPtr<MnString> nx_new_string( OvWRef<MnState> s, const OvString& str );
+
+MnIndex			 nx_absidx( OvWRef<MnState> s, MnIndex idx );
 
 OvBool			 nx_is_global( OvWRef<MnState> s, OvHash32 hash );
 
@@ -72,6 +77,9 @@ MnValue			 nx_get_global( OvWRef<MnState> s, OvHash32 hash );
 
 void			 nx_set_stack( OvWRef<MnState> s, MnIndex idx, const MnValue& val );
 MnValue			 nx_get_stack( OvWRef<MnState> s, MnIndex idx );
+
+void			 nx_set_table( OvWRef<MnState> s, MnValue& t, MnValue& n, MnValue& v );
+MnValue			 nx_get_table( OvWRef<MnState> s, MnValue& t, MnValue& n );
 
 void			 nx_push_value( OvWRef<MnState> s, const MnValue& v );
 
@@ -157,13 +165,20 @@ class MnTable : public MnObject
 {
 public:
 
-	typedef OvMap<MnValue,MnValue> map_val_val;
+	typedef OvPair<MnValue,MnValue> pair_val_val;
+	typedef OvMap<OvHash32,pair_val_val> map_hash_pair;
 
 	MnTable( OvWRef<MnState> s );
 
-	map_val_val m_table;
+	map_hash_pair table;
 
 };
+
+MnTable::MnTable( OvWRef<MnState> s )
+: MnObject(s)
+{
+
+}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -244,7 +259,8 @@ const MnValue& MnValue::operator=( const MnValue& v )
 OvSPtr<MnState> mn_open_state()
 {
 	OvSPtr<MnState> s = OvNew MnState;
-	s->top = 0;
+	s->base = 0;
+	s->top  = 0;
 	return s;
 }
 
@@ -282,32 +298,56 @@ MnValue nx_get_global( OvWRef<MnState> s, OvHash32 hash )
 
 void nx_set_stack( OvWRef<MnState> s, MnIndex idx, const MnValue& val )
 {
-	MnIndex top = mn_get_top(s);
-	if (idx < 0 && (top + idx) >= 0 )
+	idx = nx_absidx( s, idx );
+	if ( idx < s->stack.size() )
 	{
-		s->stack[top + idx] = val;
-	}
-	else if (idx > 0 && top >= idx )
-	{
-		s->stack[idx - 1] = val;
+		s->stack[idx] = val;
 	}
 }
 
 MnValue nx_get_stack( OvWRef<MnState> s, MnIndex idx )
 {
+	idx = nx_absidx( s, idx );
 	MnIndex top = mn_get_top(s);
-	if (idx < 0 && (top + idx) >= 0 )
+	if ( idx < s->stack.size() )
 	{
-		return s->stack.at( top + idx );
-	}
-	else if (idx > 0 && top >= idx )
-	{
-		return s->stack.at( idx - 1 );
+		return s->stack.at( idx );
 	}
 	else
 	{
 		return MnValue();
 	}
+}
+
+void nx_set_table( OvWRef<MnState> s, MnValue& t, MnValue& n, MnValue& v )
+{
+	if ( MnIsTable(t) && MnIsString(n) )
+	{
+		OvHash32 hash = MnToString(n)->get_hash();
+		if ( MnIsNil(v) )
+		{
+			MnToTable(t)->table.erase( hash );
+		}
+		else
+		{
+			MnToTable(t)->table.insert( make_pair( hash, make_pair(n,v) ) );
+		}
+	}
+}
+
+MnValue nx_get_table( OvWRef<MnState> s, MnValue& t, MnValue& n )
+{
+	if ( MnIsTable(t) && MnIsString(n) )
+	{
+		OvHash32 hash = MnIsString(n)->get_hash();
+		MnTable::map_hash_pair::iterator itor = MnToTable(t)->table.find( hash );
+
+		if ( itor !=  MnToTable(t)->table.end() )
+		{
+			return itor->second.second;
+		}
+	}
+	return MnValue();
 }
 
 OvBool nx_is_global( OvWRef<MnState> s, OvHash32 hash )
@@ -326,6 +366,33 @@ void mn_get_global( OvWRef<MnState> s, const OvString& name )
 	nx_push_value( s, nx_get_global( s, OU::string::rs_hash( name ) ) );
 }
 
+void mn_set_table( OvWRef<MnState> s, MnIndex idx )
+{
+	if ( mn_get_top(s) >= 2 )
+	{
+		nx_set_table( s
+			, nx_get_stack(s,idx)
+			, nx_get_stack(s,-2)
+			, nx_get_stack(s,-1));
+
+		mn_pop(s,2);
+	}
+}
+
+void mn_get_table( OvWRef<MnState> s, MnIndex idx )
+{
+	if ( mn_get_top(s) >= 1 )
+	{
+		MnValue val = nx_get_table( s
+			, nx_get_stack(s,idx)
+			, nx_get_stack(s,-1));
+
+		mn_pop(s,1);
+
+		nx_push_value( s, val );
+	}
+}
+
 OvSPtr<MnString> nx_new_string( OvWRef<MnState> s, const OvString& str )
 {
 	OvSPtr<MnString> ret;
@@ -339,27 +406,36 @@ OvSPtr<MnString> nx_new_string( OvWRef<MnState> s, const OvString& str )
 	return ret;
 }
 
+MnIndex nx_absidx( OvWRef<MnState> s, MnIndex idx )
+{
+	MnIndex abidx = 0;
+	if ( idx < 0 )
+	{
+		abidx = mn_get_top(s) + idx;
+		abidx = s->base + ((abidx<0)? 0 : abidx);
+	}
+	else if ( idx >= 0 )
+	{
+		abidx = s->base + abidx - 1;
+	}
+	return abidx;
+}
+
 ///////////////////////* get/set top *///////////////////////
 
 void mn_set_top( OvWRef<MnState> s, MnIndex idx )
 {
-	MnIndex newtop = mn_get_top(s);
-	if ( idx < 0 )
+	idx = nx_absidx( s, idx );
+	if ( idx >= s->stack.size() )
 	{
-		newtop += idx + 1;
-		newtop = (newtop<0)? 0:newtop;
+		s->stack.resize( idx );
 	}
-	else if ( idx >= 0 )
-	{
-		if ( idx > s->stack.size() ) s->stack.resize(idx);
-		newtop = idx;
-	}
-	s->top = newtop;
+	s->top = idx;
 }
 
 MnIndex mn_get_top( OvWRef<MnState> s )
 {
-	return s->top;
+	return s->top - s->base;
 }
 
 ///////////////////////*   kind of push    *//////////////////////
