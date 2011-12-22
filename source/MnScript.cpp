@@ -464,6 +464,7 @@ MnIndex nx_absidx( MnState* s, MnIndex idx )
 void mn_set_top( MnState* s, MnIndex idx )
 {
 	idx = nx_absidx( s, idx ) + 1;
+	idx = (idx < s->base)? s->base : idx;
 	if ( idx > s->stack.size() )
 	{
 		s->stack.resize( idx );
