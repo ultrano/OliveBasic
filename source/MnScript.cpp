@@ -192,21 +192,32 @@ public:
 
 //////////////////////////////////////////////////////////////////////////
 
+void	nx_inc_ref( MnValue& v )
+{
+	if ( MnIsObj(v) ) v.u.refcnt->inc();
+}
+
+void	nx_dec_ref( MnValue& v )
+{
+	if ( MnIsObj(v) )
+	{
+		if ( v.u.refcnt->getscnt() == 1 && MnToObject(v) ) MnToObject(v)->cleanup();
+		v.u.refcnt->dec();
+	}
+}
+
 MnValue::MnValue()
 : type(MOT_NIL)
 {
 
 }
 
-#define MnRefInc(v) if ( MnIsObj((v)) ) (v).u.refcnt->inc();
-#define MnRefDec(v) if ( MnIsObj((v)) ) (v).u.refcnt->dec();
-
 MnValue::MnValue( const MnValue &v )
 : type(MOT_NIL)
 {
 	type = v.type;
 	u	 = v.u;
-	MnRefInc(*this);
+	nx_inc_ref(*this);
 }
 
 MnValue::MnValue( OvBool b )
@@ -225,20 +236,20 @@ MnValue::MnValue( MnObjType t, OvSPtr<MnObject> o )
 {
 	type	 = t;
 	u.refcnt = o.refcnt;
-	MnRefInc(*this);
+	nx_inc_ref(*this);
 }
 
 MnValue::~MnValue()
 {
-	MnRefDec(*this);
+	nx_dec_ref(*this);
 }
 
 const MnValue& MnValue::operator=( const MnValue& v )
 {
-	MnRefDec(*this);
+	nx_dec_ref(*this);
 	type = v.type;
 	u	 = v.u;
-	MnRefInc(*this);
+	nx_inc_ref(*this);
 	return *this;
 }
 
@@ -302,6 +313,8 @@ void mn_close_state( MnState* s )
 {
 	if ( s )
 	{
+		s->stack.clear();
+		s->global.clear();
 		OvDelete s;
 	}
 }
@@ -436,7 +449,7 @@ OvSPtr<MnString> nx_new_string( MnState* s, const OvString& str )
 	OvSPtr<MnString> ret;
 
 	OvHash32 hash = OU::string::rs_hash(str);
-	if ( !nx_is_global( s, hash ) )
+	if ( s->strtable.find( hash ) == s->strtable.end() )
 	{
 		s->strtable.insert( make_pair( hash, OvNew MnString(s, hash, str) ) );
 	}
