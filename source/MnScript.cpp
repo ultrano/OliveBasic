@@ -71,22 +71,22 @@ public:
 
 };
 
-OvSPtr<MnString> nx_new_string( OvWRef<MnState> s, const OvString& str );
+OvSPtr<MnString> nx_new_string( MnState* s, const OvString& str );
 
-MnIndex			 nx_absidx( OvWRef<MnState> s, MnIndex idx );
+MnIndex			 nx_absidx( MnState* s, MnIndex idx );
 
-OvBool			 nx_is_global( OvWRef<MnState> s, OvHash32 hash );
+OvBool			 nx_is_global( MnState* s, OvHash32 hash );
 
-void			 nx_set_global( OvWRef<MnState> s, OvHash32 hash, const MnValue& val );
-MnValue			 nx_get_global( OvWRef<MnState> s, OvHash32 hash );
+void			 nx_set_global( MnState* s, OvHash32 hash, const MnValue& val );
+MnValue			 nx_get_global( MnState* s, OvHash32 hash );
 
-void			 nx_set_stack( OvWRef<MnState> s, MnIndex idx, const MnValue& val );
-MnValue			 nx_get_stack( OvWRef<MnState> s, MnIndex idx );
+void			 nx_set_stack( MnState* s, MnIndex idx, const MnValue& val );
+MnValue			 nx_get_stack( MnState* s, MnIndex idx );
 
-void			 nx_set_table( OvWRef<MnState> s, MnValue& t, MnValue& n, MnValue& v );
-MnValue			 nx_get_table( OvWRef<MnState> s, MnValue& t, MnValue& n );
+void			 nx_set_table( MnState* s, MnValue& t, MnValue& n, MnValue& v );
+MnValue			 nx_get_table( MnState* s, MnValue& t, MnValue& n );
 
-void			 nx_push_value( OvWRef<MnState> s, const MnValue& v );
+void			 nx_push_value( MnState* s, const MnValue& v );
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -289,25 +289,25 @@ void MnTable::cleanup()
 
 ////////////////////*    open and close    *///////////////////
 
-OvSPtr<MnState> mn_open_state()
+MnState* mn_open_state()
 {
-	OvSPtr<MnState> s = OvNew MnState;
+	MnState* s = OvNew MnState;
 	s->base = 0;
 	s->top  = 0;
 	return s;
 }
 
-void mn_close_state( OvWRef<MnState> s )
+void mn_close_state( MnState* s )
 {
 	if ( s )
 	{
-		OvDelete s.get_real();
+		OvDelete s;
 	}
 }
 
 ////////////////////////*    get/set stack, field    */////////////////////////////////
 
-void nx_set_global( OvWRef<MnState> s, OvHash32 hash, const MnValue& val )
+void nx_set_global( MnState* s, OvHash32 hash, const MnValue& val )
 {
 	if ( MnIsNil(val) )
 	{
@@ -319,7 +319,7 @@ void nx_set_global( OvWRef<MnState> s, OvHash32 hash, const MnValue& val )
 	}
 }
 
-MnValue nx_get_global( OvWRef<MnState> s, OvHash32 hash )
+MnValue nx_get_global( MnState* s, OvHash32 hash )
 {
 	MnState::map_hash_val::iterator itor = s->global.find( hash );
 	if ( itor != s->global.end() )
@@ -329,7 +329,7 @@ MnValue nx_get_global( OvWRef<MnState> s, OvHash32 hash )
 	return MnValue();
 }
 
-void nx_set_stack( OvWRef<MnState> s, MnIndex idx, const MnValue& val )
+void nx_set_stack( MnState* s, MnIndex idx, const MnValue& val )
 {
 	idx = nx_absidx( s, idx );
 	if ( idx >= 0 && idx < s->stack.size() )
@@ -338,7 +338,7 @@ void nx_set_stack( OvWRef<MnState> s, MnIndex idx, const MnValue& val )
 	}
 }
 
-MnValue nx_get_stack( OvWRef<MnState> s, MnIndex idx )
+MnValue nx_get_stack( MnState* s, MnIndex idx )
 {
 	idx = nx_absidx( s, idx );
 	if ( idx >= 0 && idx < s->stack.size() )
@@ -351,7 +351,7 @@ MnValue nx_get_stack( OvWRef<MnState> s, MnIndex idx )
 	}
 }
 
-void nx_set_table( OvWRef<MnState> s, MnValue& t, MnValue& n, MnValue& v )
+void nx_set_table( MnState* s, MnValue& t, MnValue& n, MnValue& v )
 {
 	if ( MnIsTable(t) && MnIsString(n) )
 	{
@@ -367,7 +367,7 @@ void nx_set_table( OvWRef<MnState> s, MnValue& t, MnValue& n, MnValue& v )
 	}
 }
 
-MnValue nx_get_table( OvWRef<MnState> s, MnValue& t, MnValue& n )
+MnValue nx_get_table( MnState* s, MnValue& t, MnValue& n )
 {
 	if ( MnIsTable(t) && MnIsString(n) )
 	{
@@ -382,28 +382,28 @@ MnValue nx_get_table( OvWRef<MnState> s, MnValue& t, MnValue& n )
 	return MnValue();
 }
 
-OvBool nx_is_global( OvWRef<MnState> s, OvHash32 hash )
+OvBool nx_is_global( MnState* s, OvHash32 hash )
 {
 	return ( s->global.find( hash ) != s->global.end() );
 }
 
-void mn_set_global( OvWRef<MnState> s, const OvString& name )
+void mn_set_global( MnState* s, const OvString& name )
 {
 	nx_set_global( s, OU::string::rs_hash( name ), nx_get_stack( s, -1 ) );
 	mn_pop(s,1);
 }
 
-void mn_get_global( OvWRef<MnState> s, const OvString& name )
+void mn_get_global( MnState* s, const OvString& name )
 {
 	nx_push_value( s, nx_get_global( s, OU::string::rs_hash( name ) ) );
 }
 
-void mn_new_table( OvWRef<MnState> s )
+void mn_new_table( MnState* s )
 {
 	nx_push_value( s, MnValue( MOT_TABLE, OvNew MnTable(s) ) );
 }
 
-void mn_set_table( OvWRef<MnState> s, MnIndex idx )
+void mn_set_table( MnState* s, MnIndex idx )
 {
 	if ( mn_get_top(s) >= 2 )
 	{
@@ -416,7 +416,7 @@ void mn_set_table( OvWRef<MnState> s, MnIndex idx )
 	}
 }
 
-void mn_get_table( OvWRef<MnState> s, MnIndex idx )
+void mn_get_table( MnState* s, MnIndex idx )
 {
 	if ( mn_get_top(s) >= 1 )
 	{
@@ -430,7 +430,7 @@ void mn_get_table( OvWRef<MnState> s, MnIndex idx )
 	}
 }
 
-OvSPtr<MnString> nx_new_string( OvWRef<MnState> s, const OvString& str )
+OvSPtr<MnString> nx_new_string( MnState* s, const OvString& str )
 {
 	OvSPtr<MnString> ret;
 
@@ -443,7 +443,7 @@ OvSPtr<MnString> nx_new_string( OvWRef<MnState> s, const OvString& str )
 	return ret;
 }
 
-MnIndex nx_absidx( OvWRef<MnState> s, MnIndex idx )
+MnIndex nx_absidx( MnState* s, MnIndex idx )
 {
 	MnIndex abidx = 0;
 	if ( idx < 0 )
@@ -460,7 +460,7 @@ MnIndex nx_absidx( OvWRef<MnState> s, MnIndex idx )
 
 ///////////////////////* get/set top *///////////////////////
 
-void mn_set_top( OvWRef<MnState> s, MnIndex idx )
+void mn_set_top( MnState* s, MnIndex idx )
 {
 	idx = nx_absidx( s, idx ) + 1;
 	if ( idx > s->stack.size() )
@@ -470,55 +470,55 @@ void mn_set_top( OvWRef<MnState> s, MnIndex idx )
 	s->top = idx;
 }
 
-MnIndex mn_get_top( OvWRef<MnState> s )
+MnIndex mn_get_top( MnState* s )
 {
 	return s->top - s->base;
 }
 
 ///////////////////////*   kind of push    *//////////////////////
 
-void nx_push_value( OvWRef<MnState> s, const MnValue& v )
+void nx_push_value( MnState* s, const MnValue& v )
 {
 	MnIndex top = mn_get_top(s);
 	mn_set_top( s, ++top );
 	nx_set_stack( s, top, v );
 }
 
-void mn_push_boolean( OvWRef<MnState> s, OvBool v )
+void mn_push_boolean( MnState* s, OvBool v )
 {
 	nx_push_value( s, MnValue( (OvBool)v ) );
 }
 
-void mn_push_number( OvWRef<MnState> s, OvReal v )
+void mn_push_number( MnState* s, OvReal v )
 {
 	nx_push_value( s, MnValue( (OvReal)v ) );
 }
 
-void mn_push_string( OvWRef<MnState> s, const OvString& v )
+void mn_push_string( MnState* s, const OvString& v )
 {
 	nx_push_value( s, MnValue( MOT_STRING, nx_new_string( s, v ) ) );
 }
 
 /////////////////////*  all kinds of "is"    *///////////////////////////
 
-OvBool mn_is_boolean( OvWRef<MnState> s, MnIndex idx )
+OvBool mn_is_boolean( MnState* s, MnIndex idx )
 {
 	return MnIsBoolean( nx_get_stack( s, idx ) );
 }
 
-OvBool mn_is_number( OvWRef<MnState> s, MnIndex idx )
+OvBool mn_is_number( MnState* s, MnIndex idx )
 {
 	return MnIsNumber( nx_get_stack( s, idx ) );
 }
 
-OvBool mn_is_string( OvWRef<MnState> s, MnIndex idx )
+OvBool mn_is_string( MnState* s, MnIndex idx )
 {
 	return MnIsString( nx_get_stack( s, idx ) );
 }
 
 /////////////////////*  all kinds of "to"    *///////////////////////////
 
-OvBool mn_to_boolean( OvWRef<MnState> s, MnIndex idx )
+OvBool mn_to_boolean( MnState* s, MnIndex idx )
 {
 	MnValue val = nx_get_stack( s, idx );
 	if ( MnIsBoolean(val) )
@@ -528,7 +528,7 @@ OvBool mn_to_boolean( OvWRef<MnState> s, MnIndex idx )
 	return false;
 }
 
-OvReal mn_to_number( OvWRef<MnState> s, MnIndex idx )
+OvReal mn_to_number( MnState* s, MnIndex idx )
 {
 	MnValue val = nx_get_stack( s, idx );
 	if ( MnIsNumber(val) )
@@ -538,7 +538,7 @@ OvReal mn_to_number( OvWRef<MnState> s, MnIndex idx )
 	return 0;
 }
 
-const OvString& mn_to_string( OvWRef<MnState> s, MnIndex idx )
+const OvString& mn_to_string( MnState* s, MnIndex idx )
 {
 	MnValue val = nx_get_stack( s, idx );
 	if ( MnIsString(val) )

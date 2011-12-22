@@ -24,7 +24,7 @@ OvObjectID		OvObject::GetObjectID()
 	return m_idObjectID;
 }
 
-OvWRef<MnState> OvObject::GetState()
+MnState*		OvObject::GetState()
 {
 	return m_state;
 }

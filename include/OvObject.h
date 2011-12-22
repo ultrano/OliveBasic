@@ -35,12 +35,11 @@ public:
 	OvObjectID		GetObjectID();
 
 	//! object state
-	OvWRef<MnState> GetState();
+	MnState* GetState();
 
 private:
 
-	OvObjectID		m_idObjectID;
-
-	OvSPtr<MnState>	m_state;
+	OvObjectID	m_idObjectID;
+	MnState*	m_state;
 
 };
