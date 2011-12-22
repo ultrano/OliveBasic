@@ -1,5 +1,5 @@
 #pragma once
-#include "OvRefable.h"
+#include "OvTypeDef.h"
 
 typedef OvInt	MnIndex;
 class MnState;

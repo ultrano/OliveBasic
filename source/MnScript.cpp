@@ -1,4 +1,5 @@
 #include "MnScript.h"
+#include "OvMemObject.h"
 #include "OvSolidString.h"
 
 class MnObject;
@@ -54,7 +55,7 @@ enum MnObjType
 #define MnToTable( v ) ((MnTable*)(MnIsTable(v)? (v).u.refcnt->getref() : MnBadConvert()))
 //////////////////////////////////////////////////////////////////////////
 
-class MnState : public OvRefable
+class MnState : public OvMemObject
 {
 public:
 	typedef OvMap<OvHash32,MnValue> map_hash_val;
@@ -94,11 +95,11 @@ class MnObject : public OvRefable
 {
 public:
 	
-	MnObject( OvWRef<MnState> s );
+	MnObject( MnState* s );
 	~MnObject();
 
 	/* field */
-	OvWRef<MnState> state;
+	MnState*const 	state;
 	MnObjType	type;
 
 	MnObject*	next;
@@ -111,7 +112,7 @@ public:
 	virtual void cleanup() = 0;
 };
 
-MnObject::MnObject( OvWRef<MnState> s ) 
+MnObject::MnObject( MnState* s ) 
 : state(s)
 , next(NULL)
 , prev(NULL)
@@ -135,7 +136,7 @@ class MnString : public MnObject
 {
 public:
 
-	MnString( OvWRef<MnState> s, OvHash32 hash, const OvString& sstr );
+	MnString( MnState* s, OvHash32 hash, const OvString& sstr );
 
 	OvHash32		get_hash() { return m_hash; };
 	const OvString& get_str() { return m_str; };
@@ -158,7 +159,7 @@ public:
 
 	map_hash_pair table;
 
-	MnTable( OvWRef<MnState> s );
+	MnTable( MnState* s );
 
 	virtual void marking();
 	virtual void cleanup();
@@ -243,7 +244,7 @@ const MnValue& MnValue::operator=( const MnValue& v )
 
 //////////////////////////////////////////////////////////////////////////
 
-MnString::MnString( OvWRef<MnState> s, OvHash32 hash,const OvString& sstr )
+MnString::MnString( MnState* s, OvHash32 hash,const OvString& sstr )
 : MnObject(s)
 , m_hash( hash )
 , m_str( sstr )
@@ -262,7 +263,7 @@ void MnString::cleanup()
 
 //////////////////////////////////////////////////////////////////////////
 
-MnTable::MnTable( OvWRef<MnState> s )
+MnTable::MnTable( MnState* s )
 : MnObject(s)
 {
 
