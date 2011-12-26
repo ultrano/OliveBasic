@@ -4,6 +4,7 @@
 
 class MnObject;
 class MnString;
+class MnTable;
 class MnValue;
 
 enum MnObjType
@@ -24,7 +25,7 @@ enum MnObjType
 
 #define MARKED (1)
 #define UNMARKED (0)
-#define DYING (-1)
+#define DEAD (-1)
 
 #define MnMarking( v ) \
 	if ( MnIsObj( (v) ) && !(MnToObject((v))->mark == MARKED)  )\
@@ -50,16 +51,16 @@ enum MnObjType
 #define MnBadConvert()	(NULL)
 #define MnToBoolean( v ) ((MnIsBoolean(v)? (v).u.bln : MnBadConvert()))
 #define MnToNumber( v ) ((MnIsNumber(v)? (v).u.num : MnBadConvert()))
-#define MnToObject( v ) ((MnObject*)(MnIsObj(v)? (v).u.refcnt->getref() : MnBadConvert()))
-#define MnToString( v ) ((MnString*)(MnIsString(v)? (v).u.refcnt->getref() : MnBadConvert()))
-#define MnToTable( v ) ((MnTable*)(MnIsTable(v)? (v).u.refcnt->getref() : MnBadConvert()))
+#define MnToObject( v ) (MnIsObj(v)? (v).u.cnt->u.obj : MnBadConvert())
+#define MnToString( v ) (MnIsString(v)? (v).u.cnt->u.str : MnBadConvert())
+#define MnToTable( v ) (MnIsTable(v)? (v).u.cnt->u.tbl : MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
 class MnState : public OvMemObject
 {
 public:
 	typedef OvMap<OvHash32,MnValue> map_hash_val;
-	typedef OvMap<OvHash32,OvWRef<MnString>> map_hash_str;
+	typedef OvMap<OvHash32,MnString*> map_hash_str;
 	typedef OvVector<MnValue>	vec_stack;
 
 	MnObject*	 heap;
@@ -72,7 +73,13 @@ public:
 
 };
 
-OvSPtr<MnString> nx_new_string( MnState* s, const OvString& str );
+void*			 nx_alloc( OvSize sz ) { return OvMemAlloc(sz); };
+void			 nx_free( void* p ) { OvMemFree(p); };
+
+MnString*		 nx_new_string( MnState* s, const OvString& str );
+MnTable*		 nx_new_table( MnState* s );
+
+void			 nx_delete_obj( MnObject* o );
 
 MnIndex			 nx_absidx( MnState* s, MnIndex idx );
 
@@ -91,7 +98,21 @@ void			 nx_push_value( MnState* s, const MnValue& v );
 
 //////////////////////////////////////////////////////////////////////////
 
-class MnObject : public OvRefable
+class MnRefCounter : public OvMemObject
+{
+public:
+	MnRefCounter() : scnt(0), wcnt(0) { u.obj = NULL; };
+	OvInt		scnt;
+	OvInt		wcnt;
+	union
+	{
+		MnObject* obj;
+		MnString* str;
+		MnTable*  tbl;
+	} u;
+};
+
+class MnObject : public OvMemObject
 {
 public:
 	
@@ -100,7 +121,8 @@ public:
 
 	/* field */
 	MnState*const 	state;
-	MnObjType	type;
+	MnObjType		type;
+	MnRefCounter*	refcnt;
 
 	MnObject*	next;
 	MnObject*	prev;
@@ -116,15 +138,24 @@ MnObject::MnObject( MnState* s )
 : state(s)
 , next(NULL)
 , prev(NULL)
+, refcnt(new(nx_alloc(sizeof(MnRefCounter))) MnRefCounter)
 {
+
 	if ( state->heap ) state->heap->prev = this;
 
 	next = state->heap;
 	state->heap = this;
+
+	++refcnt->wcnt;
+	refcnt->u.obj = this;
 }
 
 MnObject::~MnObject()
 {
+	refcnt->u.obj = NULL;
+	refcnt->scnt = 0;
+	if ( --refcnt->wcnt == 0) nx_free( refcnt );
+
 	if (next) next->prev = prev;
 	if (prev) prev->next = next;
 	else state->heap = next;
@@ -174,7 +205,7 @@ public:
 	MnObjType type;
 	union
 	{
-		OvRefCounter* refcnt;
+		MnRefCounter* cnt;
 		OvReal num;
 		OvBool bln;
 	} u;
@@ -183,7 +214,7 @@ public:
 	MnValue( const MnValue &v );
 	MnValue( OvBool b );
 	MnValue( OvReal n );
-	MnValue( MnObjType t, OvSPtr<MnObject> o );
+	MnValue( MnObjType t, MnObject* o );
 	~MnValue();
 
 	const MnValue& operator =( const MnValue& v );
@@ -194,15 +225,28 @@ public:
 
 void	nx_inc_ref( MnValue& v )
 {
-	if ( MnIsObj(v) ) v.u.refcnt->inc();
+	if ( MnIsObj(v) ) 
+	{
+		if ( MnToObject(v) ) ++v.u.cnt->scnt;
+		++v.u.cnt->wcnt;
+	}
 }
 
 void	nx_dec_ref( MnValue& v )
 {
 	if ( MnIsObj(v) )
 	{
-		if ( v.u.refcnt->getscnt() == 1 && MnToObject(v) ) MnToObject(v)->cleanup();
-		v.u.refcnt->dec();
+		if ( MnToObject(v) )
+		{
+			--v.u.cnt->scnt;
+			if ( v.u.cnt->scnt == 0 && MnToObject(v)->mark != DEAD )
+			{
+				nx_delete_obj( v.u.cnt->u.obj );
+				v.u.cnt->u.obj = NULL;
+			}
+		}
+
+		if ( --v.u.cnt->wcnt == 0 ) nx_free( v.u.cnt );
 	}
 }
 
@@ -232,10 +276,10 @@ MnValue::MnValue( OvReal n )
 	u.num = n;
 }
 
-MnValue::MnValue( MnObjType t, OvSPtr<MnObject> o )
+MnValue::MnValue( MnObjType t, MnObject* o )
 {
 	type	 = t;
-	u.refcnt = o.refcnt;
+	u.cnt = o->refcnt;
 	nx_inc_ref(*this);
 }
 
@@ -303,7 +347,7 @@ void MnTable::cleanup()
 
 MnState* mn_open_state()
 {
-	MnState* s = OvNew MnState;
+	MnState* s = new(nx_alloc(sizeof(MnState))) MnState;
 	s->base = 0;
 	s->top  = 0;
 	return s;
@@ -315,7 +359,8 @@ void mn_close_state( MnState* s )
 	{
 		s->stack.clear();
 		s->global.clear();
-		OvDelete s;
+		s->~MnState();
+		nx_free(s);
 	}
 }
 
@@ -414,7 +459,7 @@ void mn_get_global( MnState* s, const OvString& name )
 
 void mn_new_table( MnState* s )
 {
-	nx_push_value( s, MnValue( MOT_TABLE, OvNew MnTable(s) ) );
+	nx_push_value( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
 }
 
 void mn_set_table( MnState* s, MnIndex idx )
@@ -444,17 +489,33 @@ void mn_get_table( MnState* s, MnIndex idx )
 	}
 }
 
-OvSPtr<MnString> nx_new_string( MnState* s, const OvString& str )
+MnString* nx_new_string( MnState* s, const OvString& str )
 {
-	OvSPtr<MnString> ret;
-
+	MnString* ret;
 	OvHash32 hash = OU::string::rs_hash(str);
-	if ( s->strtable.find( hash ) == s->strtable.end() )
+
+	MnState::map_hash_str::iterator itor = s->strtable.find( hash );
+	if ( itor == s->strtable.end() )
 	{
-		s->strtable.insert( make_pair( hash, OvNew MnString(s, hash, str) ) );
+		ret = new(nx_alloc(sizeof(MnString))) MnString(s, hash, str);
+		itor = s->strtable.insert( make_pair( hash, ret ) ).first;
 	}
-	ret = s->strtable[hash];
+	ret = itor->second;
 	return ret;
+}
+
+MnTable* nx_new_table( MnState* s )
+{
+	return new(nx_alloc(sizeof(MnTable))) MnTable(s);
+}
+
+void nx_delete_obj( MnObject* o )
+{
+	if ( o )
+	{
+		o->~MnObject();
+		nx_free((void*)o);
+	}
 }
 
 MnIndex nx_absidx( MnState* s, MnIndex idx )
