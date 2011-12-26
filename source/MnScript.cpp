@@ -6,6 +6,7 @@ class MnObject;
 class MnString;
 class MnTable;
 class MnValue;
+class MnArray;
 
 enum MnObjType
 {
@@ -54,6 +55,7 @@ enum MnObjType
 #define MnToObject( v ) (MnIsObj(v)? (v).u.cnt->u.obj : MnBadConvert())
 #define MnToString( v ) (MnIsString(v)? (v).u.cnt->u.str : MnBadConvert())
 #define MnToTable( v ) (MnIsTable(v)? (v).u.cnt->u.tbl : MnBadConvert())
+#define MnToArray( v ) (MnIsArray(v)? (v).u.cnt->u.arr : MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
 class MnState : public OvMemObject
@@ -95,6 +97,9 @@ MnValue			 nx_get_stack( MnState* s, MnIndex idx );
 void			 nx_set_table( MnState* s, MnValue& t, MnValue& n, MnValue& v );
 MnValue			 nx_get_table( MnState* s, MnValue& t, MnValue& n );
 
+void			 nx_set_array( MnState* s, MnValue& t, MnValue& n, MnValue& v );
+MnValue			 nx_get_array( MnState* s, MnValue& t, MnValue& n );
+
 void			 nx_push_value( MnState* s, const MnValue& v );
 
 //////////////////////////////////////////////////////////////////////////
@@ -110,6 +115,7 @@ public:
 		MnObject* obj;
 		MnString* str;
 		MnTable*  tbl;
+		MnArray*  arr;
 	} u;
 };
 
@@ -189,6 +195,23 @@ public:
 
 	MnTable( MnState* s );
 	~MnTable();
+
+	virtual void marking();
+
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+class MnArray : public MnObject
+{
+public:
+
+	typedef OvVector<MnValue> vec_val;
+
+	vec_val array;
+
+	MnArray( MnState* s );
+	~MnArray();
 
 	virtual void marking();
 
@@ -340,6 +363,29 @@ void MnTable::marking()
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+MnArray::MnArray( MnState* s )
+: MnObject(s)
+{
+
+}
+
+MnArray::~MnArray()
+{
+	array.clear();
+}
+
+void MnArray::marking()
+{
+	mark = MARKED;
+
+	for each ( const MnValue& v in array )
+	{
+		MnMarking( v );
+	}
+}
+
 ////////////////////*    open and close    *///////////////////
 
 MnState* mn_open_state()
@@ -447,6 +493,31 @@ MnValue nx_get_table( MnState* s, MnValue& t, MnValue& n )
 	return MnValue();
 }
 
+void nx_set_array( MnState* s, MnValue& a, MnValue& n, MnValue& v )
+{
+	if ( MnIsArray(a) && MnIsNumber(n) )
+	{
+		MnIndex idx = (MnIndex)MnToNumber(n);
+		if ( idx >= 0 && idx < MnToArray(a)->array.size() )
+		{
+			MnToArray(a)->array[idx] = v;
+		}
+	}
+}
+
+MnValue nx_get_array( MnState* s, MnValue& a, MnValue& n )
+{
+	if ( MnIsArray(a) && MnIsNumber(n) )
+	{
+		MnIndex idx = (MnIndex)MnToNumber(n);
+		if ( idx >= 0 && idx < MnToArray(a)->array.size() )
+		{
+			return MnToArray(a)->array.at(idx);
+		}
+	}
+	return MnValue();
+}
+
 OvBool nx_is_global( MnState* s, OvHash32 hash )
 {
 	return ( s->global.find( hash ) != s->global.end() );
@@ -473,10 +544,22 @@ void mn_set_field( MnState* s, MnIndex idx )
 	{
 		if ( idx )
 		{
-			nx_set_table( s
-				, nx_get_stack(s,idx)
-				, nx_get_stack(s,-2)
-				, nx_get_stack(s,-1));
+			MnValue c = nx_get_stack(s,idx);
+
+			if ( MnIsTable(c) )
+			{
+				nx_set_table( s
+					, c
+					, nx_get_stack(s,-2)
+					, nx_get_stack(s,-1));
+			}
+			else if ( MnIsArray(c) )
+			{
+				nx_set_array( s
+					, c
+					, nx_get_stack(s,-2)
+					, nx_get_stack(s,-1));
+			}
 		}
 		else
 		{
@@ -496,9 +579,20 @@ void mn_get_field( MnState* s, MnIndex idx )
 		MnValue val;
 		if ( idx )
 		{
-			val = nx_get_table( s
-				, nx_get_stack(s,idx)
-				, nx_get_stack(s,-1));
+			MnValue c = nx_get_stack(s,idx);
+
+			if ( MnIsTable(c) )
+			{
+				val = nx_get_table( s
+					, c
+					, nx_get_stack(s,-1));
+			}
+			else if ( MnIsArray(c) )
+			{
+				val = nx_get_array( s
+					, c
+					, nx_get_stack(s,-1));
+			}
 		}
 		else
 		{
