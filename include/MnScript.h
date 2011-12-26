@@ -3,6 +3,7 @@
 
 typedef OvInt	MnIndex;
 class MnState;
+typedef OvInt (*MnNative)(MnState*);
 
 MnState*		mn_open_state();
 void			mn_close_state( MnState* s );
@@ -11,6 +12,8 @@ void			mn_set_field( MnState* s, MnIndex idx );
 void			mn_get_field( MnState* s, MnIndex idx );
 
 void			mn_new_table( MnState* s );
+void			mn_new_closure( MnState* s, MnNative proto );
+
 void			mnd_new_garbege( MnState* s );
 
 void			mn_set_top( MnState* s, MnIndex idx );
@@ -30,5 +33,7 @@ OvBool			mn_is_string( MnState* s, MnIndex idx );
 OvBool			mn_to_boolean( MnState* s, MnIndex idx );
 OvReal			mn_to_number( MnState* s, MnIndex idx );
 const OvString&	mn_to_string( MnState* s, MnIndex idx );
+
+void			mn_call( MnState* s, MnIndex idx );
 
 void			mn_collect_garbage( MnState* s );

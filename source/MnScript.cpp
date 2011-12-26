@@ -7,7 +7,9 @@ class MnString;
 class MnTable;
 class MnValue;
 class MnArray;
+class MnClosure;
 
+enum MnCLType { CCL= 1, MCL = 2 };
 enum MnObjType
 {
 	MOT_NIL,
@@ -56,6 +58,7 @@ enum MnObjType
 #define MnToString( v ) (MnIsString(v)? (v).u.cnt->u.str : MnBadConvert())
 #define MnToTable( v ) (MnIsTable(v)? (v).u.cnt->u.tbl : MnBadConvert())
 #define MnToArray( v ) (MnIsArray(v)? (v).u.cnt->u.arr : MnBadConvert())
+#define MnToClosure( v ) (MnIsClosure(v)? (v).u.cnt->u.cls: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
 class MnState : public OvMemObject
@@ -80,6 +83,8 @@ void			 nx_free( void* p ) { OvMemFree(p); };
 
 MnString*		 nx_new_string( MnState* s, const OvString& str );
 MnTable*		 nx_new_table( MnState* s );
+MnArray*		 nx_new_array( MnState* s );
+MnClosure*		 nx_new_closure( MnState* s, MnCLType t );
 
 void			 nx_delete_object( MnObject* o );
 void			 nx_delete_garbage( MnObject* o );
@@ -116,6 +121,7 @@ public:
 		MnString* str;
 		MnTable*  tbl;
 		MnArray*  arr;
+		MnClosure*  cls;
 	} u;
 };
 
@@ -212,6 +218,35 @@ public:
 
 	MnArray( MnState* s );
 	~MnArray();
+
+	virtual void marking();
+
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+class MnClosure : public MnObject
+{
+public:
+
+	struct CClosure : OvMemObject
+	{
+		MnNative proto;
+	};
+
+	struct MClosure : OvMemObject
+	{
+	};
+	
+	MnCLType type;
+	union
+	{
+		CClosure* ccl;
+		MClosure* mcl;
+	} u;
+
+	MnClosure( MnState* s, MnCLType t );
+	~MnClosure();
 
 	virtual void marking();
 
@@ -386,6 +421,25 @@ void MnArray::marking()
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+MnClosure::MnClosure( MnState* s, MnCLType t )
+: MnObject(s)
+, type(t)
+{
+	u.ccl = (CClosure*)nx_alloc( (type==MCL)? sizeof(MClosure) : sizeof(CClosure) );
+}
+
+MnClosure::~MnClosure()
+{
+	nx_free(u.ccl);
+}
+
+void MnClosure::marking()
+{
+
+}
+
 ////////////////////*    open and close    *///////////////////
 
 MnState* mn_open_state()
@@ -528,6 +582,14 @@ void mn_new_table( MnState* s )
 	nx_push_value( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
 }
 
+void mn_new_closure( MnState* s, MnNative proto )
+{
+	MnClosure* cl = nx_new_closure(s,CCL);
+	cl->u.ccl->proto = proto;
+
+	nx_push_value( s, MnValue(MOT_CLOSURE,cl) );
+}
+
 void mnd_new_garbege( MnState* s )
 {
 	MnString* str = nx_new_string(s,"f1");
@@ -624,6 +686,16 @@ MnString* nx_new_string( MnState* s, const OvString& str )
 MnTable* nx_new_table( MnState* s )
 {
 	return new(nx_alloc(sizeof(MnTable))) MnTable(s);
+}
+
+MnArray* nx_new_array( MnState* s )
+{
+	return new(nx_alloc(sizeof(MnArray))) MnArray(s);
+}
+
+MnClosure* nx_new_closure( MnState* s, MnCLType t )
+{
+	return new(nx_alloc(sizeof(MnClosure))) MnClosure(s,t);
 }
 
 void nx_delete_object( MnObject* o )
@@ -761,6 +833,20 @@ const OvString& mn_to_string( MnState* s, MnIndex idx )
 
 	static OvString empty;
 	return empty;
+}
+
+void mn_call( MnState* s, MnIndex idx )
+{
+	MnValue v = nx_get_stack(s,idx);
+
+	if ( MnIsClosure(v) && MnToClosure(v)->type == CCL )
+	{
+		MnClosure::CClosure* ccl = MnToClosure(v)->u.ccl;
+		if ( ccl->proto )
+		{
+			ccl->proto(s);
+		}
+	}
 }
 
 void mn_collect_garbage( MnState* s )
