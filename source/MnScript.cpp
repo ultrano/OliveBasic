@@ -25,7 +25,7 @@ enum MnObjType
 
 #define MARKED (1)
 #define UNMARKED (0)
-#define DEAD (-1)
+#define DEAD (2)
 
 #define MnMarking( v ) \
 	if ( MnIsObj( (v) ) && !(MnToObject((v))->mark == MARKED)  )\
@@ -137,6 +137,7 @@ MnObject::MnObject( MnState* s )
 : state(s)
 , next(NULL)
 , prev(NULL)
+, mark(UNMARKED)
 , refcnt(new(nx_alloc(sizeof(MnRefCounter))) MnRefCounter)
 {
 
@@ -155,9 +156,12 @@ MnObject::~MnObject()
 	refcnt->scnt = 0;
 	if ( --refcnt->wcnt == 0) nx_free( refcnt );
 
-	if (next) next->prev = prev;
-	if (prev) prev->next = next;
-	else state->heap = next;
+	if ( mark != DEAD )
+	{
+		if (next) next->prev = prev;
+		if (prev) prev->next = next;
+		else state->heap = next;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -459,6 +463,11 @@ void mn_new_table( MnState* s )
 	nx_push_value( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
 }
 
+void mnd_new_garbege( MnState* s )
+{
+	nx_new_table(s);
+}
+
 void mn_set_field( MnState* s, MnIndex idx )
 {
 	if ( mn_get_top(s) >= 2 )
@@ -644,6 +653,45 @@ const OvString& mn_to_string( MnState* s, MnIndex idx )
 
 	static OvString empty;
 	return empty;
+}
+
+void mn_collect_garbage( MnState* s )
+{
+	for ( MnState::map_hash_val::iterator itor = s->global.begin()
+		; itor != s->global.end()
+		; ++itor )
+	{
+		MnMarking(itor->second);
+	}
+	MnIndex idx = s->stack.size();
+	while ( idx-- ) MnMarking(s->stack[idx]);
+
+	MnObject* dead = NULL;
+	MnObject* heap = s->heap;
+	while ( heap )
+	{
+		MnObject* next = heap->next;
+		heap->mark = (heap->mark == MARKED)? UNMARKED : DEAD;
+		if ( heap->mark == DEAD )
+		{
+			if (heap->prev) heap->prev->next = heap->next;
+			if (heap->next) heap->next->prev = heap->prev;
+			
+			heap->prev = NULL;
+			heap->next = dead;
+			dead = heap;
+		}
+		heap = next;
+	}
+
+	while ( dead )
+	{
+		MnObject* next = dead->next;
+
+		nx_delete_obj(dead);
+
+		dead = next;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////

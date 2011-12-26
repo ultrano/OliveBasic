@@ -11,6 +11,7 @@ void			mn_set_field( MnState* s, MnIndex idx );
 void			mn_get_field( MnState* s, MnIndex idx );
 
 void			mn_new_table( MnState* s );
+void			mnd_new_garbege( MnState* s );
 
 void			mn_set_top( MnState* s, MnIndex idx );
 MnIndex			mn_get_top( MnState* s );
@@ -29,3 +30,5 @@ OvBool			mn_is_string( MnState* s, MnIndex idx );
 OvBool			mn_to_boolean( MnState* s, MnIndex idx );
 OvReal			mn_to_number( MnState* s, MnIndex idx );
 const OvString&	mn_to_string( MnState* s, MnIndex idx );
+
+void			mn_collect_garbage( MnState* s );
