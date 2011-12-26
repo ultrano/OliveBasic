@@ -7,12 +7,10 @@ class MnState;
 MnState*		mn_open_state();
 void			mn_close_state( MnState* s );
 
-void			mn_set_global( MnState* s, const OvString& name );
-void			mn_get_global( MnState* s, const OvString& name );
+void			mn_set_field( MnState* s, MnIndex idx );
+void			mn_get_field( MnState* s, MnIndex idx );
 
 void			mn_new_table( MnState* s );
-void			mn_set_table( MnState* s, MnIndex idx );
-void			mn_get_table( MnState* s, MnIndex idx );
 
 void			mn_set_top( MnState* s, MnIndex idx );
 MnIndex			mn_get_top( MnState* s );

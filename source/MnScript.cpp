@@ -85,8 +85,8 @@ MnIndex			 nx_absidx( MnState* s, MnIndex idx );
 
 OvBool			 nx_is_global( MnState* s, OvHash32 hash );
 
-void			 nx_set_global( MnState* s, OvHash32 hash, const MnValue& val );
-MnValue			 nx_get_global( MnState* s, OvHash32 hash );
+void			 nx_set_global( MnState* s, MnValue& n, const MnValue& val );
+MnValue			 nx_get_global( MnState* s, MnValue& n );
 
 void			 nx_set_stack( MnState* s, MnIndex idx, const MnValue& val );
 MnValue			 nx_get_stack( MnState* s, MnIndex idx );
@@ -365,24 +365,33 @@ void mn_close_state( MnState* s )
 
 ////////////////////////*    get/set stack, field    */////////////////////////////////
 
-void nx_set_global( MnState* s, OvHash32 hash, const MnValue& val )
+void nx_set_global( MnState* s, MnValue& n, const MnValue& val )
 {
-	if ( MnIsNil(val) )
+	if ( MnIsString(n) )
 	{
-		s->global.erase( hash );
-	}
-	else
-	{
-		s->global.insert( make_pair( hash, val ) );
+		OvHash32 hash = MnToString(n)->get_hash();
+		if ( MnIsNil(val) )
+		{
+			s->global.erase( hash );
+		}
+		else
+		{
+			s->global.insert( make_pair( hash, val ) );
+
+		}
 	}
 }
 
-MnValue nx_get_global( MnState* s, OvHash32 hash )
+MnValue nx_get_global( MnState* s, MnValue& n )
 {
-	MnState::map_hash_val::iterator itor = s->global.find( hash );
-	if ( itor != s->global.end() )
+	if ( MnIsString(n) )
 	{
-		return itor->second;
+		OvHash32 hash = MnToString(n)->get_hash();
+		MnState::map_hash_val::iterator itor = s->global.find( hash );
+		if ( itor != s->global.end() )
+		{
+			return itor->second;
+		}
 	}
 	return MnValue();
 }
@@ -445,42 +454,49 @@ OvBool nx_is_global( MnState* s, OvHash32 hash )
 	return ( s->global.find( hash ) != s->global.end() );
 }
 
-void mn_set_global( MnState* s, const OvString& name )
-{
-	nx_set_global( s, OU::string::rs_hash( name ), nx_get_stack( s, -1 ) );
-	mn_pop(s,1);
-}
-
-void mn_get_global( MnState* s, const OvString& name )
-{
-	nx_push_value( s, nx_get_global( s, OU::string::rs_hash( name ) ) );
-}
-
 void mn_new_table( MnState* s )
 {
 	nx_push_value( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
 }
 
-void mn_set_table( MnState* s, MnIndex idx )
+void mn_set_field( MnState* s, MnIndex idx )
 {
 	if ( mn_get_top(s) >= 2 )
 	{
-		nx_set_table( s
-			, nx_get_stack(s,idx)
-			, nx_get_stack(s,-2)
-			, nx_get_stack(s,-1));
+		if ( idx )
+		{
+			nx_set_table( s
+				, nx_get_stack(s,idx)
+				, nx_get_stack(s,-2)
+				, nx_get_stack(s,-1));
+		}
+		else
+		{
+			nx_set_global( s
+				, nx_get_stack(s,-2)
+				, nx_get_stack(s,-1));
+		}
 
 		mn_pop(s,2);
 	}
 }
 
-void mn_get_table( MnState* s, MnIndex idx )
+void mn_get_field( MnState* s, MnIndex idx )
 {
 	if ( mn_get_top(s) >= 1 )
 	{
-		MnValue val = nx_get_table( s
-			, nx_get_stack(s,idx)
-			, nx_get_stack(s,-1));
+		MnValue val;
+		if ( idx )
+		{
+			val = nx_get_table( s
+				, nx_get_stack(s,idx)
+				, nx_get_stack(s,-1));
+		}
+		else
+		{
+			val = nx_get_global( s
+				, nx_get_stack(s,-1));
+		}
 
 		mn_pop(s,1);
 
