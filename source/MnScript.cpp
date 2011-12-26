@@ -117,7 +117,7 @@ class MnObject : public OvMemObject
 public:
 	
 	MnObject( MnState* s );
-	~MnObject();
+	virtual ~MnObject();
 
 	/* field */
 	MnState*const 	state;
@@ -131,7 +131,6 @@ public:
 	OvByte		mark;
 
 	virtual void marking() = 0;
-	virtual void cleanup() = 0;
 };
 
 MnObject::MnObject( MnState* s ) 
@@ -168,12 +167,12 @@ class MnString : public MnObject
 public:
 
 	MnString( MnState* s, OvHash32 hash, const OvString& sstr );
+	~MnString();
 
 	OvHash32		get_hash() { return m_hash; };
 	const OvString& get_str() { return m_str; };
 
 	virtual void marking();
-	virtual void cleanup();
 private:
 	OvHash32 m_hash;
 	OvString m_str;
@@ -191,9 +190,9 @@ public:
 	map_hash_pair table;
 
 	MnTable( MnState* s );
+	~MnTable();
 
 	virtual void marking();
-	virtual void cleanup();
 
 };
 
@@ -306,14 +305,14 @@ MnString::MnString( MnState* s, OvHash32 hash,const OvString& sstr )
 {
 }
 
+MnString::~MnString()
+{
+	state->strtable.erase( m_hash );
+}
+
 void MnString::marking()
 {
 	mark = MARKED;
-}
-
-void MnString::cleanup()
-{
-	state->strtable.erase( m_hash );
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -322,6 +321,11 @@ MnTable::MnTable( MnState* s )
 : MnObject(s)
 {
 
+}
+
+MnTable::~MnTable()
+{
+	table.clear();
 }
 
 void MnTable::marking()
@@ -336,11 +340,6 @@ void MnTable::marking()
 		MnMarking( vpair.first );
 		MnMarking( vpair.second );
 	}
-}
-
-void MnTable::cleanup()
-{
-	table.clear();
 }
 
 ////////////////////*    open and close    *///////////////////
