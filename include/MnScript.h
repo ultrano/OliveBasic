@@ -16,6 +16,7 @@ void			mn_get_table( MnState* s, MnIndex idx );
 
 void			mn_set_top( MnState* s, MnIndex idx );
 MnIndex			mn_get_top( MnState* s );
+MnIndex			mn_get_gtop( MnState* s );
 
 #define			mn_pop(s,n) mn_set_top( (s), -(n)-1 )
 

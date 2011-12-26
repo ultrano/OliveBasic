@@ -550,6 +550,11 @@ MnIndex mn_get_top( MnState* s )
 	return s->top - s->base;
 }
 
+MnIndex mn_get_gtop( MnState* s )
+{
+	return s->top;
+}
+
 ///////////////////////*   kind of push    *//////////////////////
 
 void nx_push_value( MnState* s, const MnValue& v )
