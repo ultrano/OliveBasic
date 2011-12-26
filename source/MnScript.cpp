@@ -79,7 +79,8 @@ void			 nx_free( void* p ) { OvMemFree(p); };
 MnString*		 nx_new_string( MnState* s, const OvString& str );
 MnTable*		 nx_new_table( MnState* s );
 
-void			 nx_delete_obj( MnObject* o );
+void			 nx_delete_object( MnObject* o );
+void			 nx_delete_garbage( MnObject* o );
 
 MnIndex			 nx_absidx( MnState* s, MnIndex idx );
 
@@ -155,13 +156,6 @@ MnObject::~MnObject()
 	refcnt->u.obj = NULL;
 	refcnt->scnt = 0;
 	if ( --refcnt->wcnt == 0) nx_free( refcnt );
-
-	if ( mark != DEAD )
-	{
-		if (next) next->prev = prev;
-		if (prev) prev->next = next;
-		else state->heap = next;
-	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -244,7 +238,7 @@ void	nx_dec_ref( MnValue& v )
 			--v.u.cnt->scnt;
 			if ( v.u.cnt->scnt == 0 && MnToObject(v)->mark != DEAD )
 			{
-				nx_delete_obj( v.u.cnt->u.obj );
+				nx_delete_object( v.u.cnt->u.obj );
 				v.u.cnt->u.obj = NULL;
 			}
 		}
@@ -465,7 +459,12 @@ void mn_new_table( MnState* s )
 
 void mnd_new_garbege( MnState* s )
 {
-	nx_new_table(s);
+	MnString* str = nx_new_string(s,"f1");
+	MnTable* t1 = nx_new_table(s);
+	MnTable* t2 = nx_new_table(s);
+
+	t1->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t2))));
+	t2->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t1))));
 }
 
 void mn_set_field( MnState* s, MnIndex idx )
@@ -533,11 +532,26 @@ MnTable* nx_new_table( MnState* s )
 	return new(nx_alloc(sizeof(MnTable))) MnTable(s);
 }
 
-void nx_delete_obj( MnObject* o )
+void nx_delete_object( MnObject* o )
 {
 	if ( o )
 	{
 		o->~MnObject();
+
+		if (o->next) o->next->prev = o->prev;
+		if (o->prev) o->prev->next = o->next;
+		else o->state->heap = o->next;
+
+		nx_free((void*)o);
+	}
+}
+
+void nx_delete_garbage( MnObject* o )
+{
+	if ( o )
+	{
+		o->~MnObject();
+
 		nx_free((void*)o);
 	}
 }
@@ -688,7 +702,7 @@ void mn_collect_garbage( MnState* s )
 	{
 		MnObject* next = dead->next;
 
-		nx_delete_obj(dead);
+		nx_delete_garbage(dead);
 
 		dead = next;
 	}
