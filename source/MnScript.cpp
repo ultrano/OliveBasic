@@ -246,7 +246,7 @@ public:
 
 	struct CClosure : OvMemObject
 	{
-		MnNative proto;
+		MnFunction proto;
 	};
 
 	struct MClosure : OvMemObject
@@ -604,29 +604,6 @@ OvBool nx_is_global( MnState* s, OvHash32 hash )
 	return ( s->global.find( hash ) != s->global.end() );
 }
 
-void mn_new_table( MnState* s )
-{
-	nx_push_value( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
-}
-
-void mn_new_closure( MnState* s, MnNative proto )
-{
-	MnClosure* cl = nx_new_closure(s,CCL);
-	cl->u.ccl->proto = proto;
-
-	nx_push_value( s, MnValue(MOT_CLOSURE,cl) );
-}
-
-void mnd_new_garbege( MnState* s )
-{
-	MnString* str = nx_new_string(s,"f1");
-	MnTable* t1 = nx_new_table(s);
-	MnTable* t2 = nx_new_table(s);
-
-	t1->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t2))));
-	t2->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t1))));
-}
-
 void mn_set_field( MnState* s, MnIndex idx )
 {
 	if ( mn_get_top(s) >= 2 )
@@ -796,6 +773,21 @@ void nx_push_value( MnState* s, const MnValue& v )
 	nx_set_stack( s, top, v );
 }
 
+void mn_new_table( MnState* s )
+{
+	nx_push_value( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
+}
+
+void mnd_new_garbege( MnState* s )
+{
+	MnString* str = nx_new_string(s,"f1");
+	MnTable* t1 = nx_new_table(s);
+	MnTable* t2 = nx_new_table(s);
+
+	t1->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t2))));
+	t2->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t1))));
+}
+
 void mn_push_nil( MnState* s )
 {
 	nx_push_value( s, MnValue() );
@@ -814,6 +806,13 @@ void mn_push_number( MnState* s, OvReal v )
 void mn_push_string( MnState* s, const OvString& v )
 {
 	nx_push_value( s, MnValue( MOT_STRING, nx_new_string( s, v ) ) );
+}
+
+void mn_push_function( MnState* s, MnFunction proto )
+{
+	MnClosure* cl = nx_new_closure(s,CCL);
+	cl->u.ccl->proto = proto;
+	nx_push_value( s, MnValue(MOT_CLOSURE,cl) );
 }
 
 /////////////////////*  all kinds of "is"    *///////////////////////////
@@ -874,6 +873,7 @@ const OvString& mn_to_string( MnState* s, MnIndex idx )
 
 void mn_call( MnState* s, OvInt nargs )
 {
+	nargs = max(nargs,0);
 	MnValue v = nx_get_stack(s, -(nargs + 1) );
 
 	if ( MnIsClosure(v) && MnToClosure(v)->type == CCL )
@@ -894,12 +894,12 @@ void mn_call( MnState* s, OvInt nargs )
 			OvInt nrets = ccl->proto(s);
 
 			MnIndex func = s->base - 1;
-			MnIndex ret = s->top - nrets;
-			for ( ; ret < s->top ; (++ret,++func) ) s->stack[func] = s->stack[ret];
+			MnIndex ret  = s->top - nrets;
+			for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
 
-			s->ci	= ci->prev;
-			s->top  = s->base;
+			s->top  = func + nrets;
 			s->base = ci->base;
+			s->ci	= ci->prev;
 		}
 
 	}

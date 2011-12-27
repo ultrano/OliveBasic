@@ -3,7 +3,7 @@
 
 typedef OvInt	MnIndex;
 class MnState;
-typedef OvInt (*MnNative)(MnState*);
+typedef OvInt (*MnFunction)(MnState*);
 
 MnState*		mn_open_state();
 void			mn_close_state( MnState* s );
@@ -11,8 +11,6 @@ void			mn_close_state( MnState* s );
 void			mn_set_field( MnState* s, MnIndex idx );
 void			mn_get_field( MnState* s, MnIndex idx );
 
-void			mn_new_table( MnState* s );
-void			mn_new_closure( MnState* s, MnNative proto );
 
 void			mnd_new_garbege( MnState* s );
 
@@ -22,10 +20,12 @@ MnIndex			mn_get_gtop( MnState* s );
 
 #define			mn_pop(s,n) mn_set_top( (s), -(n)-1 )
 
+void			mn_new_table( MnState* s );
 void			mn_push_nil( MnState* s );
 void			mn_push_boolean( MnState* s, OvBool v );
 void			mn_push_number( MnState* s, OvReal v );
 void			mn_push_string( MnState* s, const OvString& v );
+void			mn_push_function( MnState* s, MnFunction proto );
 
 OvBool			mn_is_nil( MnState* s, MnIndex idx );
 OvBool			mn_is_boolean( MnState* s, MnIndex idx );
