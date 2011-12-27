@@ -882,7 +882,6 @@ void mn_call( MnState* s, OvInt nargs )
 		MnClosure::CClosure* ccl = cls->u.ccl;
 		if ( ccl->proto )
 		{
-			MnIndex funcidx = s->top - nargs;
 			MnCallInfo ici;
 			MnCallInfo* ci = &ici;
 			ci->cls  = cls;
@@ -890,15 +889,17 @@ void mn_call( MnState* s, OvInt nargs )
 			ci->prev = s->ci;
 
 			s->ci	 = ci;
-			s->base  = funcidx;
+			s->base  = s->top - nargs;
 
 			OvInt nrets = ccl->proto(s);
 
-			s->ci	= ci->prev;
-			s->top  = s->base + nrets;
-			s->base = ci->base;
+			MnIndex func = s->base - 1;
+			MnIndex ret = s->top - nrets;
+			for ( ; ret < s->top ; (++ret,++func) ) s->stack[func] = s->stack[ret];
 
-			nx_remove(s, funcidx - s->base );
+			s->ci	= ci->prev;
+			s->top  = s->base;
+			s->base = ci->base;
 		}
 
 	}
