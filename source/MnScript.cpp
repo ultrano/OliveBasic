@@ -2,6 +2,7 @@
 #include "OvMemObject.h"
 #include "OvSolidString.h"
 
+class MnCallInfo;
 class MnObject;
 class MnString;
 class MnTable;
@@ -73,11 +74,23 @@ public:
 	map_hash_str strtable;
 	vec_stack	 stack;
 
+	MnCallInfo*	 ci;
 	MnIndex		 base;
 	MnIndex		 top;
 
 };
 
+//////////////////////////////////////////////////////////////////////////
+
+class MnCallInfo : public OvMemObject
+{
+public:
+	MnClosure*	cls;
+	MnIndex		base;
+	MnCallInfo* prev;
+};
+
+//////////////////////////////////////////////////////////////////////////
 void*			 nx_alloc( OvSize sz ) { return OvMemAlloc(sz); };
 void			 nx_free( void* p ) { OvMemFree(p); };
 
@@ -96,6 +109,8 @@ OvBool			 nx_is_global( MnState* s, OvHash32 hash );
 void			 nx_set_global( MnState* s, MnValue& n, const MnValue& val );
 MnValue			 nx_get_global( MnState* s, MnValue& n );
 
+
+void			 nx_remove( MnState* s, MnIndex idx );
 void			 nx_set_stack( MnState* s, MnIndex idx, const MnValue& val );
 MnValue			 nx_get_stack( MnState* s, MnIndex idx );
 
@@ -494,6 +509,18 @@ MnValue nx_get_global( MnState* s, MnValue& n )
 	return MnValue();
 }
 
+
+void nx_remove( MnState* s, MnIndex idx )
+{
+	idx = nx_absidx( s, idx );
+	if ( idx >= 0 )
+	{
+		while ( ++idx < s->top ) s->stack[idx-1] = s->stack[idx];
+		--s->top;
+	}
+
+}
+
 void nx_set_stack( MnState* s, MnIndex idx, const MnValue& val )
 {
 	idx = nx_absidx( s, idx );
@@ -769,6 +796,11 @@ void nx_push_value( MnState* s, const MnValue& v )
 	nx_set_stack( s, top, v );
 }
 
+void mn_push_nil( MnState* s )
+{
+	nx_push_value( s, MnValue() );
+}
+
 void mn_push_boolean( MnState* s, OvBool v )
 {
 	nx_push_value( s, MnValue( (OvBool)v ) );
@@ -785,6 +817,11 @@ void mn_push_string( MnState* s, const OvString& v )
 }
 
 /////////////////////*  all kinds of "is"    *///////////////////////////
+
+OvBool mn_is_nil( MnState* s, MnIndex idx )
+{
+	return MnIsNil( nx_get_stack( s, idx ) );
+}
 
 OvBool mn_is_boolean( MnState* s, MnIndex idx )
 {
@@ -835,17 +872,35 @@ const OvString& mn_to_string( MnState* s, MnIndex idx )
 	return empty;
 }
 
-void mn_call( MnState* s, MnIndex idx )
+void mn_call( MnState* s, OvInt nargs )
 {
-	MnValue v = nx_get_stack(s,idx);
+	MnValue v = nx_get_stack(s, -(nargs + 1) );
 
 	if ( MnIsClosure(v) && MnToClosure(v)->type == CCL )
 	{
-		MnClosure::CClosure* ccl = MnToClosure(v)->u.ccl;
+		MnClosure* cls = MnToClosure(v);
+		MnClosure::CClosure* ccl = cls->u.ccl;
 		if ( ccl->proto )
 		{
-			ccl->proto(s);
+			MnIndex funcidx = s->top - nargs;
+			MnCallInfo ici;
+			MnCallInfo* ci = &ici;
+			ci->cls  = cls;
+			ci->base = s->base;
+			ci->prev = s->ci;
+
+			s->ci	 = ci;
+			s->base  = funcidx;
+
+			OvInt nrets = ccl->proto(s);
+
+			s->ci	= ci->prev;
+			s->top  = s->base + nrets;
+			s->base = ci->base;
+
+			nx_remove(s, funcidx - s->base );
 		}
+
 	}
 }
 
