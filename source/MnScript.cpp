@@ -212,6 +212,7 @@ public:
 	typedef OvPair<MnValue,MnValue> pair_val_val;
 	typedef OvMap<OvHash32,pair_val_val> map_hash_pair;
 
+	MnValue		  metatable;
 	map_hash_pair table;
 
 	MnTable( MnState* s );
@@ -403,6 +404,7 @@ void MnTable::marking()
 {
 	mark = MARKED;
 
+	MnMarking( metatable );
 	for ( map_hash_pair::iterator itor = table.begin()
 		; itor != table.end()
 		; ++itor )
