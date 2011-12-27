@@ -11,6 +11,8 @@ void			mn_close_state( MnState* s );
 void			mn_set_field( MnState* s, MnIndex idx );
 void			mn_get_field( MnState* s, MnIndex idx );
 
+void			mn_set_metatable( MnState* s, MnIndex idx );
+void			mn_get_metatable( MnState* s, MnIndex idx );
 
 void			mnd_new_garbege( MnState* s );
 

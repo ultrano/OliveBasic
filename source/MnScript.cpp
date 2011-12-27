@@ -140,6 +140,32 @@ public:
 	} u;
 };
 
+//////////////////////////////////////////////////////////////////////////
+
+class MnValue : public OvMemObject
+{
+public:
+	MnObjType type;
+	union
+	{
+		MnRefCounter* cnt;
+		OvReal num;
+		OvBool bln;
+	} u;
+
+	MnValue();
+	MnValue( const MnValue &v );
+	MnValue( OvBool b );
+	MnValue( OvReal n );
+	MnValue( MnObjType t, MnObject* o );
+	~MnValue();
+
+	const MnValue& operator =( const MnValue& v );
+
+};
+
+//////////////////////////////////////////////////////////////////////////
+
 class MnObject : public OvMemObject
 {
 public:
@@ -265,30 +291,6 @@ public:
 	~MnClosure();
 
 	virtual void marking();
-
-};
-
-//////////////////////////////////////////////////////////////////////////
-
-class MnValue : public OvMemObject
-{
-public:
-	MnObjType type;
-	union
-	{
-		MnRefCounter* cnt;
-		OvReal num;
-		OvBool bln;
-	} u;
-
-	MnValue();
-	MnValue( const MnValue &v );
-	MnValue( OvBool b );
-	MnValue( OvReal n );
-	MnValue( MnObjType t, MnObject* o );
-	~MnValue();
-
-	const MnValue& operator =( const MnValue& v );
 
 };
 
@@ -565,12 +567,17 @@ MnValue nx_get_table( MnState* s, MnValue& t, MnValue& n )
 {
 	if ( MnIsTable(t) && MnIsString(n) )
 	{
+		MnTable* tbl = MnToTable(t);
 		OvHash32 hash = MnToString(n)->get_hash();
-		MnTable::map_hash_pair::iterator itor = MnToTable(t)->table.find( hash );
+		MnTable::map_hash_pair::iterator itor = tbl->table.find( hash );
 
-		if ( itor !=  MnToTable(t)->table.end() )
+		if ( itor !=  tbl->table.end() )
 		{
 			return itor->second.second;
+		}
+		else if ( MnIsTable(tbl->metatable) )
+		{
+			return nx_get_table(s,tbl->metatable,n);
 		}
 	}
 	return MnValue();
