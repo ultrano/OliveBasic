@@ -99,6 +99,9 @@ MnTable*		 nx_new_table( MnState* s );
 MnArray*		 nx_new_array( MnState* s );
 MnClosure*		 nx_new_closure( MnState* s, MnCLType t );
 
+OvInt			 mt_array_size(MnState* s);
+OvInt			 mt_array_resize(MnState* s);
+
 void			 nx_delete_object( MnObject* o );
 void			 nx_delete_garbage( MnObject* o );
 
@@ -119,6 +122,9 @@ MnValue			 nx_get_table( MnState* s, MnValue& t, MnValue& n );
 
 void			 nx_set_array( MnState* s, MnValue& t, MnValue& n, MnValue& v );
 MnValue			 nx_get_array( MnState* s, MnValue& t, MnValue& n );
+
+void			 nx_set_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx,MnValue& v );
+MnValue			 nx_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx );
 
 void			 nx_push_value( MnState* s, const MnValue& v );
 
@@ -256,6 +262,7 @@ public:
 
 	typedef OvVector<MnValue> vec_val;
 
+	MnValue	metatable;
 	vec_val array;
 
 	MnArray( MnState* s );
@@ -270,21 +277,27 @@ public:
 class MnClosure : public MnObject
 {
 public:
+	struct Upval : OvMemObject
+	{
+		MnValue  hold;
+		MnValue* link;
+	};
+	struct MClosure : OvMemObject
+	{
+		OvVector<Upval>	upvals;
+	};
 
 	struct CClosure : OvMemObject
 	{
 		MnFunction proto;
-	};
-
-	struct MClosure : OvMemObject
-	{
+		OvVector<MnValue>	upvals;
 	};
 	
-	MnCLType type;
+	const MnCLType type;
 	union
 	{
-		CClosure* ccl;
-		MClosure* mcl;
+		CClosure* c;
+		MClosure* m;
 	} u;
 
 	MnClosure( MnState* s, MnCLType t );
@@ -434,6 +447,7 @@ void MnArray::marking()
 {
 	mark = MARKED;
 
+	MnMarking( metatable );
 	for each ( const MnValue& v in array )
 	{
 		MnMarking( v );
@@ -446,17 +460,33 @@ MnClosure::MnClosure( MnState* s, MnCLType t )
 : MnObject(s)
 , type(t)
 {
-	u.ccl = (CClosure*)nx_alloc( (type==MCL)? sizeof(MClosure) : sizeof(CClosure) );
+	u.c = (CClosure*)nx_alloc( (type==MCL)? sizeof(MClosure) : sizeof(CClosure) );
 }
 
 MnClosure::~MnClosure()
 {
-	nx_free(u.ccl);
+	if ( type == CCL )	u.c->upvals.clear();
+	else if ( type == MCL ) u.m->upvals.clear();
+	nx_free(u.c);
 }
 
 void MnClosure::marking()
 {
-
+	mark = MARKED;
+	if ( type == CCL )
+	{
+		for each ( const MnValue& uv in u.c->upvals )
+		{
+			MnMarking( uv );
+		}
+	}
+	else if ( type == MCL )
+	{
+		for each ( const Upval& uv in u.m->upvals )
+		{
+			MnMarking( uv.hold );
+		}
+	}
 }
 
 ////////////////////*    open and close    *///////////////////
@@ -475,7 +505,7 @@ void mn_close_state( MnState* s )
 	{
 		s->stack.clear();
 		s->global.clear();
-		s->~MnState();
+		mn_collect_garbage(s);
 		nx_free(s);
 	}
 }
@@ -585,24 +615,63 @@ MnValue nx_get_table( MnState* s, MnValue& t, MnValue& n )
 
 void nx_set_array( MnState* s, MnValue& a, MnValue& n, MnValue& v )
 {
-	if ( MnIsArray(a) && MnIsNumber(n) )
+	if ( MnIsArray(a) )
 	{
-		MnIndex idx = (MnIndex)MnToNumber(n);
-		if ( idx >= 0 && idx < MnToArray(a)->array.size() )
+		if ( MnIsNumber(n) )
 		{
-			MnToArray(a)->array[idx] = v;
+			MnIndex idx = (MnIndex)MnToNumber(n);
+			if ( idx >= 0 && idx < MnToArray(a)->array.size() )
+			{
+				MnToArray(a)->array[idx] = v;
+			}
 		}
 	}
 }
 
 MnValue nx_get_array( MnState* s, MnValue& a, MnValue& n )
 {
-	if ( MnIsArray(a) && MnIsNumber(n) )
+	if ( MnIsArray(a) )
 	{
-		MnIndex idx = (MnIndex)MnToNumber(n);
-		if ( idx >= 0 && idx < MnToArray(a)->array.size() )
+		if ( MnIsNumber(n) )
 		{
-			return MnToArray(a)->array.at(idx);
+			MnIndex idx = (MnIndex)MnToNumber(n);
+			if ( idx >= 0 && idx < MnToArray(a)->array.size() )
+			{
+				return MnToArray(a)->array.at(idx);
+
+			}
+		}
+		else
+		{
+			return nx_get_table( s, MnToArray(a)->metatable, n );
+		}
+	}
+	return MnValue();
+}
+
+void nx_set_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx, MnValue& v )
+{
+	MnValue c = nx_get_stack(s,clsidx);
+	if ( MnIsClosure(c) )
+	{
+		MnClosure* cls = MnToClosure(c);
+		if ( upvalidx > 0 && upvalidx <= cls->u.c->upvals.size() )
+		{
+			cls->u.c->upvals[ upvalidx ] = v;
+			return ;
+		}
+	}
+}
+
+MnValue nx_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx )
+{
+	MnValue c = nx_get_stack(s,clsidx);
+	if ( MnIsClosure(c) )
+	{
+		MnClosure* cls = MnToClosure(c);
+		if ( upvalidx > 0 && upvalidx <= cls->u.c->upvals.size() )
+		{
+			return cls->u.c->upvals.at( upvalidx - 1 );
 		}
 	}
 	return MnValue();
@@ -679,6 +748,47 @@ void mn_get_field( MnState* s, MnIndex idx )
 
 		nx_push_value( s, val );
 	}
+}
+
+void mn_set_metatable( MnState* s, MnIndex idx )
+{
+	MnValue t = nx_get_stack(s,idx);
+	MnValue v = nx_get_stack(s,-1);
+	if ( MnIsTable(v) )
+	{
+		if ( MnIsTable(t) )
+		{
+			MnToTable(t)->metatable = v;
+		}
+		else if ( MnIsArray(t) )
+		{
+			MnToArray(t)->metatable = v;
+		}
+	}
+	mn_pop(s,1);
+}
+
+void mn_get_metatable( MnState* s, MnIndex idx )
+{
+	MnValue t = nx_get_stack(s,idx);
+	if ( MnIsTable(t) )
+	{
+		nx_push_value(s,MnToTable(t)->metatable);
+	}
+	else if ( MnIsArray(t) )
+	{
+		nx_push_value(s,MnToArray(t)->metatable);
+	}
+}
+
+void mn_set_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx )
+{
+	nx_set_upval(s, clsidx, upvalidx, nx_get_stack(s,-1));
+}
+
+void mn_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx )
+{
+	nx_push_value(s, nx_get_upval(s, clsidx, upvalidx ) );
 }
 
 MnString* nx_new_string( MnState* s, const OvString& str )
@@ -787,6 +897,20 @@ void mn_new_table( MnState* s )
 	nx_push_value( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
 }
 
+void mn_new_array( MnState* s )
+{
+	MnValue arr( MOT_ARRAY, nx_new_array(s) );
+
+	nx_push_value( s, arr );
+	nx_push_value( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
+
+	mn_push_string( s, "resize" );
+	mn_push_function(s, mt_array_resize );
+	mn_set_field( s, -3 );
+
+	mn_set_metatable( s, -2 );
+}
+
 void mnd_new_garbege( MnState* s )
 {
 	MnString* str = nx_new_string(s,"f1");
@@ -795,6 +919,24 @@ void mnd_new_garbege( MnState* s )
 
 	t1->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t2))));
 	t2->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t1))));
+}
+
+void mn_new_closure( MnState* s, MnFunction proto, OvInt nupvals )
+{
+	MnClosure* cl = nx_new_closure(s,CCL);
+	cl->u.c->proto = proto;
+	cl->u.c->upvals.reserve(nupvals);
+	for ( OvInt i = 0 ; i < nupvals ; ++i )
+	{
+		cl->u.c->upvals.push_back( nx_get_stack(s, i - nupvals ) );
+	}
+	mn_pop(s,nupvals);
+	nx_push_value( s, MnValue(MOT_CLOSURE,cl) );
+}
+
+void mn_push_function( MnState* s, MnFunction proto )
+{
+	mn_new_closure(s,proto,0);
 }
 
 void mn_push_nil( MnState* s )
@@ -817,11 +959,9 @@ void mn_push_string( MnState* s, const OvString& v )
 	nx_push_value( s, MnValue( MOT_STRING, nx_new_string( s, v ) ) );
 }
 
-void mn_push_function( MnState* s, MnFunction proto )
+void mn_push_stack( MnState* s, MnIndex idx )
 {
-	MnClosure* cl = nx_new_closure(s,CCL);
-	cl->u.ccl->proto = proto;
-	nx_push_value( s, MnValue(MOT_CLOSURE,cl) );
+	nx_push_value( s, nx_get_stack(s, idx) );
 }
 
 /////////////////////*  all kinds of "is"    *///////////////////////////
@@ -888,7 +1028,7 @@ void mn_call( MnState* s, OvInt nargs )
 	if ( MnIsClosure(v) && MnToClosure(v)->type == CCL )
 	{
 		MnClosure* cls = MnToClosure(v);
-		MnClosure::CClosure* ccl = cls->u.ccl;
+		MnClosure::CClosure* ccl = cls->u.c;
 		if ( ccl->proto )
 		{
 			MnCallInfo ici;
@@ -951,6 +1091,28 @@ void mn_collect_garbage( MnState* s )
 
 		dead = next;
 	}
+}
+
+OvInt mt_array_size(MnState* s)
+{
+	OvReal nsize = 0.0;
+	MnValue arg1 = nx_get_stack(s,1);
+	if ( MnIsArray(arg1) )
+	{
+		nsize = (OvReal)MnToArray(arg1)->array.size();
+	}
+	mn_push_number( s, nsize );
+	return 1;
+}
+OvInt mt_array_resize( MnState* s )
+{
+	MnValue arg1 = nx_get_stack(s,1);
+	MnValue arg2 = nx_get_stack(s,2);
+	if ( MnIsArray(arg1) && MnIsNumber(arg2) )
+	{
+		MnToArray(arg1)->array.resize( (OvSize)MnToNumber(arg2) );
+	}
+	return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////
