@@ -99,13 +99,11 @@ MnTable*		 nx_new_table( MnState* s );
 MnArray*		 nx_new_array( MnState* s );
 MnClosure*		 nx_new_closure( MnState* s, MnCLType t );
 
-OvInt			 mt_array_size(MnState* s);
-OvInt			 mt_array_resize(MnState* s);
-
 void			 nx_delete_object( MnObject* o );
 void			 nx_delete_garbage( MnObject* o );
 
 MnIndex			 nx_absidx( MnState* s, MnIndex idx );
+void			 nx_set_abstop( MnState* s, MnIndex idx );
 
 OvBool			 nx_is_global( MnState* s, OvHash32 hash );
 
@@ -113,7 +111,6 @@ void			 nx_set_global( MnState* s, MnValue& n, const MnValue& val );
 MnValue			 nx_get_global( MnState* s, MnValue& n );
 
 
-void			 nx_remove( MnState* s, MnIndex idx );
 void			 nx_set_stack( MnState* s, MnIndex idx, const MnValue& val );
 MnValue			 nx_get_stack( MnState* s, MnIndex idx );
 
@@ -510,6 +507,7 @@ void mn_close_state( MnState* s )
 	}
 }
 
+
 ////////////////////////*    get/set stack, field    */////////////////////////////////
 
 void nx_set_global( MnState* s, MnValue& n, const MnValue& val )
@@ -541,18 +539,6 @@ MnValue nx_get_global( MnState* s, MnValue& n )
 		}
 	}
 	return MnValue();
-}
-
-
-void nx_remove( MnState* s, MnIndex idx )
-{
-	idx = nx_absidx( s, idx );
-	if ( idx >= 0 )
-	{
-		while ( ++idx < s->top ) s->stack[idx-1] = s->stack[idx];
-		--s->top;
-	}
-
 }
 
 void nx_set_stack( MnState* s, MnIndex idx, const MnValue& val )
@@ -860,17 +846,28 @@ MnIndex nx_absidx( MnState* s, MnIndex idx )
 	return abidx;
 }
 
-///////////////////////* get/set top *///////////////////////
-
-void mn_set_top( MnState* s, MnIndex idx )
+void nx_set_abstop( MnState* s, MnIndex idx )
 {
-	idx = nx_absidx( s, idx ) + 1;
 	idx = (idx < s->base)? s->base : idx;
 	if ( idx > s->stack.size() )
 	{
 		s->stack.resize( idx );
 	}
+	else if ( idx < s->top )
+	{
+		for ( MnIndex i = idx ; i < s->top ; ++i )
+		{
+			s->stack[ i ] = MnValue();
+		}
+	}
 	s->top = idx;
+}
+
+///////////////////////* get/set top *///////////////////////
+
+void mn_set_top( MnState* s, MnIndex idx )
+{
+	nx_set_abstop( s, nx_absidx( s, idx ) + 1 );
 }
 
 MnIndex mn_get_top( MnState* s )
@@ -899,16 +896,7 @@ void mn_new_table( MnState* s )
 
 void mn_new_array( MnState* s )
 {
-	MnValue arr( MOT_ARRAY, nx_new_array(s) );
-
-	nx_push_value( s, arr );
-	nx_push_value( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
-
-	mn_push_string( s, "resize" );
-	mn_push_function(s, mt_array_resize );
-	mn_set_field( s, -3 );
-
-	mn_set_metatable( s, -2 );
+	nx_push_value( s, MnValue( MOT_ARRAY, nx_new_array(s) ) );
 }
 
 void mnd_new_garbege( MnState* s )
@@ -1046,7 +1034,7 @@ void mn_call( MnState* s, OvInt nargs )
 			MnIndex ret  = s->top - nrets;
 			for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
 
-			s->top  = func + nrets;
+			nx_set_abstop( s, func + nrets );
 			s->base = ci->base;
 			s->ci	= ci->prev;
 		}
@@ -1062,7 +1050,7 @@ void mn_collect_garbage( MnState* s )
 	{
 		MnMarking(itor->second);
 	}
-	MnIndex idx = s->stack.size();
+	MnIndex idx = s->top;
 	while ( idx-- ) MnMarking(s->stack[idx]);
 
 	MnObject* dead = NULL;
@@ -1093,7 +1081,7 @@ void mn_collect_garbage( MnState* s )
 	}
 }
 
-OvInt mt_array_size(MnState* s)
+OvInt mt_global_length(MnState* s)
 {
 	OvReal nsize = 0.0;
 	MnValue arg1 = nx_get_stack(s,1);
@@ -1101,10 +1089,15 @@ OvInt mt_array_size(MnState* s)
 	{
 		nsize = (OvReal)MnToArray(arg1)->array.size();
 	}
+	else if ( MnIsTable(arg1) )
+	{
+		nsize = (OvReal)MnToTable(arg1)->table.size();
+	}
 	mn_push_number( s, nsize );
 	return 1;
 }
-OvInt mt_array_resize( MnState* s )
+
+OvInt mt_global_resize( MnState* s )
 {
 	MnValue arg1 = nx_get_stack(s,1);
 	MnValue arg2 = nx_get_stack(s,2);
@@ -1113,6 +1106,17 @@ OvInt mt_array_resize( MnState* s )
 		MnToArray(arg1)->array.resize( (OvSize)MnToNumber(arg2) );
 	}
 	return 0;
+}
+
+void mn_default_lib( MnState* s )
+{
+	mn_push_string( s, "length" );
+	mn_push_function( s, mt_global_length );
+	mn_set_field( s, 0 );
+
+	mn_push_string( s, "resize" );
+	mn_push_function( s, mt_global_resize );
+	mn_set_field( s, 0 );
 }
 
 //////////////////////////////////////////////////////////////////////////

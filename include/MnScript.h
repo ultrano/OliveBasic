@@ -7,9 +7,13 @@ typedef OvInt (*MnFunction)(MnState*);
 
 MnState*		mn_open_state();
 void			mn_close_state( MnState* s );
+void			mn_default_lib( MnState* s );
 
 void			mn_set_field( MnState* s, MnIndex idx );
 void			mn_get_field( MnState* s, MnIndex idx );
+
+#define			mn_set_global(s) mn_set_field((s),0)
+#define			mn_get_global(s) mn_get_field((s),0)
 
 void			mn_set_metatable( MnState* s, MnIndex idx );
 void			mn_get_metatable( MnState* s, MnIndex idx );
