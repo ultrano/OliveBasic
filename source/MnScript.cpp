@@ -1087,13 +1087,16 @@ OvInt mt_global_length(MnState* s)
 	MnValue arg1 = nx_get_stack(s,1);
 	if ( MnIsArray(arg1) )
 	{
-		nsize = (OvReal)MnToArray(arg1)->array.size();
+		mn_push_number( s, (OvReal)MnToArray(arg1)->array.size() );
 	}
 	else if ( MnIsTable(arg1) )
 	{
-		nsize = (OvReal)MnToTable(arg1)->table.size();
+		mn_push_number( s, (OvReal)MnToTable(arg1)->table.size() );
 	}
-	mn_push_number( s, nsize );
+	else
+	{
+		mn_push_nil( s );
+	}
 	return 1;
 }
 
