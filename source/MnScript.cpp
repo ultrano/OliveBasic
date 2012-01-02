@@ -1168,9 +1168,9 @@ void mn_default_lib( MnState* s )
 //////////////////////////////////////////////////////////////////////////
 
 #define MnOp(i) ((MnOperate)((MnBitMask1(MnOpSize,MnOpPos) & (MnInstruction)(i)) >> MnOpPos ))
-#define MnA(i)	((MnRegister)((MnBitMask1(MnASize,MnAPos) & (MnInstruction)(i)) >> MnAPos ))
-#define MnB(i)	((MnRegister)((MnBitMask1(MnBSize,MnBPos) & (MnInstruction)(i)) >> MnBPos ))
-#define MnC(i)	((MnRegister)((MnBitMask1(MnCSize,MnCPos) & (MnInstruction)(i)) >> MnCPos ))
+#define MnA(i)	((MnOperand)((MnBitMask1(MnASize,MnAPos) & (MnInstruction)(i)) >> MnAPos ))
+#define MnB(i)	((MnOperand)((MnBitMask1(MnBSize,MnBPos) & (MnInstruction)(i)) >> MnBPos ))
+#define MnC(i)	((MnOperand)((MnBitMask1(MnCSize,MnCPos) & (MnInstruction)(i)) >> MnCPos ))
 
 /*unsigned Ax*/
 #define MnUAx(i) ((MnBitMask1(MnAxSize,MnAxPos) & (MnInstruction)(i)) >> MnAxPos )
@@ -1203,7 +1203,7 @@ void mn_default_lib( MnState* s )
 
 enum MnOperate
 {
-	MOP_NONEOP = -1, 
+	MOP_NONEOP = 0, 
 	MOP_NEWTABLE,	//< sa = {}
 	MOP_NEWARRAY,	//< sa = []
 };
@@ -1218,16 +1218,16 @@ void execute_mclosure( MnState* s, MnClosure* cls, OvInt nargs )
 	MnValue* cst = &(proto->consts[0]);
 	MnIndex base = s->base;
 
-#define _Ax	(OsAx(i))
-#define _A	(OsA(i))
-#define _B	(OsB(i))
-#define _C	(OsC(i))
+#define _Ax	(MnAx(i))
+#define _A	(MnA(i))
+#define _B	(MnB(i))
+#define _C	(MnC(i))
 
-#define fB	(OsFlag(_B))
-#define fC	(OsFlag(_C))
+#define fB	(MnReposit(_B))
+#define fC	(MnReposit(_C))
 
-#define iB	(OsIdx(_B))
-#define iC	(OsIdx(_C))
+#define iB	(MnIdx(_B))
+#define iC	(MnIdx(_C))
 
 #define sA  (stk[base + _A])
 #define sB  (stk[base + iB])
@@ -1240,8 +1240,8 @@ void execute_mclosure( MnState* s, MnClosure* cls, OvInt nargs )
 #define cB  (cst[iB])
 #define cC  (cst[iC])
 
-#define rB ((fB==OsCstIdx)? cB:sB)
-#define rC ((fC==OsCstIdx)? cC:sC)
+#define rB ((fB==MnCstIdx)? cB:sB)
+#define rC ((fC==MnCstIdx)? cC:sC)
 
 	while ( pc )
 	{
@@ -1250,7 +1250,7 @@ void execute_mclosure( MnState* s, MnClosure* cls, OvInt nargs )
 		{
 		case MOP_NEWTABLE:
 			{
-
+				sA = MnValue( MOT_TABLE, nx_new_table(s) );
 			}
 			break;
 		}
