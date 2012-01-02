@@ -125,6 +125,8 @@ MnValue			 nx_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx );
 
 void			 nx_push_value( MnState* s, const MnValue& v );
 
+void			 nx_call_closure( MnState* s, MnClosure* cls, OvInt nargs );
+
 //////////////////////////////////////////////////////////////////////////
 
 class MnRefCounter : public OvMemObject
@@ -502,6 +504,7 @@ void mn_close_state( MnState* s )
 	{
 		s->stack.clear();
 		s->global.clear();
+		s->strtable.clear();
 		mn_collect_garbage(s);
 		nx_free(s);
 	}
@@ -1012,34 +1015,7 @@ void mn_call( MnState* s, OvInt nargs )
 {
 	nargs = max(nargs,0);
 	MnValue v = nx_get_stack(s, -(nargs + 1) );
-
-	if ( MnIsClosure(v) && MnToClosure(v)->type == CCL )
-	{
-		MnClosure* cls = MnToClosure(v);
-		MnClosure::CClosure* ccl = cls->u.c;
-		if ( ccl->proto )
-		{
-			MnCallInfo ici;
-			MnCallInfo* ci = &ici;
-			ci->cls  = cls;
-			ci->base = s->base;
-			ci->prev = s->ci;
-
-			s->ci	 = ci;
-			s->base  = s->top - nargs;
-
-			OvInt nrets = ccl->proto(s);
-
-			MnIndex func = s->base - 1;
-			MnIndex ret  = s->top - nrets;
-			for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
-
-			nx_set_abstop( s, func + nrets );
-			s->base = ci->base;
-			s->ci	= ci->prev;
-		}
-
-	}
+	if ( MnIsClosure(v) ) nx_call_closure( s, MnToClosure(v), nargs );
 }
 
 void mn_collect_garbage( MnState* s )
@@ -1122,6 +1098,129 @@ void mn_default_lib( MnState* s )
 	mn_set_field( s, 0 );
 }
 
+void execute_cclosure( MnState* s, MnClosure* cls, OvInt nargs )
+{
+	MnClosure::CClosure* ccl = cls->u.c;
+	if ( ccl->proto )
+	{
+		MnCallInfo ici;
+		MnCallInfo* ci = &ici;
+		ci->cls  = cls;
+		ci->base = s->base;
+		ci->prev = s->ci;
+
+		s->ci	 = ci;
+		s->base  = s->top - nargs;
+
+		OvInt nrets = ccl->proto(s);
+
+		MnIndex func = s->base - 1;
+		MnIndex ret  = s->top - nrets;
+		for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
+
+		nx_set_abstop( s, func + nrets );
+		s->base = ci->base;
+		s->ci	= ci->prev;
+	}
+}
+
+void execute_mclosure( MnState* s, MnClosure* cls, OvInt nargs )
+{
+	MnClosure::MClosure* mcl = cls->u.m;
+}
+
+void nx_call_closure( MnState* s, MnClosure* cls, OvInt nargs )
+{
+	if ( cls )
+	{
+		if ( cls->type == CCL )
+			execute_cclosure( s, cls, nargs );
+		else
+			execute_mclosure( s, cls, nargs );
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 // DOTO: 컴파일러 만들자.
+
+/*
+- instruction architecture
+
+	instruction
+	: op(6) a(8) b(9) c(9) 
+	: op(6) ax(17) c(9)
+
+*/
+
+typedef OvUShort MnOperand;
+typedef OvUInt	 MnInstruction;
+
+/// bit masking utility (c:count, p:pos)
+#define MnBitMask1(c,p) ((~(((~(MnInstruction)0)<<c)))<<p)
+#define MnBitMask0(c,p) (~MnBitMask1(c,p))
+
+#define MnOpPos (0)
+#define MnOpSize (6)
+
+#define MnAPos (MnOpPos+MnOpSize)
+#define MnASize (8)
+
+#define MnBPos (MnAPos+MnASize)
+#define MnBSize (9)
+
+#define MnCPos (MnBPos+MnBSize)
+#define MnCSize (9)
+
+#define MnAxPos (MnOpPos+MnOpSize)
+#define MnAxSize (17)
+
+//////////////////////////////////////////////////////////////////////////
+
+#define MnIdxPos   (0)
+#define MnIdxSize  (8)
+
+#define MnRepositPos  (MnIdxSize)
+#define MnRepositSize (1)
+
+#define MnReposit(r) ((OvInt)((MnBitMask1(MnRepositSize,MnRepositPos) & r) >> MnRepositPos))
+#define MnIdx(r) ((MnIndex)((MnBitMask1(MnIdxSize,MnIdxPos) & r) >> MnIdxPos))
+
+#define MnStkIdx (0)
+#define MnCstIdx (1)
+#define MnBC(f,i) ((MnOperand)((MnBitMask1(MnRepositSize,MnRepositPos) & (f << MnRepositPos)) | (MnBitMask1(MnIdxSize,MnIdxPos) & (i << MnIdxPos))))
+
+//////////////////////////////////////////////////////////////////////////
+
+#define MnOp(i) ((MnOperate)((MnBitMask1(MnOpSize,MnOpPos) & (MnInstruction)(i)) >> MnOpPos ))
+#define MnA(i)	((MnRegister)((MnBitMask1(MnASize,MnAPos) & (MnInstruction)(i)) >> MnAPos ))
+#define MnB(i)	((MnRegister)((MnBitMask1(MnBSize,MnBPos) & (MnInstruction)(i)) >> MnBPos ))
+#define MnC(i)	((MnRegister)((MnBitMask1(MnCSize,MnCPos) & (MnInstruction)(i)) >> MnCPos ))
+
+/*unsigned Ax*/
+#define MnUAx(i) ((MnBitMask1(MnAxSize,MnAxPos) & (MnInstruction)(i)) >> MnAxPos )
+
+/*signed Ax*/
+#define MnAx(i) ((int)((MnUAx(i) >> (MnAxSize-1))? (MnBitMask1(sizeof(int)-MnAxSize,MnAxSize) | MnUAx(i)) : MnUAx(i)))
+
+#define MnFixA(i,a) {(i) = ((((MnInstruction)(i)) & MnBitMask0(MnASize,MnAPos)) | (((a) << MnAPos) & MnBitMask1(MnASize,MnAPos)));}
+#define MnFixB(i,b) {(i) = ((((MnInstruction)(i)) & MnBitMask0(MnBSize,MnBPos)) | (((b) << MnBPos) & MnBitMask1(MnBSize,MnBPos)));}
+#define MnFixC(i,c) {(i) = ((((MnInstruction)(i)) & MnBitMask0(MnCSize,MnCPos)) | (((c) << MnCPos) & MnBitMask1(MnCSize,MnCPos)));}
+#define MnFixAx(i,ax) {(i) = ((((MnInstruction)(i)) & MnBitMask0(MnAxSize,MnAxPos)) | (((ax) << MnAxPos) & MnBitMask1(MnAxSize,MnAxPos)));}
+
+//////////////////////////////////////////////////////////////////////////
+
+#define MnOpABC(op,a,b,c) \
+	((MnInstruction)( \
+	(((op) << MnOpPos) & MnBitMask1(MnOpSize,MnOpPos)) | \
+	(((a) << MnAPos)   & MnBitMask1(MnASize,MnAPos)) | \
+	(((b) << MnBPos)   & MnBitMask1(MnBSize,MnBPos)) | \
+	(((c) << MnCPos)   & MnBitMask1(MnCSize,MnCPos))\
+	))
+
+#define MnOpAxC(op,ax,c) \
+	((MnInstruction)( \
+	(((op) << MnOpPos) & MnBitMask1(MnOpSize,MnOpPos)) | \
+	(((ax) << MnAxPos) & MnBitMask1(MnAxSize,MnAxPos)) | \
+	(((c) << MnCPos)   & MnBitMask1(MnCSize,MnCPos))\
+	))
