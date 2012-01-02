@@ -180,7 +180,7 @@ public:
 class MnObject : public OvMemObject
 {
 public:
-	
+
 	MnObject( MnState* s );
 	virtual ~MnObject();
 
@@ -310,7 +310,7 @@ public:
 		MnCFunction proto;
 		OvVector<MnValue>	upvals;
 	};
-	
+
 	const MnCLType type;
 	union
 	{
@@ -1059,7 +1059,7 @@ void mn_collect_garbage( MnState* s )
 		{
 			if (heap->prev) heap->prev->next = heap->next;
 			if (heap->next) heap->next->prev = heap->prev;
-			
+
 			heap->prev = NULL;
 			heap->next = dead;
 			dead = heap;
@@ -1125,9 +1125,9 @@ void mn_default_lib( MnState* s )
 /*
 - instruction architecture
 
-	instruction
-	: op(6) a(8) b(9) c(9) 
-	: op(6) ax(17) c(9)
+instruction
+: op(6) a(8) b(9) c(9) 
+: op(6) ax(17) c(9)
 
 */
 
@@ -1208,10 +1208,8 @@ enum MnOperate
 	MOP_NEWARRAY,	//< sa = []
 };
 
-void execute_mclosure( MnState* s, MnClosure* cls, OvInt nargs )
+OvInt exec_proto( MnState* s, MnMFunction* proto )
 {
-	MnClosure::MClosure* mcl = cls->u.m;
-	MnMFunction* proto = MnToFunction(mcl->proto);
 	OvInt isz = proto->codes.size();
 	MnInstruction* pc = isz? &(proto->codes[0]) : NULL;
 	MnValue* stk = &(s->stack[0]);
@@ -1255,12 +1253,12 @@ void execute_mclosure( MnState* s, MnClosure* cls, OvInt nargs )
 			break;
 		}
 	}
+	return 0;
 }
 
-void execute_cclosure( MnState* s, MnClosure* cls, OvInt nargs )
+void nx_call_closure( MnState* s, MnClosure* cls, OvInt nargs )
 {
-	MnClosure::CClosure* ccl = cls->u.c;
-	if ( ccl->proto )
+	if ( cls )
 	{
 		MnCallInfo ici;
 		MnCallInfo* ci = &ici;
@@ -1271,7 +1269,17 @@ void execute_cclosure( MnState* s, MnClosure* cls, OvInt nargs )
 		s->ci	 = ci;
 		s->base  = s->top - nargs;
 
-		OvInt nrets = ccl->proto(s);
+		OvInt nrets = 0;
+		if ( cls->type == CCL )
+		{
+			MnClosure::CClosure* ccl = cls->u.c;
+			nrets = ccl->proto(s);
+		}
+		else
+		{
+			MnClosure::MClosure* mcl = cls->u.m;
+			nrets = exec_proto( s, MnToFunction(mcl->proto) );
+		}
 
 		MnIndex func = s->base - 1;
 		MnIndex ret  = s->top - nrets;
@@ -1280,16 +1288,5 @@ void execute_cclosure( MnState* s, MnClosure* cls, OvInt nargs )
 		nx_set_abstop( s, func + nrets );
 		s->base = ci->base;
 		s->ci	= ci->prev;
-	}
-}
-
-void nx_call_closure( MnState* s, MnClosure* cls, OvInt nargs )
-{
-	if ( cls )
-	{
-		if ( cls->type == CCL )
-			execute_cclosure( s, cls, nargs );
-		else
-			execute_mclosure( s, cls, nargs );
 	}
 }
