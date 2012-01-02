@@ -8,7 +8,11 @@ class MnString;
 class MnTable;
 class MnValue;
 class MnArray;
+class MnMFunction;
 class MnClosure;
+
+typedef OvUShort MnOperand;
+typedef OvUInt	 MnInstruction;
 
 enum MnCLType { CCL= 1, MCL = 2 };
 enum MnObjType
@@ -41,13 +45,13 @@ enum MnObjType
 #define MnIsString( v ) ((v).type == MOT_STRING)
 #define MnIsTable( v ) ((v).type == MOT_TABLE)
 #define MnIsArray( v ) ((v).type == MOT_ARRAY)
-#define MnIsFuncProto( v ) ((v).type == MOT_FUNCPROTO)
+#define MnIsFunction( v ) ((v).type == MOT_FUNCPROTO)
 #define MnIsClosure( v ) ((v).type == MOT_CLOSURE)
 #define MnIsObj( v ) \
 	( \
 	MnIsString((v)) ||  \
 	MnIsArray((v)) ||  \
-	MnIsFuncProto((v)) ||  \
+	MnIsFunction((v)) ||  \
 	MnIsClosure((v)) ||  \
 	MnIsTable((v)) \
 	)
@@ -59,6 +63,7 @@ enum MnObjType
 #define MnToString( v ) (MnIsString(v)? (v).u.cnt->u.str : MnBadConvert())
 #define MnToTable( v ) (MnIsTable(v)? (v).u.cnt->u.tbl : MnBadConvert())
 #define MnToArray( v ) (MnIsArray(v)? (v).u.cnt->u.arr : MnBadConvert())
+#define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.proto: MnBadConvert())
 #define MnToClosure( v ) (MnIsClosure(v)? (v).u.cnt->u.cls: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
@@ -141,6 +146,7 @@ public:
 		MnString* str;
 		MnTable*  tbl;
 		MnArray*  arr;
+		MnMFunction*  proto;
 		MnClosure*  cls;
 	} u;
 };
@@ -273,6 +279,18 @@ public:
 
 //////////////////////////////////////////////////////////////////////////
 
+class MnMFunction : public MnObject
+{
+public:
+	typedef OvVector<MnValue>		vec_value;
+	typedef OvVector<MnInstruction> vec_instruction;
+
+	vec_value		consts;
+	vec_instruction	codes;
+};
+
+//////////////////////////////////////////////////////////////////////////
+
 class MnClosure : public MnObject
 {
 public:
@@ -283,12 +301,13 @@ public:
 	};
 	struct MClosure : OvMemObject
 	{
+		MnValue  proto;
 		OvVector<Upval>	upvals;
 	};
 
 	struct CClosure : OvMemObject
 	{
-		MnFunction proto;
+		MnCFunction proto;
 		OvVector<MnValue>	upvals;
 	};
 	
@@ -481,6 +500,7 @@ void MnClosure::marking()
 	}
 	else if ( type == MCL )
 	{
+		MnMarking(u.m->proto);
 		for each ( const Upval& uv in u.m->upvals )
 		{
 			MnMarking( uv.hold );
@@ -912,7 +932,7 @@ void mnd_new_garbege( MnState* s )
 	t2->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t1))));
 }
 
-void mn_new_closure( MnState* s, MnFunction proto, OvInt nupvals )
+void mn_new_closure( MnState* s, MnCFunction proto, OvInt nupvals )
 {
 	MnClosure* cl = nx_new_closure(s,CCL);
 	cl->u.c->proto = proto;
@@ -925,7 +945,7 @@ void mn_new_closure( MnState* s, MnFunction proto, OvInt nupvals )
 	nx_push_value( s, MnValue(MOT_CLOSURE,cl) );
 }
 
-void mn_push_function( MnState* s, MnFunction proto )
+void mn_push_function( MnState* s, MnCFunction proto )
 {
 	mn_new_closure(s,proto,0);
 }
@@ -1098,48 +1118,6 @@ void mn_default_lib( MnState* s )
 	mn_set_field( s, 0 );
 }
 
-void execute_cclosure( MnState* s, MnClosure* cls, OvInt nargs )
-{
-	MnClosure::CClosure* ccl = cls->u.c;
-	if ( ccl->proto )
-	{
-		MnCallInfo ici;
-		MnCallInfo* ci = &ici;
-		ci->cls  = cls;
-		ci->base = s->base;
-		ci->prev = s->ci;
-
-		s->ci	 = ci;
-		s->base  = s->top - nargs;
-
-		OvInt nrets = ccl->proto(s);
-
-		MnIndex func = s->base - 1;
-		MnIndex ret  = s->top - nrets;
-		for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
-
-		nx_set_abstop( s, func + nrets );
-		s->base = ci->base;
-		s->ci	= ci->prev;
-	}
-}
-
-void execute_mclosure( MnState* s, MnClosure* cls, OvInt nargs )
-{
-	MnClosure::MClosure* mcl = cls->u.m;
-}
-
-void nx_call_closure( MnState* s, MnClosure* cls, OvInt nargs )
-{
-	if ( cls )
-	{
-		if ( cls->type == CCL )
-			execute_cclosure( s, cls, nargs );
-		else
-			execute_mclosure( s, cls, nargs );
-	}
-}
-
 //////////////////////////////////////////////////////////////////////////
 
 // DOTO: 컴파일러 만들자.
@@ -1152,9 +1130,6 @@ void nx_call_closure( MnState* s, MnClosure* cls, OvInt nargs )
 	: op(6) ax(17) c(9)
 
 */
-
-typedef OvUShort MnOperand;
-typedef OvUInt	 MnInstruction;
 
 /// bit masking utility (c:count, p:pos)
 #define MnBitMask1(c,p) ((~(((~(MnInstruction)0)<<c)))<<p)
@@ -1224,3 +1199,97 @@ typedef OvUInt	 MnInstruction;
 	(((ax) << MnAxPos) & MnBitMask1(MnAxSize,MnAxPos)) | \
 	(((c) << MnCPos)   & MnBitMask1(MnCSize,MnCPos))\
 	))
+
+
+enum MnOperate
+{
+	MOP_NONEOP = -1, 
+	MOP_NEWTABLE,	//< sa = {}
+	MOP_NEWARRAY,	//< sa = []
+};
+
+void execute_mclosure( MnState* s, MnClosure* cls, OvInt nargs )
+{
+	MnClosure::MClosure* mcl = cls->u.m;
+	MnMFunction* proto = MnToFunction(mcl->proto);
+	OvInt isz = proto->codes.size();
+	MnInstruction* pc = isz? &(proto->codes[0]) : NULL;
+	MnValue* stk = &(s->stack[0]);
+	MnValue* cst = &(proto->consts[0]);
+	MnIndex base = s->base;
+
+#define _Ax	(OsAx(i))
+#define _A	(OsA(i))
+#define _B	(OsB(i))
+#define _C	(OsC(i))
+
+#define fB	(OsFlag(_B))
+#define fC	(OsFlag(_C))
+
+#define iB	(OsIdx(_B))
+#define iC	(OsIdx(_C))
+
+#define sA  (stk[base + _A])
+#define sB  (stk[base + iB])
+#define sC  (stk[base + iC])
+
+#define uA	(ci->clr->upvals[_A])
+#define uB	(ci->clr->upvals[iB])
+#define uC	(ci->clr->upvals[iC])
+
+#define cB  (cst[iB])
+#define cC  (cst[iC])
+
+#define rB ((fB==OsCstIdx)? cB:sB)
+#define rC ((fC==OsCstIdx)? cC:sC)
+
+	while ( pc )
+	{
+		MnInstruction i = *pc; ++pc;
+		switch ( MnOp(i) )
+		{
+		case MOP_NEWTABLE:
+			{
+
+			}
+			break;
+		}
+	}
+}
+
+void execute_cclosure( MnState* s, MnClosure* cls, OvInt nargs )
+{
+	MnClosure::CClosure* ccl = cls->u.c;
+	if ( ccl->proto )
+	{
+		MnCallInfo ici;
+		MnCallInfo* ci = &ici;
+		ci->cls  = cls;
+		ci->base = s->base;
+		ci->prev = s->ci;
+
+		s->ci	 = ci;
+		s->base  = s->top - nargs;
+
+		OvInt nrets = ccl->proto(s);
+
+		MnIndex func = s->base - 1;
+		MnIndex ret  = s->top - nrets;
+		for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
+
+		nx_set_abstop( s, func + nrets );
+		s->base = ci->base;
+		s->ci	= ci->prev;
+	}
+}
+
+void nx_call_closure( MnState* s, MnClosure* cls, OvInt nargs )
+{
+	if ( cls )
+	{
+		if ( cls->type == CCL )
+			execute_cclosure( s, cls, nargs );
+		else
+			execute_mclosure( s, cls, nargs );
+	}
+}
