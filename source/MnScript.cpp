@@ -86,16 +86,6 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
-
-class MnCallInfo : public OvMemObject
-{
-public:
-	MnClosure*	cls;
-	MnIndex		base;
-	MnCallInfo* prev;
-};
-
-//////////////////////////////////////////////////////////////////////////
 void*			 nx_alloc( OvSize sz ) { return OvMemAlloc(sz); };
 void			 nx_free( void* p ) { OvMemFree(p); };
 
@@ -130,7 +120,7 @@ MnValue			 nx_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx );
 
 void			 nx_push_value( MnState* s, const MnValue& v );
 
-void			 nx_call_closure( MnState* s, MnClosure* cls, OvInt nargs );
+void			 nx_call_closure( MnState* s, MnClosure* cls );
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -285,8 +275,13 @@ public:
 	typedef OvVector<MnValue>		vec_value;
 	typedef OvVector<MnInstruction> vec_instruction;
 
+	~MnMFunction();
+
 	vec_value		consts;
 	vec_instruction	codes;
+
+	OvInt			nargs;
+	OvInt			nrets;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -470,6 +465,14 @@ void MnArray::marking()
 	{
 		MnMarking( v );
 	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+MnMFunction::~MnMFunction()
+{
+	consts.clear();
+	codes.clear();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1035,7 +1038,8 @@ void mn_call( MnState* s, OvInt nargs )
 {
 	nargs = max(nargs,0);
 	MnValue v = nx_get_stack(s, -(nargs + 1) );
-	if ( MnIsClosure(v) ) nx_call_closure( s, MnToClosure(v), nargs );
+	s->base  = s->top - nargs;
+	if ( MnIsClosure(v) ) nx_call_closure( s, MnToClosure(v) );
 }
 
 void mn_collect_garbage( MnState* s )
@@ -1200,6 +1204,18 @@ instruction
 	(((c) << MnCPos)   & MnBitMask1(MnCSize,MnCPos))\
 	))
 
+//////////////////////////////////////////////////////////////////////////
+
+class MnCallInfo : public OvMemObject
+{
+public:
+	MnValue		cls;
+	MnIndex		base;
+	MnCallInfo* prev;
+	OvInt		savepc;
+};
+
+//////////////////////////////////////////////////////////////////////////
 
 enum MnOperate
 {
@@ -1210,11 +1226,6 @@ enum MnOperate
 
 OvInt exec_proto( MnState* s, MnMFunction* proto )
 {
-	OvInt isz = proto->codes.size();
-	MnInstruction* pc = isz? &(proto->codes[0]) : NULL;
-	MnValue* stk = &(s->stack[0]);
-	MnValue* cst = &(proto->consts[0]);
-	MnIndex base = s->base;
 
 #define _Ax	(MnAx(i))
 #define _A	(MnA(i))
@@ -1227,20 +1238,22 @@ OvInt exec_proto( MnState* s, MnMFunction* proto )
 #define iB	(MnIdx(_B))
 #define iC	(MnIdx(_C))
 
-#define sA  (stk[base + _A])
-#define sB  (stk[base + iB])
-#define sC  (stk[base + iC])
+#define sA  (nx_get_stack(s,_A))
+#define sB  (nx_get_stack(s,iB))
+#define sC  (nx_get_stack(s,iC))
+
+#define cB  (proto->consts[iB])
+#define cC  (proto->consts[iC])
 
 #define uA	(ci->clr->upvals[_A])
 #define uB	(ci->clr->upvals[iB])
 #define uC	(ci->clr->upvals[iC])
 
-#define cB  (cst[iB])
-#define cC  (cst[iC])
-
 #define rB ((fB==MnCstIdx)? cB:sB)
 #define rC ((fC==MnCstIdx)? cC:sC)
 
+	OvInt isz = proto->codes.size();
+	MnInstruction* pc = isz? &(proto->codes[0]) : NULL;
 	while ( pc )
 	{
 		MnInstruction i = *pc; ++pc;
@@ -1256,29 +1269,22 @@ OvInt exec_proto( MnState* s, MnMFunction* proto )
 	return 0;
 }
 
-void nx_call_closure( MnState* s, MnClosure* cls, OvInt nargs )
+void nx_call_closure( MnState* s, MnClosure* cls )
 {
 	if ( cls )
 	{
 		MnCallInfo ici;
 		MnCallInfo* ci = &ici;
-		ci->cls  = cls;
+		ci->cls  = MnValue(MOT_CLOSURE,(MnObject*)cls);
 		ci->base = s->base;
 		ci->prev = s->ci;
-
 		s->ci	 = ci;
-		s->base  = s->top - nargs;
 
 		OvInt nrets = 0;
 		if ( cls->type == CCL )
 		{
 			MnClosure::CClosure* ccl = cls->u.c;
 			nrets = ccl->proto(s);
-		}
-		else
-		{
-			MnClosure::MClosure* mcl = cls->u.m;
-			nrets = exec_proto( s, MnToFunction(mcl->proto) );
 		}
 
 		MnIndex func = s->base - 1;
