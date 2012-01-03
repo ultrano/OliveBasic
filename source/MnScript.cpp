@@ -80,6 +80,7 @@ public:
 	vec_stack	 stack;
 
 	MnCallInfo*	 ci;
+	MnInstruction* pc;
 	MnIndex		 base;
 	MnIndex		 top;
 
@@ -681,9 +682,20 @@ MnValue nx_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx )
 	if ( MnIsClosure(c) )
 	{
 		MnClosure* cls = MnToClosure(c);
-		if ( upvalidx > 0 && upvalidx <= cls->u.c->upvals.size() )
+		if ( cls->type == CCL )
 		{
-			return cls->u.c->upvals.at( upvalidx - 1 );
+			if ( upvalidx > 0 && upvalidx <= cls->u.c->upvals.size() )
+			{
+				return cls->u.c->upvals.at( upvalidx - 1 );
+			}
+		}
+		else
+		{
+			if ( upvalidx > 0 && upvalidx <= cls->u.m->upvals.size() )
+			{
+				MnClosure::Upval& upval = cls->u.m->upvals.at( upvalidx - 1 );
+				return *upval.link;
+			}
 		}
 	}
 	return MnValue();
@@ -889,6 +901,14 @@ void nx_set_abstop( MnState* s, MnIndex idx )
 	s->top = idx;
 }
 
+void nx_set_absbase( MnState* s, MnIndex idx )
+{
+	if ( idx >= 0 && idx <= s->top )
+	{
+		s->base = idx;
+	}
+}
+
 ///////////////////////* get/set top *///////////////////////
 
 void mn_set_top( MnState* s, MnIndex idx )
@@ -1034,13 +1054,6 @@ const OvString& mn_to_string( MnState* s, MnIndex idx )
 	return empty;
 }
 
-void mn_call( MnState* s, OvInt nargs )
-{
-	nargs = max(nargs,0);
-	MnValue v = nx_get_stack(s, -(nargs + 1) );
-	s->base  = s->top - nargs;
-	if ( MnIsClosure(v) ) nx_call_closure( s, MnToClosure(v) );
-}
 
 void mn_collect_garbage( MnState* s )
 {
@@ -1209,10 +1222,10 @@ instruction
 class MnCallInfo : public OvMemObject
 {
 public:
-	MnValue		cls;
-	MnIndex		base;
-	MnCallInfo* prev;
-	OvInt		savepc;
+	MnCallInfo*		prev;
+	MnIndex			base;
+	MnValue			cls;
+	MnInstruction*	savepc;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1245,18 +1258,17 @@ OvInt exec_proto( MnState* s, MnMFunction* proto )
 #define cB  (proto->consts[iB])
 #define cC  (proto->consts[iC])
 
-#define uA	(ci->clr->upvals[_A])
-#define uB	(ci->clr->upvals[iB])
-#define uC	(ci->clr->upvals[iC])
+#define uA	(nx_get_upval(s,0,_A))
+#define uB	(nx_get_upval(s,0,iB))
+#define uC	(nx_get_upval(s,0,iC))
 
 #define rB ((fB==MnCstIdx)? cB:sB)
 #define rC ((fC==MnCstIdx)? cC:sC)
 
-	OvInt isz = proto->codes.size();
-	MnInstruction* pc = isz? &(proto->codes[0]) : NULL;
-	while ( pc )
+	s->pc = proto->codes.size()? &(proto->codes[0]) : NULL;
+	while ( s->pc )
 	{
-		MnInstruction i = *pc; ++pc;
+		MnInstruction i = *s->pc; ++s->pc;
 		switch ( MnOp(i) )
 		{
 		case MOP_NEWTABLE:
@@ -1269,30 +1281,41 @@ OvInt exec_proto( MnState* s, MnMFunction* proto )
 	return 0;
 }
 
-void nx_call_closure( MnState* s, MnClosure* cls )
+void func_prologue();
+void func_epilogue();
+
+void nx_call_cls( MnState* s, MnClosure* cls ) 
 {
-	if ( cls )
+	MnCallInfo ici;
+	MnCallInfo* ci = &ici;
+	ci->cls  = MnValue(MOT_CLOSURE,(MnObject*)cls);
+	ci->base = s->base;
+	ci->prev = s->ci;
+	s->ci	 = ci;
+
+	OvInt nrets = 0;
+	if ( cls->type == CCL )
 	{
-		MnCallInfo ici;
-		MnCallInfo* ci = &ici;
-		ci->cls  = MnValue(MOT_CLOSURE,(MnObject*)cls);
-		ci->base = s->base;
-		ci->prev = s->ci;
-		s->ci	 = ci;
+		MnClosure::CClosure* ccl = cls->u.c;
+		nrets = ccl->proto(s);
+	}
 
-		OvInt nrets = 0;
-		if ( cls->type == CCL )
-		{
-			MnClosure::CClosure* ccl = cls->u.c;
-			nrets = ccl->proto(s);
-		}
+	MnIndex func = s->base - 1;
+	MnIndex ret  = s->top - nrets;
+	for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
 
-		MnIndex func = s->base - 1;
-		MnIndex ret  = s->top - nrets;
-		for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
+	nx_set_abstop( s, func + nrets );
+	s->base = ci->base;
+	s->ci	= ci->prev;
+}
 
-		nx_set_abstop( s, func + nrets );
-		s->base = ci->base;
-		s->ci	= ci->prev;
+void mn_call( MnState* s, OvInt nargs )
+{
+	nargs = max(nargs,0);
+	MnValue v = nx_get_stack(s, -(nargs + 1) );
+	if ( MnIsClosure(v) )
+	{
+		nx_set_absbase( s, s->top - nargs );
+		nx_call_cls(s, MnToClosure(v));
 	}
 }
