@@ -87,6 +87,17 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
+
+class MnCallInfo : public OvMemObject
+{
+public:
+	MnCallInfo*		prev;
+	MnIndex			base;
+	MnClosure*		cls;
+	MnInstruction*	savepc;
+};
+
+//////////////////////////////////////////////////////////////////////////
 void*			 nx_alloc( OvSize sz ) { return OvMemAlloc(sz); };
 void			 nx_free( void* p ) { OvMemFree(p); };
 
@@ -99,7 +110,6 @@ void			 nx_delete_object( MnObject* o );
 void			 nx_delete_garbage( MnObject* o );
 
 MnIndex			 nx_absidx( MnState* s, MnIndex idx );
-void			 nx_set_abstop( MnState* s, MnIndex idx );
 
 OvBool			 nx_is_global( MnState* s, OvHash32 hash );
 
@@ -519,6 +529,8 @@ MnState* mn_open_state()
 	MnState* s = new(nx_alloc(sizeof(MnState))) MnState;
 	s->base = 0;
 	s->top  = 0;
+	s->ci	= NULL;
+	s->pc	= NULL;
 	return s;
 }
 
@@ -526,6 +538,8 @@ void mn_close_state( MnState* s )
 {
 	if ( s )
 	{
+		while ( s->ci ) { MnCallInfo* ci = s->ci; s->ci = ci->prev; nx_free(ci); }
+		s->base = s->top = 0;
 		s->stack.clear();
 		s->global.clear();
 		s->strtable.clear();
@@ -884,23 +898,6 @@ MnIndex nx_absidx( MnState* s, MnIndex idx )
 	return abidx;
 }
 
-void nx_set_abstop( MnState* s, MnIndex idx )
-{
-	idx = (idx < s->base)? s->base : idx;
-	if ( idx > s->stack.size() )
-	{
-		s->stack.resize( idx );
-	}
-	else if ( idx < s->top )
-	{
-		for ( MnIndex i = idx ; i < s->top ; ++i )
-		{
-			s->stack[ i ] = MnValue();
-		}
-	}
-	s->top = idx;
-}
-
 void nx_set_absbase( MnState* s, MnIndex idx )
 {
 	if ( idx >= 0 && idx <= s->top )
@@ -909,11 +906,21 @@ void nx_set_absbase( MnState* s, MnIndex idx )
 	}
 }
 
+void nx_new_top( MnState* s , MnIndex idx ) 
+{
+	idx = (idx < s->base)? s->base : idx;
+	if ( idx > s->stack.size() )
+	{
+		s->stack.resize( idx );
+	}
+	s->top = idx;
+}
+
 ///////////////////////* get/set top *///////////////////////
 
 void mn_set_top( MnState* s, MnIndex idx )
 {
-	nx_set_abstop( s, nx_absidx( s, idx ) + 1 );
+	nx_new_top(s, nx_absidx( s, idx ) + 1);
 }
 
 MnIndex mn_get_top( MnState* s )
@@ -1219,17 +1226,6 @@ instruction
 
 //////////////////////////////////////////////////////////////////////////
 
-class MnCallInfo : public OvMemObject
-{
-public:
-	MnCallInfo*		prev;
-	MnIndex			base;
-	MnValue			cls;
-	MnInstruction*	savepc;
-};
-
-//////////////////////////////////////////////////////////////////////////
-
 enum MnOperate
 {
 	MOP_NONEOP = 0, 
@@ -1281,41 +1277,60 @@ OvInt exec_proto( MnState* s, MnMFunction* proto )
 	return 0;
 }
 
-void func_prologue();
-void func_epilogue();
-
-void nx_call_cls( MnState* s, MnClosure* cls ) 
+void func_prologue( MnState* s, MnClosure* cls, MnIndex newbase )
 {
-	MnCallInfo ici;
-	MnCallInfo* ci = &ici;
-	ci->cls  = MnValue(MOT_CLOSURE,(MnObject*)cls);
+	MnCallInfo* ci = (MnCallInfo*)nx_alloc(sizeof(MnCallInfo));
+	ci->cls  = cls;
 	ci->base = s->base;
 	ci->prev = s->ci;
-	s->ci	 = ci;
+	ci->savepc = s->pc;
 
-	OvInt nrets = 0;
+	s->ci	 = ci;
+	s->base  = newbase;
+}
+void func_epilogue( MnState* s )
+{
+	MnCallInfo* ci = s->ci;
+	s->top	= s->base;
+	s->base = ci->base;
+	s->ci	= ci->prev;
+	s->pc	= ci->savepc;
+	nx_free(ci);
+}
+
+void nx_call_cls( MnState* s, MnIndex clsidx ) 
+{
+	MnClosure* cls = MnToClosure(nx_get_stack(s, clsidx ));
+	func_prologue( s, cls, nx_absidx(s,clsidx) + 1 );
 	if ( cls->type == CCL )
 	{
 		MnClosure::CClosure* ccl = cls->u.c;
-		nrets = ccl->proto(s);
+		OvInt nrets = ccl->proto(s);
+		MnIndex func = s->base - 1;
+		if ( nrets )
+		{
+			MnIndex ret  = s->top - nrets;
+			for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
+		}
+
+		MnIndex newtop = func + nrets;
+		while ( newtop < s->top ) s->stack[ --s->top ] = MnValue();
 	}
-
-	MnIndex func = s->base - 1;
-	MnIndex ret  = s->top - nrets;
-	for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
-
-	nx_set_abstop( s, func + nrets );
-	s->base = ci->base;
-	s->ci	= ci->prev;
+	else if ( cls->type == MCL )
+	{
+		MnClosure::MClosure* mcl = cls->u.m;
+		MnMFunction* proto = MnToFunction(mcl->proto);
+		exec_proto( s, proto );
+	}
+	func_epilogue( s );
 }
 
 void mn_call( MnState* s, OvInt nargs )
 {
 	nargs = max(nargs,0);
-	MnValue v = nx_get_stack(s, -(nargs + 1) );
+	MnValue v = nx_get_stack(s, -(1 + nargs) );
 	if ( MnIsClosure(v) )
 	{
-		nx_set_absbase( s, s->top - nargs );
-		nx_call_cls(s, MnToClosure(v));
+		nx_call_cls(s, -(1 + nargs));
 	}
 }
