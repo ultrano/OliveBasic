@@ -1298,39 +1298,25 @@ void func_epilogue( MnState* s )
 	nx_free(ci);
 }
 
-void nx_call_cls( MnState* s, MnIndex clsidx ) 
-{
-	MnClosure* cls = MnToClosure(nx_get_stack(s, clsidx ));
-	func_prologue( s, cls, nx_absidx(s,clsidx) + 1 );
-	if ( cls->type == CCL )
-	{
-		MnClosure::CClosure* ccl = cls->u.c;
-		OvInt nrets = ccl->proto(s);
-		MnIndex func = s->base - 1;
-		if ( nrets )
-		{
-			MnIndex ret  = s->top - nrets;
-			for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
-		}
-
-		MnIndex newtop = func + nrets;
-		while ( newtop < s->top ) s->stack[ --s->top ] = MnValue();
-	}
-	else if ( cls->type == MCL )
-	{
-		MnClosure::MClosure* mcl = cls->u.m;
-		MnMFunction* proto = MnToFunction(mcl->proto);
-		exec_proto( s, proto );
-	}
-	func_epilogue( s );
-}
-
 void mn_call( MnState* s, OvInt nargs )
 {
 	nargs = max(nargs,0);
 	MnValue v = nx_get_stack(s, -(1 + nargs) );
 	if ( MnIsClosure(v) )
 	{
-		nx_call_cls(s, -(1 + nargs));
+		MnClosure* cls = MnToClosure(v);
+		if ( cls->type == CCL )
+		{
+			MnClosure::CClosure* ccl = cls->u.c;
+			OvInt nrets = ccl->proto(s);
+			MnIndex func = s->base - 1;
+			MnIndex newtop = func + nrets>0? nrets : -1;
+			if ( nrets )
+			{
+				MnIndex ret  = s->top - nrets;
+				for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
+			}
+			while ( newtop < s->top ) s->stack[ --s->top ] = MnValue();
+		}
 	}
 }
