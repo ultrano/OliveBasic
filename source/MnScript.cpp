@@ -63,7 +63,7 @@ enum MnObjType
 #define MnToString( v ) (MnIsString(v)? (v).u.cnt->u.str : MnBadConvert())
 #define MnToTable( v ) (MnIsTable(v)? (v).u.cnt->u.tbl : MnBadConvert())
 #define MnToArray( v ) (MnIsArray(v)? (v).u.cnt->u.arr : MnBadConvert())
-#define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.proto: MnBadConvert())
+#define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.func: MnBadConvert())
 #define MnToClosure( v ) (MnIsClosure(v)? (v).u.cnt->u.cls: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
@@ -147,7 +147,7 @@ public:
 		MnString* str;
 		MnTable*  tbl;
 		MnArray*  arr;
-		MnMFunction*  proto;
+		MnMFunction*  func;
 		MnClosure*  cls;
 	} u;
 };
@@ -307,13 +307,13 @@ public:
 	};
 	struct MClosure : OvMemObject
 	{
-		MnValue  proto;
+		MnValue  func;
 		OvVector<Upval>	upvals;
 	};
 
 	struct CClosure : OvMemObject
 	{
-		MnCFunction proto;
+		MnCFunction func;
 		OvVector<MnValue>	upvals;
 	};
 
@@ -514,7 +514,7 @@ void MnClosure::marking()
 	}
 	else if ( type == MCL )
 	{
-		MnMarking(u.m->proto);
+		MnMarking(u.m->func);
 		for each ( const Upval& uv in u.m->upvals )
 		{
 			MnMarking( uv.hold );
@@ -906,13 +906,15 @@ void nx_set_absbase( MnState* s, MnIndex idx )
 	}
 }
 
+void nx_resize_stack( MnState* s, OvInt sz )
+{
+	if ( sz > s->stack.size() ) s->stack.resize( sz );
+}
+
 void nx_new_top( MnState* s , MnIndex idx ) 
 {
 	idx = (idx < s->base)? s->base : idx;
-	if ( idx > s->stack.size() )
-	{
-		s->stack.resize( idx );
-	}
+	nx_resize_stack( s, idx );
 	s->top = idx;
 }
 
@@ -965,7 +967,7 @@ void mnd_new_garbege( MnState* s )
 void mn_new_closure( MnState* s, MnCFunction proto, OvInt nupvals )
 {
 	MnClosure* cl = nx_new_closure(s,CCL);
-	cl->u.c->proto = proto;
+	cl->u.c->func = proto;
 	cl->u.c->upvals.reserve(nupvals);
 	for ( OvInt i = 0 ; i < nupvals ; ++i )
 	{
@@ -1233,7 +1235,7 @@ enum MnOperate
 	MOP_NEWARRAY,	//< sa = []
 };
 
-OvInt exec_proto( MnState* s, MnMFunction* proto )
+OvInt nx_exec_func( MnState* s, MnMFunction* proto )
 {
 
 #define _Ax	(MnAx(i))
@@ -1251,8 +1253,8 @@ OvInt exec_proto( MnState* s, MnMFunction* proto )
 #define sB  (nx_get_stack(s,iB))
 #define sC  (nx_get_stack(s,iC))
 
-#define cB  (proto->consts[iB])
-#define cC  (proto->consts[iC])
+#define cB  (func->consts[iB])
+#define cC  (func->consts[iC])
 
 #define uA	(nx_get_upval(s,0,_A))
 #define uB	(nx_get_upval(s,0,iB))
@@ -1298,25 +1300,49 @@ void func_epilogue( MnState* s )
 	nx_free(ci);
 }
 
-void mn_call( MnState* s, OvInt nargs )
+void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 {
 	nargs = max(nargs,0);
 	MnValue v = nx_get_stack(s, -(1 + nargs) );
 	if ( MnIsClosure(v) )
 	{
+		MnCallInfo* ci = ( MnCallInfo* )nx_alloc( sizeof( MnCallInfo ) );
 		MnClosure* cls = MnToClosure(v);
+		ci->cls  = cls;
+		ci->prev = s->ci;
+		ci->savepc = s->pc;
+		ci->base = s->base;
+
+		s->ci    = ci;
+		s->base  = nx_absidx( s,-nargs );
+
+		OvInt r = 0;
 		if ( cls->type == CCL )
 		{
 			MnClosure::CClosure* ccl = cls->u.c;
-			OvInt nrets = ccl->proto(s);
-			MnIndex func = s->base - 1;
-			MnIndex newtop = func + nrets>0? nrets : -1;
-			if ( nrets )
-			{
-				MnIndex ret  = s->top - nrets;
-				for ( OvInt i = 0 ; (ret+i) < s->top ; ++i )  s->stack[func+i] = s->stack[ret+i];
-			}
-			while ( newtop < s->top ) s->stack[ --s->top ] = MnValue();
+			r = ccl->func(s);
 		}
+		else
+		{
+			MnClosure::MClosure* mcl = cls->u.m;
+			mcl->func;
+			MnMFunction* func = MnToFunction( mcl->func );
+			nx_exec_func( s, func );
+			r = func->nrets;
+		}
+
+		MnIndex newtop = s->base - 1;
+		MnIndex first_ret  = s->top - r;
+
+		if ( r > 0 ) for ( OvInt i = 0 ; i < nargs ; ++i )  s->stack[newtop++] = s->stack[first_ret++];
+
+		while ( newtop < s->top ) s->stack[ --s->top ] = MnValue();
+		nx_resize_stack( s, newtop );
+		while ( newtop > s->top ) s->stack[ ++s->top ] = MnValue();
+
+		ci = s->ci;
+		s->base = ci->base;
+		s->ci	= ci->prev;
+		nx_free(ci);
 	}
 }
