@@ -292,7 +292,6 @@ public:
 	vec_instruction	codes;
 
 	OvInt			nargs;
-	OvInt			nrets;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1304,16 +1303,14 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 		else
 		{
 			MnClosure::MClosure* mcl = cls->u.m;
-			mcl->func;
-			MnMFunction* func = MnToFunction( mcl->func );
-			nx_exec_func( s, func );
-			r = func->nrets;
+			r = nx_exec_func( s, MnToFunction( mcl->func ) );
 		}
 
 		MnIndex oldtop = s->base - 1;
 		MnIndex newtop = oldtop + nrets;
 		MnIndex first_ret  = s->last - r;
-		nx_reserve_stack( s, newtop );
+		first_ret = max( oldtop, first_ret );
+		nx_reserve_stack( s, oldtop + max( nrets, r ) );
 
 		if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  s->stack[oldtop++] = s->stack[first_ret++];
 
