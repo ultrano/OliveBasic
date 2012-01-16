@@ -82,7 +82,7 @@ public:
 	MnCallInfo*	 ci;
 	MnInstruction* pc;
 	MnIndex		 base;
-	MnIndex		 top;
+	MnIndex		 last;
 
 };
 
@@ -528,7 +528,7 @@ MnState* mn_open_state()
 {
 	MnState* s = new(nx_alloc(sizeof(MnState))) MnState;
 	s->base = 0;
-	s->top  = 0;
+	s->last  = 0;
 	s->ci	= NULL;
 	s->pc	= NULL;
 	return s;
@@ -539,7 +539,7 @@ void mn_close_state( MnState* s )
 	if ( s )
 	{
 		while ( s->ci ) { MnCallInfo* ci = s->ci; s->ci = ci->prev; nx_free(ci); }
-		s->base = s->top = 0;
+		s->base = s->last = 0;
 		s->stack.clear();
 		s->global.clear();
 		s->strtable.clear();
@@ -900,7 +900,7 @@ MnIndex nx_absidx( MnState* s, MnIndex idx )
 
 void nx_set_absbase( MnState* s, MnIndex idx )
 {
-	if ( idx >= 0 && idx <= s->top )
+	if ( idx >= 0 && idx <= s->last )
 	{
 		s->base = idx;
 	}
@@ -915,7 +915,7 @@ void nx_new_top( MnState* s , MnIndex idx )
 {
 	idx = (idx < s->base)? s->base : idx;
 	nx_reserve_stack( s, idx );
-	s->top = idx;
+	s->last = idx;
 }
 
 ///////////////////////* get/set top *///////////////////////
@@ -927,12 +927,12 @@ void mn_set_top( MnState* s, MnIndex idx )
 
 MnIndex mn_get_top( MnState* s )
 {
-	return s->top - s->base;
+	return s->last - s->base;
 }
 
 MnIndex mn_get_gtop( MnState* s )
 {
-	return s->top;
+	return s->last;
 }
 
 ///////////////////////*   kind of push    *//////////////////////
@@ -1072,7 +1072,7 @@ void mn_collect_garbage( MnState* s )
 	{
 		MnMarking(itor->second);
 	}
-	MnIndex idx = s->top;
+	MnIndex idx = s->last;
 	while ( idx-- ) MnMarking(s->stack[idx]);
 
 	MnObject* dead = NULL;
@@ -1310,18 +1310,18 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 			r = func->nrets;
 		}
 
-		MnIndex top = s->base - 1;
-		MnIndex newtop = top + nrets;
-		MnIndex first_ret  = s->top - r;
+		MnIndex oldtop = s->base - 1;
+		MnIndex newtop = oldtop + nrets;
+		MnIndex first_ret  = s->last - r;
 		nx_reserve_stack( s, newtop );
 
-		if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  s->stack[top++] = s->stack[first_ret++];
+		if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  s->stack[oldtop++] = s->stack[first_ret++];
 
-		while ( top < s->top ) s->stack[ --s->top ] = MnValue();
-		while ( top > s->top ) s->stack[ s->top++ ] = MnValue();
+		while ( oldtop < s->last ) s->stack[ --s->last ] = MnValue();
+		while ( oldtop > s->last ) s->stack[ s->last++ ] = MnValue();
 
 		ci = s->ci;
-		s->top  = newtop;
+		s->last  = newtop;
 		s->base = ci->base;
 		s->ci	= ci->prev;
 		nx_free(ci);
