@@ -906,7 +906,7 @@ void nx_set_absbase( MnState* s, MnIndex idx )
 	}
 }
 
-void nx_resize_stack( MnState* s, OvInt sz )
+void nx_reserve_stack( MnState* s, OvInt sz )
 {
 	if ( sz > s->stack.size() ) s->stack.resize( sz );
 }
@@ -914,7 +914,7 @@ void nx_resize_stack( MnState* s, OvInt sz )
 void nx_new_top( MnState* s , MnIndex idx ) 
 {
 	idx = (idx < s->base)? s->base : idx;
-	nx_resize_stack( s, idx );
+	nx_reserve_stack( s, idx );
 	s->top = idx;
 }
 
@@ -1279,27 +1279,6 @@ OvInt nx_exec_func( MnState* s, MnMFunction* proto )
 	return 0;
 }
 
-void func_prologue( MnState* s, MnClosure* cls, MnIndex newbase )
-{
-	MnCallInfo* ci = (MnCallInfo*)nx_alloc(sizeof(MnCallInfo));
-	ci->cls  = cls;
-	ci->base = s->base;
-	ci->prev = s->ci;
-	ci->savepc = s->pc;
-
-	s->ci	 = ci;
-	s->base  = newbase;
-}
-void func_epilogue( MnState* s )
-{
-	MnCallInfo* ci = s->ci;
-	s->top	= s->base;
-	s->base = ci->base;
-	s->ci	= ci->prev;
-	s->pc	= ci->savepc;
-	nx_free(ci);
-}
-
 void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 {
 	nargs = max(nargs,0);
@@ -1331,16 +1310,18 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 			r = func->nrets;
 		}
 
-		MnIndex newtop = s->base - 1;
+		MnIndex top = s->base - 1;
+		MnIndex newtop = top + nrets;
 		MnIndex first_ret  = s->top - r;
+		nx_reserve_stack( s, newtop );
 
-		if ( r > 0 ) for ( OvInt i = 0 ; i < nargs ; ++i )  s->stack[newtop++] = s->stack[first_ret++];
+		if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  s->stack[top++] = s->stack[first_ret++];
 
-		while ( newtop < s->top ) s->stack[ --s->top ] = MnValue();
-		nx_resize_stack( s, newtop );
-		while ( newtop > s->top ) s->stack[ ++s->top ] = MnValue();
+		while ( top < s->top ) s->stack[ --s->top ] = MnValue();
+		while ( top > s->top ) s->stack[ s->top++ ] = MnValue();
 
 		ci = s->ci;
+		s->top  = newtop;
 		s->base = ci->base;
 		s->ci	= ci->prev;
 		nx_free(ci);
