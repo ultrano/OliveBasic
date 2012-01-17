@@ -1,6 +1,7 @@
 #include "MnScript.h"
 #include "OvMemObject.h"
 #include "OvSolidString.h"
+#include "OvFile.h"
 
 class MnCallInfo;
 class MnObject;
@@ -1230,8 +1231,9 @@ instruction
 enum MnOperate
 {
 	MOP_NONEOP = 0, 
-	MOP_NEWTABLE,	//< sa = {}
-	MOP_NEWARRAY,	//< sa = []
+	MOP_NEWTABLE,	//< a = {}
+	MOP_NEWARRAY,	//< a = []
+	MOP_MOVE,		//< a = b
 };
 
 OvInt nx_exec_func( MnState* s, MnMFunction* proto )
@@ -1324,3 +1326,196 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 		nx_free(ci);
 	}
 }
+
+void mn_load_asm( MnState* s, const OvString& file )
+{
+}
+/*
+
+void OsLexer::Tokenize( OvInputStream & lexs )
+{
+Clear();
+OvMap<OsHash,OvSolidString> strtable;
+OvByte c = ' ';
+while ( 1 )
+{
+if ( isdigit( c ) )
+{
+OsToken t( TT_NUMBER, m_line, m_col );
+OvReal mantissa = 0;
+OvReal fraction = 0;
+OvBool fract = 0;
+OvInt  under = 0;
+OvReal antilog = 0;
+
+if ( c >= '1' && c <= '9' )
+{
+antilog = 10;
+}
+else if ( c == '0' )
+{
+if (!_read(lexs,c)) return ;
+if ( c == 'x' || c == 'X' )
+{
+antilog = 16;
+if (!_read(lexs,c)) return ;
+if ( !ishexdigit( c ) ) _error( "잘못된 16진수 표기" );
+}
+else if (isdigit(c))
+{
+antilog = 8;
+}
+}
+
+if ( antilog ) do 
+{
+if ( !fract ) if ( fract = ( c == '.' ) ) continue ;
+
+int v = 0;
+
+if ( isdigit(c) )
+v = c - '0';
+else if ( c >= 'a' && c <= 'f' )
+v = c - 'a' + 10;
+else if ( c >= 'A' && c <= 'F' )
+v = c - 'A' + 10;
+else break;
+
+if ( fract )
+{
+fraction *= antilog;
+fraction += v;
+++under;
+}
+else
+{
+mantissa *= antilog;
+mantissa += v;
+}
+
+
+if (!_read(lexs,c)) break ;
+} while ( isdigit(c) || (c == '.') );
+
+t.num = mantissa + ( fraction / pow( antilog, under ) );
+m_tok_stream.push_back( t );
+continue;
+}
+else if ( isalpha( c ) || c == '_' )
+{
+OsToken t( TT_IDENTIFIER, m_line, m_col );
+OvString id;
+do 
+{
+id.push_back( c );
+if (!_read(lexs,c)) return ;
+} while ( isalnum(c) || c == '_' );
+
+OsHash hash = OU::string::rs_hash( id );
+OvSolidString ret;
+if ( strtable.find(hash) == strtable.end() )
+{
+strtable.insert( make_pair( hash, OvSolidString( id ) ) );
+}
+ret = strtable[hash];
+t.ttype = m_keyword_table.WordFiltering( ret.str() );
+t.str = ret;
+m_tok_stream.push_back( t );
+continue;
+}
+else if ( c == '"' || c == '\'')
+{
+OvChar terminal = c;
+OsToken t( TT_STRING, m_line, m_col );
+OvString str;
+
+if (!_read(lexs,c)) return ;
+
+while ( !( c == '\n' || c == terminal ) ) 
+{
+str.push_back( c );
+if (!_read(lexs,c)) return ;
+}
+
+if ( c != terminal ) _error( "문자열 종료 없음" );
+
+OsHash hash = OU::string::rs_hash( str );
+OvSolidString ret;
+if ( strtable.find(hash) == strtable.end() )
+{
+strtable.insert( make_pair( hash, OvSolidString( str ) ) );
+}
+ret = strtable[hash];
+t.str = ret;
+m_tok_stream.push_back( t );
+
+if (!_read(lexs,c)) return ;
+continue;
+}
+else if ( isspace( c ) )
+{
+if (!_read(lexs,c)) return ;
+continue;
+}
+else if ( c == '/' )
+{
+OvByte p = c;
+if (!_read(lexs,c)) return ;
+
+if ( c == '/' )
+{
+
+do 
+{
+if (!_read(lexs,c)) return ;
+}
+while ( c != '\n' );
+
+if ( !_read(lexs,c) ) return ;
+}
+else if ( c == '*' )
+{
+do 
+{
+if ( !_read(lexs,c) ) return ;
+p = c;
+if ( !_read(lexs,c) ) return ;
+} while ( !( p == '*' && c == '/' ));
+
+if ( !_read(lexs,c) ) return ;
+}
+else
+{
+OsToken t( (OsTokType)p, m_line, m_col );
+m_tok_stream.push_back( t );
+continue;
+}
+}
+else
+{
+OvByte p = c;
+m_tok_stream.push_back( OsToken((OsTokType)p, m_line, m_col) );
+if (!_read(lexs,c)) return;
+
+#define PAIR_TOK(c1,c2,tok) if (p==c1 && c==c2) { m_tok_stream.back().ttype = (OsTokType)tok; _read(lexs,c); }
+
+PAIR_TOK('=','=',TT_EQ)
+else PAIR_TOK('!','=',TT_NEQ)
+else PAIR_TOK('<','=',TT_LEQ)
+else PAIR_TOK('>','=',TT_GEQ)
+else PAIR_TOK('&','&',TT_AND)
+else PAIR_TOK('|','|',TT_OR)
+else PAIR_TOK('+','+',TT_INC)
+else PAIR_TOK('-','-',TT_DEC)
+else PAIR_TOK('<','<',TT_PUSH)
+else PAIR_TOK('>','>',TT_PULL)
+else PAIR_TOK(':',':',TT_SCOPE)
+
+#undef  PAIR_TOK
+
+continue;
+}
+}
+}
+
+*/
