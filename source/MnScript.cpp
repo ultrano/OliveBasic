@@ -897,41 +897,24 @@ MnIndex nx_absidx( MnState* s, MnIndex idx )
 	return abidx;
 }
 
-void nx_set_absbase( MnState* s, MnIndex idx )
-{
-	if ( idx >= 0 && idx <= s->last )
-	{
-		s->base = idx;
-	}
-}
-
 void nx_reserve_stack( MnState* s, OvInt sz )
 {
 	if ( sz > s->stack.size() ) s->stack.resize( sz );
-}
-
-void nx_new_top( MnState* s , MnIndex idx ) 
-{
-	idx = (idx < s->base)? s->base : idx;
-	nx_reserve_stack( s, idx );
-	s->last = idx;
 }
 
 ///////////////////////* get/set top *///////////////////////
 
 void mn_set_top( MnState* s, MnIndex idx )
 {
-	nx_new_top(s, nx_absidx( s, idx ) + 1);
+	idx = nx_absidx( s, idx ) + 1;
+	idx = (idx < s->base)? s->base : idx;
+	nx_reserve_stack( s, idx );
+	s->last = idx;
 }
 
 MnIndex mn_get_top( MnState* s )
 {
 	return s->last - s->base;
-}
-
-MnIndex mn_get_gtop( MnState* s )
-{
-	return s->last;
 }
 
 ///////////////////////*   kind of push    *//////////////////////
@@ -1072,6 +1055,7 @@ void mn_collect_garbage( MnState* s )
 		MnMarking(itor->second);
 	}
 	MnIndex idx = s->last;
+	s->stack.resize( idx );
 	while ( idx-- ) MnMarking(s->stack[idx]);
 
 	MnObject* dead = NULL;
@@ -1306,19 +1290,19 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 			r = nx_exec_func( s, MnToFunction( mcl->func ) );
 		}
 
-		MnIndex oldtop = s->base - 1;
-		MnIndex newtop = oldtop + nrets;
+		MnIndex oldlast = s->base - 1;
+		MnIndex newlast = oldlast + nrets;
 		MnIndex first_ret  = s->last - r;
-		first_ret = max( oldtop, first_ret );
-		nx_reserve_stack( s, oldtop + max( nrets, r ) );
+		first_ret = max( oldlast, first_ret );
+		nx_reserve_stack( s, oldlast + max( nrets, r ) );
 
-		if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  s->stack[oldtop++] = s->stack[first_ret++];
+		if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  s->stack[oldlast++] = s->stack[first_ret++];
 
-		while ( oldtop < s->last ) s->stack[ --s->last ] = MnValue();
-		while ( oldtop > s->last ) s->stack[ s->last++ ] = MnValue();
+		while ( oldlast < s->last ) s->stack[ --s->last ] = MnValue();
+		while ( oldlast > s->last ) s->stack[ s->last++ ] = MnValue();
 
 		ci = s->ci;
-		s->last  = newtop;
+		s->last  = newlast;
 		s->base = ci->base;
 		s->ci	= ci->prev;
 		nx_free(ci);
