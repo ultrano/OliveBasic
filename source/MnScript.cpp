@@ -1314,6 +1314,33 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 void mn_load_asm( MnState* s, const OvString& file )
 {
 }
+
+struct MnCompileState : public OvMemObject
+{
+	MnState* state;
+	OvInputStream* is;
+	MnValue	errfunc;
+};
+
+enum eErrCode
+{
+	eErrCode_Unknown,
+};
+
+void cp_call_errfunc( MnCompileState* cs, eErrCode errcode, const OvString& msg )
+{
+	nx_push_value( cs->state, cs->errfunc );
+	mn_push_number( cs->state, errcode );
+	mn_push_string( cs->state, msg );
+	mn_call( cs->state, 2, 0 );
+}
+
+void cp_build_func( MnCompileState* cs, MnMFunction* func )
+{
+	OvByte c;
+	cs->is->Read( c );
+}
+
 /*
 
 void OsLexer::Tokenize( OvInputStream & lexs )
