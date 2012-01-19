@@ -9,9 +9,9 @@ OvFileInputStream::OvFileInputStream( const OvString& file, const OvString& mode
 OvSize OvFileInputStream::ReadBytes( OvByte * dest, OvSize dest_size )
 {
 	FILE* file = m_file->GetHandle();
-	if ( file && dest && dest_size )
+	if ( dest && dest_size )
 	{
-		if ( fread( dest, dest_size, 1, file ) )
+		if ( file && fread( dest, dest_size, 1, file ) )
 		{
 			return dest_size;
 		}

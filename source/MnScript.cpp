@@ -1188,20 +1188,36 @@ struct MnInstruction : public OvMemObject
 enum MnOperate
 {
 	MOP_NONEOP = 0, 
-	MOP_NEWTABLE,		//< stk[a] = {}
-	MOP_NEWARRAY,		//< stk[a] = []
+	MOP_NEWTABLE,
+	MOP_NEWARRAY,
 
-	MOP_SETSTACK,			//< stk[a] = reg[b]
-	MOP_GETSTACK,			//< stk[a] = reg[b]
+	MOP_SET_STACK,
+	MOP_GET_STACK,
 
-	MOP_SETFIELD,
-	MOP_GETFIELD,
+	MOP_SET_FIELD,
+	MOP_GET_FIELD,
 
-	MOP_SETGLOBAL,		//< glb[reg[b]] = reg[c]
-	MOP_GETGLOBAL,		//< reg[b] = glb[reg[c]]
+	MOP_SET_GLOBAL,
+	MOP_GET_GLOBAL,
+
+	MOP_SET_META,
+	MOP_GET_META,
+
+	MOP_SET_UPVAL,
+	MOP_GET_UPVAL,
 
 	MOP_PUSH,
 	MOP_POP,
+
+	MOP_AND,
+	MOP_OR,
+	MOP_XOR,
+
+	MOP_EQ,
+	MOP_LT,
+	MOP_GT,
+
+	MOP_CALL,
 };
 
 OvInt nx_exec_func( MnState* s, MnMFunction* func )
@@ -1233,20 +1249,28 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 		MnInstruction i = *s->pc; ++s->pc;
 		switch ( i.op )
 		{
-		case MOP_NEWTABLE:	mn_new_table(s); break;
-		case MOP_NEWARRAY:	mn_new_array(s); break;
+		case MOP_NEWTABLE:	mn_new_table( s ); break;
+		case MOP_NEWARRAY:	mn_new_array( s ); break;
 
-		case MOP_SETSTACK:	mn_set_stack(s,i.ax); break;
-		case MOP_GETSTACK:	mn_get_stack(s,i.ax); break;
+		case MOP_SET_STACK:	mn_set_stack( s, i.ax ); break;
+		case MOP_GET_STACK:	mn_get_stack( s, i.ax ); break;
 
-		case MOP_SETFIELD:	mn_set_field(s,i.ax); break;
-		case MOP_GETFIELD:	mn_get_field(s,i.ax); break;
+		case MOP_SET_FIELD:	mn_set_field( s, i.ax); break;
+		case MOP_GET_FIELD:	mn_get_field( s, i.ax); break;
 
-		case MOP_SETGLOBAL:	mn_set_global(s); break;
-		case MOP_GETGLOBAL:	mn_get_global(s); break;
+		case MOP_SET_GLOBAL:	mn_set_global( s ); break;
+		case MOP_GET_GLOBAL:	mn_get_global( s ); break;
 
-		case MOP_PUSH:		nx_push_value(s, func->consts[i.a-1] ); break;
-		case MOP_POP:		mn_pop(s,i.ax); break;
+		case MOP_SET_META:	mn_set_metatable( s, i.ax ); break;
+		case MOP_GET_META:	mn_get_metatable( s, i.ax ); break;
+
+		case MOP_SET_UPVAL:	mn_set_upval( s, i.ax ); break;
+		case MOP_GET_UPVAL:	mn_get_upval( s, i.ax ); break;
+
+		case MOP_PUSH:		nx_push_value( s, func->consts[i.a-1] ); break;
+		case MOP_POP:		mn_pop( s, i.ax ); break;
+
+		case MOP_CALL:		mn_call( s, i.a, i.b ); break;
 
 		case MOP_NONEOP:
 			return 0;
@@ -1333,7 +1357,7 @@ enum eErrCode
 	eErrCode_Unknown,
 };
 
-void cp_call_errfunc( MnCompileState* cs, eErrCode errcode, const OvString& msg )
+void cp_call_errfunc( MnCompileState* cs, OvInt errcode, const OvString& msg )
 {
 	nx_push_value( cs->state, cs->errfunc );
 	mn_push_number( cs->state, errcode );
@@ -1349,6 +1373,7 @@ enum
 	eTEndOfStream,
 	eTUnknown,
 };
+
 OvInt cp_token( MnCompileState* cs, OvInt& num, OvString& str )
 {
 	OvChar& c = cs->c;
@@ -1427,17 +1452,26 @@ MnOperate cp_operate( MnCompileState* cs )
 		else if ( str == "pop" ) return MOP_POP;
 		else if ( str == "newarr" ) return MOP_NEWARRAY;
 		else if ( str == "newtbl" ) return MOP_NEWTABLE;
-		else if ( str == "setstk" ) return MOP_SETSTACK;
-		else if ( str == "getstk" ) return MOP_GETSTACK;
-		else if ( str == "setfld" ) return MOP_SETFIELD;
-		else if ( str == "getfld" ) return MOP_GETFIELD;
-		else if ( str == "setglb" ) return MOP_SETGLOBAL;
-		else if ( str == "getglb" ) return MOP_GETGLOBAL;
+		else if ( str == "setstk" ) return MOP_SET_STACK;
+		else if ( str == "getstk" ) return MOP_GET_STACK;
+		else if ( str == "setfield" ) return MOP_SET_FIELD;
+		else if ( str == "getfield" ) return MOP_GET_FIELD;
+		else if ( str == "setglobal" ) return MOP_SET_GLOBAL;
+		else if ( str == "getglobal" ) return MOP_GET_GLOBAL;
+		else if ( str == "setmeta" ) return MOP_SET_META;
+		else if ( str == "getmeta" ) return MOP_GET_META;
+		else if ( str == "setupval" ) return MOP_SET_UPVAL;
+		else if ( str == "getupval" ) return MOP_GET_UPVAL;
+		else if ( str == "call" )   return MOP_CALL;
+		else
+		{
+			cp_call_errfunc( cs, 0, (str + " - unknown operate\n"));
+		}
 	}
 	return MOP_NONEOP;
 }
 
-OvInt	  cp_operandAx( MnCompileState* cs )
+OvInt	  cp_operand( MnCompileState* cs )
 {
 	OvString str;
 	OvInt num;
@@ -1467,7 +1501,19 @@ MnOperand cp_func_const( MnCompileState* cs, MnMFunction* func )
 		tok = cp_token(cs,num,str);
 	} while ( isspace((OvChar)tok) );
 
-	if ( tok == eTString )
+	if ( tok == eTIdentifier )
+	{
+		if ( str == "false" || str == "true" )
+		{
+			func->consts.push_back( MnValue( (OvBool)(str=="true") ) );
+		}
+		else if ( str == "nil" )
+		{
+			func->consts.push_back( MnValue() );
+		}
+		return func->consts.size();
+	}
+	else if ( tok == eTString )
 	{
 		func->consts.push_back( MnValue( MOT_STRING, nx_new_string(cs->state,str) ) );
 		return func->consts.size();
@@ -1488,58 +1534,31 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 	while ( true )
 	{
 		MnInstruction i;
-		i.op = cp_operate( cs );
-		if ( i.op == MOP_NEWTABLE )
+		switch ( i.op = cp_operate( cs ) )
 		{
-			func->codes.push_back( i );
-		}
-		else if ( i.op == MOP_NEWARRAY )
-		{
-			func->codes.push_back( i );
-		}
-		else if ( i.op == MOP_SETSTACK )
-		{
-			i.ax = cp_operandAx(cs);
-			func->codes.push_back( i );
-		}
-		else if ( i.op == MOP_GETSTACK )
-		{
-			i.ax = cp_operandAx(cs);
-			func->codes.push_back( i );
-		}
-		else if ( i.op == MOP_SETFIELD)
-		{
-			i.ax = cp_operandAx(cs);
-			func->codes.push_back( i );
-		}
-		else if ( i.op == MOP_GETFIELD)
-		{
-			i.ax = cp_operandAx(cs);
-			func->codes.push_back( i );
-		}
-		else if ( i.op == MOP_SETGLOBAL)
-		{
-			func->codes.push_back( i );
-		}
-		else if ( i.op == MOP_GETGLOBAL)
-		{
-			func->codes.push_back( i );
-		}
-		else if ( i.op == MOP_PUSH )
-		{
-			i.a  = cp_func_const( cs, func );
-			func->codes.push_back( i );			
-		}
-		else if ( i.op == MOP_POP )
-		{
-			i.ax = cp_operandAx(cs);
-			func->codes.push_back( i );
-		}
-		else 
-		{
-			func->codes.push_back( i );
+		case MOP_SET_STACK:
+		case MOP_GET_STACK:
+		case MOP_SET_FIELD:
+		case MOP_GET_FIELD:
+		case MOP_SET_META:
+		case MOP_GET_META:
+		case MOP_SET_UPVAL:
+		case MOP_GET_UPVAL:
+		case MOP_POP:
+			i.ax = cp_operand(cs);
 			break;
-		};
+		case MOP_PUSH:
+			i.a  = cp_func_const( cs, func );
+			break;
+		case MOP_CALL:
+			i.a = cp_operand(cs);
+			i.b = cp_operand(cs);
+			break;
+		case MOP_NONEOP:
+			func->codes.push_back( i );
+			return ;
+		}
+		func->codes.push_back( i );
 	}
 }
 /*
