@@ -1066,6 +1066,10 @@ OvBool mn_to_boolean( MnState* s, MnIndex idx )
 	{
 		return MnToBoolean(val);
 	}
+	else if ( MnIsNumber(val) )
+	{
+		return (MnToNumber(val) != 0.0);
+	}
 	return false;
 }
 
@@ -1217,6 +1221,9 @@ enum MnOperate
 	MOP_LT,
 	MOP_GT,
 
+	MOP_CMP,
+	MOP_JMP,
+
 	MOP_CALL,
 };
 
@@ -1271,6 +1278,16 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 		case MOP_POP:		mn_pop( s, i.ax ); break;
 
 		case MOP_CALL:		mn_call( s, i.a, i.b ); break;
+
+		case MOP_JMP: s->pc += i.ax; break;
+
+		case MOP_CMP:
+			{
+				OvBool b =mn_to_boolean(s,-1);
+				mn_pop(s,1);
+				if ( !b ) ++s->pc;
+			}
+			break;
 
 		case MOP_NONEOP:
 			return 0;
@@ -1462,6 +1479,8 @@ MnOperate cp_operate( MnCompileState* cs )
 		else if ( str == "getmeta" ) return MOP_GET_META;
 		else if ( str == "setupval" ) return MOP_SET_UPVAL;
 		else if ( str == "getupval" ) return MOP_GET_UPVAL;
+		else if ( str == "jmp" )   return MOP_JMP;
+		else if ( str == "cmp" )   return MOP_CMP;
 		else if ( str == "call" )   return MOP_CALL;
 		else
 		{
@@ -1545,6 +1564,7 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		case MOP_SET_UPVAL:
 		case MOP_GET_UPVAL:
 		case MOP_POP:
+		case MOP_JMP:
 			i.ax = cp_operand(cs);
 			break;
 		case MOP_PUSH:
