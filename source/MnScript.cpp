@@ -105,7 +105,9 @@ void			 nx_free( void* p ) { OvMemFree(p); };
 MnString*		 nx_new_string( MnState* s, const OvString& str );
 MnTable*		 nx_new_table( MnState* s );
 MnArray*		 nx_new_array( MnState* s );
-MnClosure*		 nx_new_closure( MnState* s, MnCLType t );
+MnClosure*		 nx_new_Cclosure( MnState* s, MnCLType t );
+MnClosure*		 nx_new_Mclosure( MnState* s );
+MnMFunction*	 nx_new_function( MnState* s );
 
 void			 nx_delete_object( MnObject* o );
 void			 nx_delete_garbage( MnObject* o );
@@ -287,12 +289,15 @@ public:
 	typedef OvVector<MnValue>		vec_value;
 	typedef OvVector<MnInstruction> vec_instruction;
 
+	MnMFunction( MnState* s );
 	~MnMFunction();
 
 	vec_value		consts;
 	vec_instruction	codes;
 
 	OvInt			nargs;
+
+	virtual void marking();
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -480,10 +485,24 @@ void MnArray::marking()
 
 //////////////////////////////////////////////////////////////////////////
 
+MnMFunction::MnMFunction( MnState* s )
+: MnObject(s)
+{
+
+}
+
 MnMFunction::~MnMFunction()
 {
 	consts.clear();
 	codes.clear();
+}
+
+void MnMFunction::marking()
+{
+	for each ( const MnValue& v in consts )
+	{
+		MnMarking( v );
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -498,7 +517,11 @@ MnClosure::MnClosure( MnState* s, MnCLType t )
 MnClosure::~MnClosure()
 {
 	if ( type == CCL )	u.c->upvals.clear();
-	else if ( type == MCL ) u.m->upvals.clear();
+	else if ( type == MCL ) 
+	{
+		u.m->upvals.clear();
+		u.m->func = MnValue();
+	}
 	nx_free(u.c);
 }
 
@@ -594,6 +617,7 @@ void nx_set_stack( MnState* s, MnIndex idx, const MnValue& val )
 MnValue nx_get_stack( MnState* s, MnIndex idx )
 {
 	idx = nx_absidx( s, idx );
+
 	if ( idx >= 0 && idx < s->stack.size() )
 	{
 		return s->stack.at( idx );
@@ -718,6 +742,17 @@ MnValue nx_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx )
 OvBool nx_is_global( MnState* s, OvHash32 hash )
 {
 	return ( s->global.find( hash ) != s->global.end() );
+}
+
+void mn_set_stack( MnState* s, MnIndex idx )
+{
+	nx_set_stack( s, idx, nx_get_stack(s,-1));
+	mn_pop(s,1);
+}
+
+void mn_get_stack( MnState* s, MnIndex idx )
+{
+	nx_push_value( s, nx_get_stack(s,idx) );
 }
 
 void mn_set_field( MnState* s, MnIndex idx )
@@ -854,9 +889,19 @@ MnArray* nx_new_array( MnState* s )
 	return new(nx_alloc(sizeof(MnArray))) MnArray(s);
 }
 
-MnClosure* nx_new_closure( MnState* s, MnCLType t )
+MnClosure* nx_new_Cclosure( MnState* s )
 {
-	return new(nx_alloc(sizeof(MnClosure))) MnClosure(s,t);
+	return new(nx_alloc(sizeof(MnClosure))) MnClosure(s,CCL);
+}
+
+MnClosure* nx_new_Mclosure( MnState* s )
+{
+	return new(nx_alloc(sizeof(MnClosure))) MnClosure(s,MCL);
+}
+
+MnMFunction* nx_new_function( MnState* s )
+{
+	return new(nx_alloc(sizeof(MnMFunction))) MnMFunction(s);
 }
 
 void nx_delete_object( MnObject* o )
@@ -949,7 +994,7 @@ void mnd_new_garbege( MnState* s )
 
 void mn_new_closure( MnState* s, MnCFunction proto, OvInt nupvals )
 {
-	MnClosure* cl = nx_new_closure(s,CCL);
+	MnClosure* cl = nx_new_Cclosure(s);
 	cl->u.c->func = proto;
 	cl->u.c->upvals.reserve(nupvals);
 	for ( OvInt i = 0 ; i < nupvals ; ++i )
@@ -1171,8 +1216,8 @@ instruction
 #define MnReposit(r) ((OvInt)((MnBitMask1(MnRepositSize,MnRepositPos) & r) >> MnRepositPos))
 #define MnIdx(r) ((MnIndex)((MnBitMask1(MnIdxSize,MnIdxPos) & r) >> MnIdxPos))
 
-#define MnStkIdx (0)
-#define MnCstIdx (1)
+#define FlagStack (0)
+#define FlagConst (1)
 #define MnBC(f,i) ((MnOperand)((MnBitMask1(MnRepositSize,MnRepositPos) & (f << MnRepositPos)) | (MnBitMask1(MnIdxSize,MnIdxPos) & (i << MnIdxPos))))
 
 //////////////////////////////////////////////////////////////////////////
@@ -1215,12 +1260,23 @@ instruction
 enum MnOperate
 {
 	MOP_NONEOP = 0, 
-	MOP_NEWTABLE,	//< a = {}
-	MOP_NEWARRAY,	//< a = []
-	MOP_MOVE,		//< a = b
+	MOP_NEWTABLE,		//< stk[a] = {}
+	MOP_NEWARRAY,		//< stk[a] = []
+	MOP_SET,			//< stk[a] = reg[b]
+	MOP_SETGLOBAL,		//< glb[reg[b]] = reg[c]
+	MOP_GETGLOBAL,		//< reg[b] = glb[reg[c]]
+	MOP_PUSH,
+	MOP_POP,
 };
 
-OvInt nx_exec_func( MnState* s, MnMFunction* proto )
+MnIndex nx_icheck( MnState* s, MnIndex idx )
+{
+	if ( idx >= s->stack.size() ) s->stack.resize(idx);
+	s->last = max(idx,s->last);
+	return idx;
+}
+
+OvInt nx_exec_func( MnState* s, MnMFunction* func )
 {
 
 #define _Ax	(MnAx(i))
@@ -1231,24 +1287,29 @@ OvInt nx_exec_func( MnState* s, MnMFunction* proto )
 #define fB	(MnReposit(_B))
 #define fC	(MnReposit(_C))
 
+#define iCheck(idx) (nx_icheck(s,idx))
+
+#define iAx (_Ax)
+#define iA	(MnIdx(_A))
 #define iB	(MnIdx(_B))
 #define iC	(MnIdx(_C))
 
-#define sA  (nx_get_stack(s,_A))
-#define sB  (nx_get_stack(s,iB))
-#define sC  (nx_get_stack(s,iC))
+#define sA  (s->stack[iCheck(iA + s->base) - 1])
+#define sB  (s->stack[iCheck(iB + s->base) - 1])
+#define sC  (s->stack[iCheck(iC + s->base) - 1])
 
-#define cB  (func->consts[iB])
-#define cC  (func->consts[iC])
+#define cB  (func->consts[iB - 1])
+#define cC  (func->consts[iC - 1])
 
-#define uA	(nx_get_upval(s,0,_A))
+#define uA	(nx_get_upval(s,0,iA))
 #define uB	(nx_get_upval(s,0,iB))
 #define uC	(nx_get_upval(s,0,iC))
 
-#define rB ((fB==MnCstIdx)? cB:sB)
-#define rC ((fC==MnCstIdx)? cC:sC)
+#define rA (sA)
+#define rB ((fB==FlagConst)? cB:sB)
+#define rC ((fC==FlagConst)? cC:sC)
 
-	s->pc = proto->codes.size()? &(proto->codes[0]) : NULL;
+	s->pc = func->codes.size()? &(func->codes[0]) : NULL;
 	while ( s->pc )
 	{
 		MnInstruction i = *s->pc; ++s->pc;
@@ -1256,9 +1317,26 @@ OvInt nx_exec_func( MnState* s, MnMFunction* proto )
 		{
 		case MOP_NEWTABLE:
 			{
-				sA = MnValue( MOT_TABLE, nx_new_table(s) );
+				mn_new_table(s);
 			}
 			break;
+		case MOP_SET:
+			{
+				mn_set_stack(s,iAx);
+			}
+			break;
+		case MOP_PUSH:
+			{
+				nx_push_value(s,cB);
+			}
+			break;
+		case MOP_POP:
+			{
+				mn_pop(s,iAx);
+			}
+			break;
+		case MOP_NONEOP:
+			return 0;
 		}
 	}
 	return 0;
@@ -1278,7 +1356,7 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 		ci->base = s->base;
 
 		s->ci    = ci;
-		s->base  = nx_absidx( s,-nargs );
+		s->base  = s->last - nargs;
 
 		OvInt r = 0;
 		if ( cls->type == CCL )
@@ -1326,10 +1404,15 @@ void mn_load_asm( MnState* s, const OvString& file, MnIndex idx )
 	MnCompileState cs;
 	cs.state = s;
 	cs.is = &fis;
-	cs.c = ' ';
+	cs.is->Read(cs.c);
 	cs.errfunc = nx_get_stack(s,idx);
 
-	cp_build_func(&cs,NULL);
+	MnMFunction* func = nx_new_function(s);
+	cp_build_func(&cs,func);
+	MnClosure* cls = nx_new_Mclosure( s );
+	cls->u.m->func = MnValue(MOT_FUNCPROTO,func);
+	nx_push_value(s,MnValue(MOT_CLOSURE,cls));
+	mn_call(s,0,0);
 }
 
 enum eErrCode
@@ -1364,11 +1447,6 @@ OvInt cp_token( MnCompileState* cs, OvInt& num, OvString& str )
 		if ( c == EOF  )
 		{
 			return eTEndOfStream;
-		}
-		else if ( isspace(c) )
-		{
-			cp_read();
-			continue;
 		}
 		else if ( isdigit(c) )
 		{
@@ -1420,22 +1498,96 @@ OvInt cp_token( MnCompileState* cs, OvInt& num, OvString& str )
 #undef cp_read
 }
 
+MnOperate cp_operate( MnCompileState* cs )
+{
+	OvString str;
+	OvInt num;
+	OvInt tok;
+	do 
+	{
+		tok = cp_token(cs,num,str);
+	} while ( isspace((OvChar)tok) );
+
+	if ( tok == eTIdentifier )
+	{
+		if ( str == "push" ) return MOP_PUSH;
+		else if ( str == "set" ) return MOP_SET;
+	}
+	return MOP_NONEOP;
+}
+
+OvInt	  cp_operandAx( MnCompileState* cs )
+{
+	OvString str;
+	OvInt num;
+	OvInt tok;
+	do 
+	{
+		tok = cp_token(cs,num,str);
+	} while ( isspace((OvChar)tok) );
+
+	if ( tok == eTNumber )
+	{
+		return num;
+	}
+	return 0;
+}
+
+MnOperand cp_operand( MnCompileState* cs, MnMFunction* func )
+{
+	OvString str;
+	OvInt num;
+	OvInt tok;
+	do 
+	{
+		tok = cp_token(cs,num,str);
+	} while ( isspace((OvChar)tok) );
+
+	if ( tok == eTString )
+	{
+		func->consts.push_back( MnValue( MOT_STRING, nx_new_string(cs->state,str) ) );
+		return MnBC(FlagConst,func->consts.size());
+	}
+	else if ( tok == eTNumber )
+	{
+		func->consts.push_back( MnValue( (OvReal)num ) );
+		return MnBC(FlagConst,func->consts.size());
+	}
+	return 0;
+}
+
 void cp_build_func( MnCompileState* cs, MnMFunction* func )
 {
 	OvString str;
 	OvInt num;
 	OvInt tok;
-	tok = cp_token(cs,num,str);
-	tok = cp_token(cs,num,str);
-	tok = cp_token(cs,num,str);
-	tok = cp_token(cs,num,str);
-	tok = cp_token(cs,num,str);
-	tok = cp_token(cs,num,str);
-	tok = cp_token(cs,num,str);
-	tok = cp_token(cs,num,str);
-	tok = cp_token(cs,num,str);
-
-
+	while ( true )
+	{
+		MnOperate op = cp_operate( cs );
+		if ( op == MOP_NEWTABLE )
+		{
+			MnOperand a  = cp_operand( cs, func );
+			func->codes.push_back( MnOpABC(op,a,0,0) );
+		}
+		else if ( op == MOP_SET )
+		{
+			func->codes.push_back( MnOpAxC(op,cp_operandAx(cs),0,0) );
+		}
+		else if ( op == MOP_PUSH )
+		{
+			MnOperand b  = cp_operand( cs, func );
+			func->codes.push_back( MnOpABC(op,0,b,0) );			
+		}
+		else if ( op == MOP_POP )
+		{
+			func->codes.push_back( MnOpAxC(op,cp_operandAx(cs),0,0) );
+		}
+		else 
+		{
+			func->codes.push_back( MnOpABC(MOP_NONEOP,0,0,0) );
+			break;
+		};
+	}
 }
 /*
 
