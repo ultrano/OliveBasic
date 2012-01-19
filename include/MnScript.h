@@ -21,8 +21,8 @@ void			mn_get_field( MnState* s, MnIndex idx );
 void			mn_set_metatable( MnState* s, MnIndex idx );
 void			mn_get_metatable( MnState* s, MnIndex idx );
 
-void			mn_set_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx );
-void			mn_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx );
+void			mn_set_upval( MnState* s, MnIndex upvalidx );
+void			mn_get_upval( MnState* s, MnIndex upvalidx );
 
 void			mn_set_top( MnState* s, MnIndex idx );
 MnIndex			mn_get_top( MnState* s );

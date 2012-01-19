@@ -11,9 +11,9 @@ class MnValue;
 class MnArray;
 class MnMFunction;
 class MnClosure;
+struct MnInstruction;
 
 typedef OvUShort MnOperand;
-typedef OvUInt	 MnInstruction;
 
 enum MnCLType { CCL= 1, MCL = 2 };
 enum MnObjType
@@ -854,14 +854,14 @@ void mn_get_metatable( MnState* s, MnIndex idx )
 	}
 }
 
-void mn_set_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx )
+void mn_set_upval( MnState* s, MnIndex upvalidx )
 {
-	nx_set_upval(s, clsidx, upvalidx, nx_get_stack(s,-1));
+	nx_set_upval(s, 0, upvalidx, nx_get_stack(s,-1));
 }
 
-void mn_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx )
+void mn_get_upval( MnState* s, MnIndex upvalidx )
 {
-	nx_push_value(s, nx_get_upval(s, clsidx, upvalidx ) );
+	nx_push_value(s, nx_get_upval(s, 0, upvalidx ) );
 }
 
 MnString* nx_new_string( MnState* s, const OvString& str )
@@ -1175,106 +1175,34 @@ void mn_default_lib( MnState* s )
 
 //////////////////////////////////////////////////////////////////////////
 
-// DOTO: 컴파일러 만들자.
-
-/*
-- instruction architecture
-
-instruction
-: op(6) a(8) b(9) c(9) 
-: op(6) ax(17) c(9)
-
-*/
-
-/// bit masking utility (c:count, p:pos)
-#define MnBitMask1(c,p) ((~(((~(MnInstruction)0)<<c)))<<p)
-#define MnBitMask0(c,p) (~MnBitMask1(c,p))
-
-#define MnOpPos (0)
-#define MnOpSize (6)
-
-#define MnAPos (MnOpPos+MnOpSize)
-#define MnASize (8)
-
-#define MnBPos (MnAPos+MnASize)
-#define MnBSize (9)
-
-#define MnCPos (MnBPos+MnBSize)
-#define MnCSize (9)
-
-#define MnAxPos (MnOpPos+MnOpSize)
-#define MnAxSize (17)
-
-//////////////////////////////////////////////////////////////////////////
-
-#define MnIdxPos   (0)
-#define MnIdxSize  (8)
-
-#define MnRepositPos  (MnIdxSize)
-#define MnRepositSize (1)
-
-#define MnReposit(r) ((OvInt)((MnBitMask1(MnRepositSize,MnRepositPos) & r) >> MnRepositPos))
-#define MnIdx(r) ((MnIndex)((MnBitMask1(MnIdxSize,MnIdxPos) & r) >> MnIdxPos))
-
-#define FlagStack (0)
-#define FlagConst (1)
-#define MnBC(f,i) ((MnOperand)((MnBitMask1(MnRepositSize,MnRepositPos) & (f << MnRepositPos)) | (MnBitMask1(MnIdxSize,MnIdxPos) & (i << MnIdxPos))))
-
-//////////////////////////////////////////////////////////////////////////
-
-#define MnOp(i) ((MnOperate)((MnBitMask1(MnOpSize,MnOpPos) & (MnInstruction)(i)) >> MnOpPos ))
-#define MnA(i)	((MnOperand)((MnBitMask1(MnASize,MnAPos) & (MnInstruction)(i)) >> MnAPos ))
-#define MnB(i)	((MnOperand)((MnBitMask1(MnBSize,MnBPos) & (MnInstruction)(i)) >> MnBPos ))
-#define MnC(i)	((MnOperand)((MnBitMask1(MnCSize,MnCPos) & (MnInstruction)(i)) >> MnCPos ))
-
-/*unsigned Ax*/
-#define MnUAx(i) ((MnBitMask1(MnAxSize,MnAxPos) & (MnInstruction)(i)) >> MnAxPos )
-
-/*signed Ax*/
-#define MnAx(i) ((int)((MnUAx(i) >> (MnAxSize-1))? (MnBitMask1(sizeof(int)-MnAxSize,MnAxSize) | MnUAx(i)) : MnUAx(i)))
-
-#define MnFixA(i,a) {(i) = ((((MnInstruction)(i)) & MnBitMask0(MnASize,MnAPos)) | (((a) << MnAPos) & MnBitMask1(MnASize,MnAPos)));}
-#define MnFixB(i,b) {(i) = ((((MnInstruction)(i)) & MnBitMask0(MnBSize,MnBPos)) | (((b) << MnBPos) & MnBitMask1(MnBSize,MnBPos)));}
-#define MnFixC(i,c) {(i) = ((((MnInstruction)(i)) & MnBitMask0(MnCSize,MnCPos)) | (((c) << MnCPos) & MnBitMask1(MnCSize,MnCPos)));}
-#define MnFixAx(i,ax) {(i) = ((((MnInstruction)(i)) & MnBitMask0(MnAxSize,MnAxPos)) | (((ax) << MnAxPos) & MnBitMask1(MnAxSize,MnAxPos)));}
-
-//////////////////////////////////////////////////////////////////////////
-
-#define MnOpABC(op,a,b,c) \
-	((MnInstruction)( \
-	(((op) << MnOpPos) & MnBitMask1(MnOpSize,MnOpPos)) | \
-	(((a) << MnAPos)   & MnBitMask1(MnASize,MnAPos)) | \
-	(((b) << MnBPos)   & MnBitMask1(MnBSize,MnBPos)) | \
-	(((c) << MnCPos)   & MnBitMask1(MnCSize,MnCPos))\
-	))
-
-#define MnOpAxC(op,ax,c) \
-	((MnInstruction)( \
-	(((op) << MnOpPos) & MnBitMask1(MnOpSize,MnOpPos)) | \
-	(((ax) << MnAxPos) & MnBitMask1(MnAxSize,MnAxPos)) | \
-	(((c) << MnCPos)   & MnBitMask1(MnCSize,MnCPos))\
-	))
-
-//////////////////////////////////////////////////////////////////////////
+struct MnInstruction : public OvMemObject
+{
+	OvByte op;
+	union
+	{
+		OvInt ax;
+		struct { OvUShort a; OvUShort b; };
+	};
+};
 
 enum MnOperate
 {
 	MOP_NONEOP = 0, 
 	MOP_NEWTABLE,		//< stk[a] = {}
 	MOP_NEWARRAY,		//< stk[a] = []
-	MOP_SET,			//< stk[a] = reg[b]
+
+	MOP_SETSTACK,			//< stk[a] = reg[b]
+	MOP_GETSTACK,			//< stk[a] = reg[b]
+
+	MOP_SETFIELD,
+	MOP_GETFIELD,
+
 	MOP_SETGLOBAL,		//< glb[reg[b]] = reg[c]
 	MOP_GETGLOBAL,		//< reg[b] = glb[reg[c]]
+
 	MOP_PUSH,
 	MOP_POP,
 };
-
-MnIndex nx_icheck( MnState* s, MnIndex idx )
-{
-	if ( idx >= s->stack.size() ) s->stack.resize(idx);
-	s->last = max(idx,s->last);
-	return idx;
-}
 
 OvInt nx_exec_func( MnState* s, MnMFunction* func )
 {
@@ -1287,23 +1215,13 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 #define fB	(MnReposit(_B))
 #define fC	(MnReposit(_C))
 
-#define iCheck(idx) (nx_icheck(s,idx))
-
 #define iAx (_Ax)
 #define iA	(MnIdx(_A))
 #define iB	(MnIdx(_B))
 #define iC	(MnIdx(_C))
 
-#define sA  (s->stack[iCheck(iA + s->base) - 1])
-#define sB  (s->stack[iCheck(iB + s->base) - 1])
-#define sC  (s->stack[iCheck(iC + s->base) - 1])
-
 #define cB  (func->consts[iB - 1])
 #define cC  (func->consts[iC - 1])
-
-#define uA	(nx_get_upval(s,0,iA))
-#define uB	(nx_get_upval(s,0,iB))
-#define uC	(nx_get_upval(s,0,iC))
 
 #define rA (sA)
 #define rB ((fB==FlagConst)? cB:sB)
@@ -1313,28 +1231,23 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 	while ( s->pc )
 	{
 		MnInstruction i = *s->pc; ++s->pc;
-		switch ( MnOp(i) )
+		switch ( i.op )
 		{
-		case MOP_NEWTABLE:
-			{
-				mn_new_table(s);
-			}
-			break;
-		case MOP_SET:
-			{
-				mn_set_stack(s,iAx);
-			}
-			break;
-		case MOP_PUSH:
-			{
-				nx_push_value(s,cB);
-			}
-			break;
-		case MOP_POP:
-			{
-				mn_pop(s,iAx);
-			}
-			break;
+		case MOP_NEWTABLE:	mn_new_table(s); break;
+		case MOP_NEWARRAY:	mn_new_array(s); break;
+
+		case MOP_SETSTACK:	mn_set_stack(s,i.ax); break;
+		case MOP_GETSTACK:	mn_get_stack(s,i.ax); break;
+
+		case MOP_SETFIELD:	mn_set_field(s,i.ax); break;
+		case MOP_GETFIELD:	mn_get_field(s,i.ax); break;
+
+		case MOP_SETGLOBAL:	mn_set_global(s); break;
+		case MOP_GETGLOBAL:	mn_get_global(s); break;
+
+		case MOP_PUSH:		nx_push_value(s, func->consts[i.a-1] ); break;
+		case MOP_POP:		mn_pop(s,i.ax); break;
+
 		case MOP_NONEOP:
 			return 0;
 		}
@@ -1511,7 +1424,15 @@ MnOperate cp_operate( MnCompileState* cs )
 	if ( tok == eTIdentifier )
 	{
 		if ( str == "push" ) return MOP_PUSH;
-		else if ( str == "set" ) return MOP_SET;
+		else if ( str == "pop" ) return MOP_POP;
+		else if ( str == "newarr" ) return MOP_NEWARRAY;
+		else if ( str == "newtbl" ) return MOP_NEWTABLE;
+		else if ( str == "setstk" ) return MOP_SETSTACK;
+		else if ( str == "getstk" ) return MOP_GETSTACK;
+		else if ( str == "setfld" ) return MOP_SETFIELD;
+		else if ( str == "getfld" ) return MOP_GETFIELD;
+		else if ( str == "setglb" ) return MOP_SETGLOBAL;
+		else if ( str == "getglb" ) return MOP_GETGLOBAL;
 	}
 	return MOP_NONEOP;
 }
@@ -1521,19 +1442,22 @@ OvInt	  cp_operandAx( MnCompileState* cs )
 	OvString str;
 	OvInt num;
 	OvInt tok;
-	do 
+	do { tok = cp_token(cs,num,str); } while ( isspace((OvChar)tok) );
+
+	bool minus = ( tok == '-' );
+	if ( minus )
 	{
-		tok = cp_token(cs,num,str);
-	} while ( isspace((OvChar)tok) );
+		do { tok = cp_token(cs,num,str); } while ( isspace((OvChar)tok) );
+	}
 
 	if ( tok == eTNumber )
 	{
-		return num;
+		return num * (minus? -1:1);
 	}
 	return 0;
 }
 
-MnOperand cp_operand( MnCompileState* cs, MnMFunction* func )
+MnOperand cp_func_const( MnCompileState* cs, MnMFunction* func )
 {
 	OvString str;
 	OvInt num;
@@ -1546,12 +1470,12 @@ MnOperand cp_operand( MnCompileState* cs, MnMFunction* func )
 	if ( tok == eTString )
 	{
 		func->consts.push_back( MnValue( MOT_STRING, nx_new_string(cs->state,str) ) );
-		return MnBC(FlagConst,func->consts.size());
+		return func->consts.size();
 	}
 	else if ( tok == eTNumber )
 	{
 		func->consts.push_back( MnValue( (OvReal)num ) );
-		return MnBC(FlagConst,func->consts.size());
+		return func->consts.size();
 	}
 	return 0;
 }
@@ -1563,28 +1487,57 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 	OvInt tok;
 	while ( true )
 	{
-		MnOperate op = cp_operate( cs );
-		if ( op == MOP_NEWTABLE )
+		MnInstruction i;
+		i.op = cp_operate( cs );
+		if ( i.op == MOP_NEWTABLE )
 		{
-			MnOperand a  = cp_operand( cs, func );
-			func->codes.push_back( MnOpABC(op,a,0,0) );
+			func->codes.push_back( i );
 		}
-		else if ( op == MOP_SET )
+		else if ( i.op == MOP_NEWARRAY )
 		{
-			func->codes.push_back( MnOpAxC(op,cp_operandAx(cs),0,0) );
+			func->codes.push_back( i );
 		}
-		else if ( op == MOP_PUSH )
+		else if ( i.op == MOP_SETSTACK )
 		{
-			MnOperand b  = cp_operand( cs, func );
-			func->codes.push_back( MnOpABC(op,0,b,0) );			
+			i.ax = cp_operandAx(cs);
+			func->codes.push_back( i );
 		}
-		else if ( op == MOP_POP )
+		else if ( i.op == MOP_GETSTACK )
 		{
-			func->codes.push_back( MnOpAxC(op,cp_operandAx(cs),0,0) );
+			i.ax = cp_operandAx(cs);
+			func->codes.push_back( i );
+		}
+		else if ( i.op == MOP_SETFIELD)
+		{
+			i.ax = cp_operandAx(cs);
+			func->codes.push_back( i );
+		}
+		else if ( i.op == MOP_GETFIELD)
+		{
+			i.ax = cp_operandAx(cs);
+			func->codes.push_back( i );
+		}
+		else if ( i.op == MOP_SETGLOBAL)
+		{
+			func->codes.push_back( i );
+		}
+		else if ( i.op == MOP_GETGLOBAL)
+		{
+			func->codes.push_back( i );
+		}
+		else if ( i.op == MOP_PUSH )
+		{
+			i.a  = cp_func_const( cs, func );
+			func->codes.push_back( i );			
+		}
+		else if ( i.op == MOP_POP )
+		{
+			i.ax = cp_operandAx(cs);
+			func->codes.push_back( i );
 		}
 		else 
 		{
-			func->codes.push_back( MnOpABC(MOP_NONEOP,0,0,0) );
+			func->codes.push_back( i );
 			break;
 		};
 	}
