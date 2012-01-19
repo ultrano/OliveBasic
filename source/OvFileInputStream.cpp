@@ -15,6 +15,10 @@ OvSize OvFileInputStream::ReadBytes( OvByte * dest, OvSize dest_size )
 		{
 			return dest_size;
 		}
+		else
+		{
+			dest[0] = EOF;
+		}
 	}
 	return 0;
 }

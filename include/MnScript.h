@@ -48,3 +48,6 @@ const OvString&	mn_to_string( MnState* s, MnIndex idx );
 void			mn_call( MnState* s, OvInt nargs, OvInt nrets );
 
 void			mn_collect_garbage( MnState* s );
+
+
+void mn_load_asm( MnState* s, const OvString& file, MnIndex idx );

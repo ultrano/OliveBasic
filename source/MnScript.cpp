@@ -1311,16 +1311,26 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 	}
 }
 
-void mn_load_asm( MnState* s, const OvString& file )
-{
-}
-
 struct MnCompileState : public OvMemObject
 {
 	MnState* state;
 	OvInputStream* is;
+	OvChar c;
 	MnValue	errfunc;
 };
+
+void cp_build_func( MnCompileState* cs, MnMFunction* func );
+void mn_load_asm( MnState* s, const OvString& file, MnIndex idx )
+{
+	OvFileInputStream fis( file );
+	MnCompileState cs;
+	cs.state = s;
+	cs.is = &fis;
+	cs.c = ' ';
+	cs.errfunc = nx_get_stack(s,idx);
+
+	cp_build_func(&cs,NULL);
+}
 
 enum eErrCode
 {
@@ -1335,12 +1345,98 @@ void cp_call_errfunc( MnCompileState* cs, eErrCode errcode, const OvString& msg 
 	mn_call( cs->state, 2, 0 );
 }
 
-void cp_build_func( MnCompileState* cs, MnMFunction* func )
+enum
 {
-	OvByte c;
-	cs->is->Read( c );
+	eTNumber = 256,
+	eTString,
+	eTIdentifier,
+	eTEndOfStream,
+	eTUnknown,
+};
+OvInt cp_token( MnCompileState* cs, OvInt& num, OvString& str )
+{
+	OvChar& c = cs->c;
+	num = 0;
+	str.clear();
+#define cp_read() (cs->is->Read(c))
+	while ( true )
+	{
+		if ( c == EOF  )
+		{
+			return eTEndOfStream;
+		}
+		else if ( isspace(c) )
+		{
+			cp_read();
+			continue;
+		}
+		else if ( isdigit(c) )
+		{
+			OvInt mult = 10;
+			if ( c == '0' )
+			{
+				mult = 8;
+				cp_read();
+				if ( c == 'x' || c == 'X' )
+				{
+					mult = 16;
+					cp_read();
+				}
+			}
+			bool under = false;
+			while ( true )
+			{
+				if ( isdigit(c) ) num = (num * mult) + (c-'0'); else break;
+				if ( !cp_read() ) break;
+			}
+			return eTNumber;
+		}
+		else if ( c == '"' )
+		{
+			cp_read();
+			do
+			{
+				str.push_back(c);
+			} while ( cp_read() && c != '"' );
+			cp_read();
+			return eTString;
+		}
+		else if ( isalpha(c) || c == '_' )
+		{
+			do
+			{
+				str.push_back(c);
+			} while ( cp_read() && (isalnum(c) || c == '_') );
+			return eTIdentifier;
+		}
+		else
+		{
+			OvChar ret = c;
+			cp_read();
+			return ret;
+		}
+	}
+	return eTUnknown;
+#undef cp_read
 }
 
+void cp_build_func( MnCompileState* cs, MnMFunction* func )
+{
+	OvString str;
+	OvInt num;
+	OvInt tok;
+	tok = cp_token(cs,num,str);
+	tok = cp_token(cs,num,str);
+	tok = cp_token(cs,num,str);
+	tok = cp_token(cs,num,str);
+	tok = cp_token(cs,num,str);
+	tok = cp_token(cs,num,str);
+	tok = cp_token(cs,num,str);
+	tok = cp_token(cs,num,str);
+	tok = cp_token(cs,num,str);
+
+
+}
 /*
 
 void OsLexer::Tokenize( OvInputStream & lexs )
