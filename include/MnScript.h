@@ -11,6 +11,7 @@ void			mn_default_lib( MnState* s );
 
 void			mn_set_stack( MnState* s, MnIndex idx );
 void			mn_get_stack( MnState* s, MnIndex idx );
+void			mn_insert_stack( MnState* s, MnIndex idx );
 
 void			mn_set_field( MnState* s, MnIndex idx );
 void			mn_get_field( MnState* s, MnIndex idx );

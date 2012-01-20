@@ -68,6 +68,36 @@ enum MnObjType
 #define MnToClosure( v ) (MnIsClosure(v)? (v).u.cnt->u.cls: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
+OvBool ut_str2num( const OvString& str, OvReal &num ) 
+{
+	OvInt i = 0;
+	OvChar c = str[i];
+	if ( isdigit(c) )
+	{
+		OvInt mult = 10;
+		if ( c == '0' )
+		{
+			mult = 8;
+			c = str[++i];
+			if ( c == 'x' || c == 'X' )
+			{
+				mult = 16;
+				c = str[++i];
+			}
+		}
+		bool under = false;
+		while ( true )
+		{
+			if ( isdigit(c) ) num = (num * mult) + (c-'0'); else break;
+			if ( !(i >= str.size()) ) break;
+		}
+		return true;
+	}
+	return false;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 class MnState : public OvMemObject
 {
 public:
@@ -755,6 +785,30 @@ void mn_get_stack( MnState* s, MnIndex idx )
 	nx_push_value( s, nx_get_stack(s,idx) );
 }
 
+void mn_insert_stack( MnState* s, MnIndex idx )
+{
+	idx = nx_absidx( s, idx );
+	if ( idx >= 0 && idx < s->last )
+	{
+		MnIndex i = idx;
+		MnValue val = s->stack[idx];
+		while ( i < s->last )
+		{
+			if ( i+1 == s->last )
+			{
+				s->stack[idx] = val;
+			}
+			else
+			{
+				MnValue temp = s->stack[i+1];
+				s->stack[i+1] = val;
+				val = temp;
+			}
+			++i;
+		}
+	}
+}
+
 void mn_set_field( MnState* s, MnIndex idx )
 {
 	if ( mn_get_top(s) >= 2 )
@@ -955,6 +1009,7 @@ void mn_set_top( MnState* s, MnIndex idx )
 	idx = nx_absidx( s, idx ) + 1;
 	idx = (idx < s->base)? s->base : idx;
 	nx_reserve_stack( s, idx );
+	while ( s->last > idx ) s->stack[--s->last] = MnValue();
 	s->last = idx;
 }
 
@@ -1070,6 +1125,10 @@ OvBool mn_to_boolean( MnState* s, MnIndex idx )
 	{
 		return (MnToNumber(val) != 0.0);
 	}
+	else if ( MnIsObj(val) )
+	{
+		return !!MnToObject(val);
+	}
 	return false;
 }
 
@@ -1079,6 +1138,11 @@ OvReal mn_to_number( MnState* s, MnIndex idx )
 	if ( MnIsNumber(val) )
 	{
 		return MnToNumber(val);
+	}
+	else if ( MnIsString(val) )
+	{
+		OvReal num; 
+		if (ut_str2num( MnToString(val)->get_str(), num ) ) return num;;
 	}
 	return 0;
 }
@@ -1184,8 +1248,9 @@ struct MnInstruction : public OvMemObject
 	OvByte op;
 	union
 	{
-		OvInt ax;
-		struct { OvUShort a; OvUShort b; };
+		OvInt eax;
+		struct { OvShort ax; OvShort bx; };
+		struct { OvChar a; OvChar b; OvChar c; OvChar d; };
 	};
 };
 
@@ -1221,8 +1286,15 @@ enum MnOperate
 	MOP_LT,
 	MOP_GT,
 
+	MOP_NOT,
 	MOP_CMP,
 	MOP_JMP,
+
+
+	MOP_ADD,
+	MOP_SUB,
+	MOP_MUL,
+	MOP_DIV,
 
 	MOP_CALL,
 };
@@ -1259,37 +1331,122 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 		case MOP_NEWTABLE:	mn_new_table( s ); break;
 		case MOP_NEWARRAY:	mn_new_array( s ); break;
 
-		case MOP_SET_STACK:	mn_set_stack( s, i.ax ); break;
-		case MOP_GET_STACK:	mn_get_stack( s, i.ax ); break;
+		case MOP_SET_STACK:	mn_set_stack( s, i.eax ); break;
+		case MOP_GET_STACK:	mn_get_stack( s, i.eax ); break;
 
-		case MOP_SET_FIELD:	mn_set_field( s, i.ax); break;
-		case MOP_GET_FIELD:	mn_get_field( s, i.ax); break;
+		case MOP_SET_FIELD:	mn_set_field( s, i.eax); break;
+		case MOP_GET_FIELD:	mn_get_field( s, i.eax); break;
 
 		case MOP_SET_GLOBAL:	mn_set_global( s ); break;
 		case MOP_GET_GLOBAL:	mn_get_global( s ); break;
 
-		case MOP_SET_META:	mn_set_metatable( s, i.ax ); break;
-		case MOP_GET_META:	mn_get_metatable( s, i.ax ); break;
+		case MOP_SET_META:	mn_set_metatable( s, i.eax ); break;
+		case MOP_GET_META:	mn_get_metatable( s, i.eax ); break;
 
-		case MOP_SET_UPVAL:	mn_set_upval( s, i.ax ); break;
-		case MOP_GET_UPVAL:	mn_get_upval( s, i.ax ); break;
+		case MOP_SET_UPVAL:	mn_set_upval( s, i.eax ); break;
+		case MOP_GET_UPVAL:	mn_get_upval( s, i.eax ); break;
 
-		case MOP_PUSH:		nx_push_value( s, func->consts[i.a-1] ); break;
-		case MOP_POP:		mn_pop( s, i.ax ); break;
+		case MOP_PUSH:		nx_push_value( s, func->consts[i.ax-1] ); break;
+		case MOP_POP:		mn_pop( s, i.eax ); break;
 
-		case MOP_CALL:		mn_call( s, i.a, i.b ); break;
+		case MOP_CALL:		mn_call( s, i.ax, i.bx ); break;
 
-		case MOP_JMP: s->pc += i.ax; break;
+		case MOP_JMP: s->pc += i.eax; break;
 
+		case MOP_NOT:
+			{
+				OvBool b = mn_to_boolean(s,-1);
+				mn_pop(s,1);
+				mn_push_boolean(s,!b);
+			}
 		case MOP_CMP:
 			{
-				OvBool b =mn_to_boolean(s,-1);
-				mn_pop(s,1);
+				OvBool b = mn_to_boolean(s,i.ax);
 				if ( !b ) ++s->pc;
 			}
 			break;
 
+		case MOP_EQ:
+		case MOP_LT:
+		case MOP_GT:
+			{
+				OvBool b = false;
+				if ( mn_is_number(s,-2) && mn_is_number(s,-1) )
+				{
+					OvReal na = mn_to_number(s,-2);
+					OvReal nb = mn_to_number(s,-1);
+					if ( i.op == MOP_EQ ) b = (na == nb);
+					else if ( i.op == MOP_LT ) b = (na < nb);
+					else if ( i.op == MOP_GT ) b = (na > nb);
+				}
+				else if ( mn_is_string(s,-2) && mn_is_string(s,-1) )
+				{
+					if ( i.op == MOP_EQ ) b = (mn_to_string(s,-2) == mn_to_string(s,-1));
+				}
+				else
+				{
+					mn_get_metatable(s,-2);
+					if ( i.op == MOP_EQ ) mn_push_string(s,"__eq");
+					else if ( i.op == MOP_LT ) mn_push_string(s,"__lt");
+					else if ( i.op == MOP_GT ) mn_push_string(s,"__gt");
+					mn_get_field(s,-2);
+					mn_insert_stack(s,-4);
+					mn_pop(s,1);
+					mn_call(s,2,1);
+				}
+			}
+			break;
+
+		case MOP_ADD:
+		case MOP_SUB:
+		case MOP_MUL:
+		case MOP_DIV:
+			{
+				if ( mn_is_number(s,-2) )
+				{
+					OvReal na = mn_to_number(s,-2);
+					OvReal nb = mn_to_number(s,-1);
+					mn_pop(s,2);
+
+					switch (i.op)
+					{
+					case MOP_ADD: na += nb; break;
+					case MOP_SUB: na -= nb; break;
+					case MOP_MUL: na *= nb; break;
+					case MOP_DIV: na /= nb; break;
+					}
+
+					mn_push_number( s, na );
+				}
+				else if ( mn_is_string(s,-2) )
+				{
+					OvString sa = mn_to_string(s,-2);
+					OvString sb = mn_to_string(s,-1);
+					
+					if ( i.op == MOP_ADD )
+					{
+						mn_pop(s,2);
+						mn_push_string( s, sa+sb );
+					}
+					else mn_pop(s,1);
+				}
+				else
+				{
+					mn_get_metatable(s,-2);
+					if ( i.op == MOP_ADD ) mn_push_string(s,"__add");
+					else if ( i.op == MOP_SUB ) mn_push_string(s,"__sub");
+					else if ( i.op == MOP_MUL ) mn_push_string(s,"__mul");
+					else if ( i.op == MOP_DIV ) mn_push_string(s,"__div");
+					mn_get_field(s,-2);
+					mn_insert_stack(s,-4);
+					mn_pop(s,1);
+					mn_call(s,2,1);
+				}
+			}
+			break;
+
 		case MOP_NONEOP:
+		default:
 			return 0;
 		}
 	}
@@ -1300,19 +1457,19 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 {
 	nargs = max(nargs,0);
 	MnValue v = nx_get_stack(s, -(1 + nargs) );
+	MnCallInfo* ci = ( MnCallInfo* )nx_alloc( sizeof( MnCallInfo ) );
+	ci->prev = s->ci;
+	ci->savepc = s->pc;
+	ci->base = s->base;
+
+	s->ci    = ci;
+	s->base  = s->last - nargs;
+
+	OvInt r = 0;
 	if ( MnIsClosure(v) )
 	{
-		MnCallInfo* ci = ( MnCallInfo* )nx_alloc( sizeof( MnCallInfo ) );
 		MnClosure* cls = MnToClosure(v);
 		ci->cls  = cls;
-		ci->prev = s->ci;
-		ci->savepc = s->pc;
-		ci->base = s->base;
-
-		s->ci    = ci;
-		s->base  = s->last - nargs;
-
-		OvInt r = 0;
 		if ( cls->type == CCL )
 		{
 			MnClosure::CClosure* ccl = cls->u.c;
@@ -1323,24 +1480,24 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 			MnClosure::MClosure* mcl = cls->u.m;
 			r = nx_exec_func( s, MnToFunction( mcl->func ) );
 		}
-
-		MnIndex oldlast = s->base - 1;
-		MnIndex newlast = oldlast + nrets;
-		MnIndex first_ret  = s->last - r;
-		first_ret = max( oldlast, first_ret );
-		nx_reserve_stack( s, oldlast + max( nrets, r ) );
-
-		if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  s->stack[oldlast++] = s->stack[first_ret++];
-
-		while ( oldlast < s->last ) s->stack[ --s->last ] = MnValue();
-		while ( oldlast > s->last ) s->stack[ s->last++ ] = MnValue();
-
-		ci = s->ci;
-		s->last  = newlast;
-		s->base = ci->base;
-		s->ci	= ci->prev;
-		nx_free(ci);
 	}
+
+	MnIndex oldlast = s->base - 1;
+	MnIndex newlast = oldlast + nrets;
+	MnIndex first_ret  = s->last - r;
+	first_ret = max( oldlast, first_ret );
+	nx_reserve_stack( s, oldlast + max( nrets, r ) );
+
+	if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  s->stack[oldlast++] = s->stack[first_ret++];
+
+	while ( oldlast < s->last ) s->stack[ --s->last ] = MnValue();
+	while ( oldlast > s->last ) s->stack[ s->last++ ] = MnValue();
+
+	ci = s->ci;
+	s->last  = newlast;
+	s->base = ci->base;
+	s->ci	= ci->prev;
+	nx_free(ci);
 }
 
 struct MnCompileState : public OvMemObject
@@ -1467,8 +1624,8 @@ MnOperate cp_operate( MnCompileState* cs )
 	{
 		if ( str == "push" ) return MOP_PUSH;
 		else if ( str == "pop" ) return MOP_POP;
-		else if ( str == "newarr" ) return MOP_NEWARRAY;
-		else if ( str == "newtbl" ) return MOP_NEWTABLE;
+		else if ( str == "newarray" ) return MOP_NEWARRAY;
+		else if ( str == "newtable" ) return MOP_NEWTABLE;
 		else if ( str == "setstk" ) return MOP_SET_STACK;
 		else if ( str == "getstk" ) return MOP_GET_STACK;
 		else if ( str == "setfield" ) return MOP_SET_FIELD;
@@ -1481,6 +1638,10 @@ MnOperate cp_operate( MnCompileState* cs )
 		else if ( str == "getupval" ) return MOP_GET_UPVAL;
 		else if ( str == "jmp" )   return MOP_JMP;
 		else if ( str == "cmp" )   return MOP_CMP;
+		else if ( str == "add" )   return MOP_ADD;
+		else if ( str == "sub" )   return MOP_SUB;
+		else if ( str == "mul" )   return MOP_MUL;
+		else if ( str == "div" )   return MOP_DIV;
 		else if ( str == "call" )   return MOP_CALL;
 		else
 		{
@@ -1565,14 +1726,15 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		case MOP_GET_UPVAL:
 		case MOP_POP:
 		case MOP_JMP:
-			i.ax = cp_operand(cs);
+		case MOP_CMP:
+			i.eax = cp_operand(cs);
 			break;
 		case MOP_PUSH:
-			i.a  = cp_func_const( cs, func );
+			i.ax  = cp_func_const( cs, func );
 			break;
 		case MOP_CALL:
-			i.a = cp_operand(cs);
-			i.b = cp_operand(cs);
+			i.ax = cp_operand(cs);
+			i.bx = cp_operand(cs);
 			break;
 		case MOP_NONEOP:
 			func->codes.push_back( i );
@@ -1581,192 +1743,3 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		func->codes.push_back( i );
 	}
 }
-/*
-
-void OsLexer::Tokenize( OvInputStream & lexs )
-{
-Clear();
-OvMap<OsHash,OvSolidString> strtable;
-OvByte c = ' ';
-while ( 1 )
-{
-if ( isdigit( c ) )
-{
-OsToken t( TT_NUMBER, m_line, m_col );
-OvReal mantissa = 0;
-OvReal fraction = 0;
-OvBool fract = 0;
-OvInt  under = 0;
-OvReal antilog = 0;
-
-if ( c >= '1' && c <= '9' )
-{
-antilog = 10;
-}
-else if ( c == '0' )
-{
-if (!_read(lexs,c)) return ;
-if ( c == 'x' || c == 'X' )
-{
-antilog = 16;
-if (!_read(lexs,c)) return ;
-if ( !ishexdigit( c ) ) _error( "잘못된 16진수 표기" );
-}
-else if (isdigit(c))
-{
-antilog = 8;
-}
-}
-
-if ( antilog ) do 
-{
-if ( !fract ) if ( fract = ( c == '.' ) ) continue ;
-
-int v = 0;
-
-if ( isdigit(c) )
-v = c - '0';
-else if ( c >= 'a' && c <= 'f' )
-v = c - 'a' + 10;
-else if ( c >= 'A' && c <= 'F' )
-v = c - 'A' + 10;
-else break;
-
-if ( fract )
-{
-fraction *= antilog;
-fraction += v;
-++under;
-}
-else
-{
-mantissa *= antilog;
-mantissa += v;
-}
-
-
-if (!_read(lexs,c)) break ;
-} while ( isdigit(c) || (c == '.') );
-
-t.num = mantissa + ( fraction / pow( antilog, under ) );
-m_tok_stream.push_back( t );
-continue;
-}
-else if ( isalpha( c ) || c == '_' )
-{
-OsToken t( TT_IDENTIFIER, m_line, m_col );
-OvString id;
-do 
-{
-id.push_back( c );
-if (!_read(lexs,c)) return ;
-} while ( isalnum(c) || c == '_' );
-
-OsHash hash = OU::string::rs_hash( id );
-OvSolidString ret;
-if ( strtable.find(hash) == strtable.end() )
-{
-strtable.insert( make_pair( hash, OvSolidString( id ) ) );
-}
-ret = strtable[hash];
-t.ttype = m_keyword_table.WordFiltering( ret.str() );
-t.str = ret;
-m_tok_stream.push_back( t );
-continue;
-}
-else if ( c == '"' || c == '\'')
-{
-OvChar terminal = c;
-OsToken t( TT_STRING, m_line, m_col );
-OvString str;
-
-if (!_read(lexs,c)) return ;
-
-while ( !( c == '\n' || c == terminal ) ) 
-{
-str.push_back( c );
-if (!_read(lexs,c)) return ;
-}
-
-if ( c != terminal ) _error( "문자열 종료 없음" );
-
-OsHash hash = OU::string::rs_hash( str );
-OvSolidString ret;
-if ( strtable.find(hash) == strtable.end() )
-{
-strtable.insert( make_pair( hash, OvSolidString( str ) ) );
-}
-ret = strtable[hash];
-t.str = ret;
-m_tok_stream.push_back( t );
-
-if (!_read(lexs,c)) return ;
-continue;
-}
-else if ( isspace( c ) )
-{
-if (!_read(lexs,c)) return ;
-continue;
-}
-else if ( c == '/' )
-{
-OvByte p = c;
-if (!_read(lexs,c)) return ;
-
-if ( c == '/' )
-{
-
-do 
-{
-if (!_read(lexs,c)) return ;
-}
-while ( c != '\n' );
-
-if ( !_read(lexs,c) ) return ;
-}
-else if ( c == '*' )
-{
-do 
-{
-if ( !_read(lexs,c) ) return ;
-p = c;
-if ( !_read(lexs,c) ) return ;
-} while ( !( p == '*' && c == '/' ));
-
-if ( !_read(lexs,c) ) return ;
-}
-else
-{
-OsToken t( (OsTokType)p, m_line, m_col );
-m_tok_stream.push_back( t );
-continue;
-}
-}
-else
-{
-OvByte p = c;
-m_tok_stream.push_back( OsToken((OsTokType)p, m_line, m_col) );
-if (!_read(lexs,c)) return;
-
-#define PAIR_TOK(c1,c2,tok) if (p==c1 && c==c2) { m_tok_stream.back().ttype = (OsTokType)tok; _read(lexs,c); }
-
-PAIR_TOK('=','=',TT_EQ)
-else PAIR_TOK('!','=',TT_NEQ)
-else PAIR_TOK('<','=',TT_LEQ)
-else PAIR_TOK('>','=',TT_GEQ)
-else PAIR_TOK('&','&',TT_AND)
-else PAIR_TOK('|','|',TT_OR)
-else PAIR_TOK('+','+',TT_INC)
-else PAIR_TOK('-','-',TT_DEC)
-else PAIR_TOK('<','<',TT_PUSH)
-else PAIR_TOK('>','>',TT_PULL)
-else PAIR_TOK(':',':',TT_SCOPE)
-
-#undef  PAIR_TOK
-
-continue;
-}
-}
-}
-
-*/
