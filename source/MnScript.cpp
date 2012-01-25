@@ -1346,7 +1346,7 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 		case MOP_SET_UPVAL:	mn_set_upval( s, i.eax ); break;
 		case MOP_GET_UPVAL:	mn_get_upval( s, i.eax ); break;
 
-		case MOP_PUSH:		nx_push_value( s, func->consts[i.ax-1] ); break;
+		case MOP_PUSH:		nx_push_value( s, func->consts[i.eax-1] ); break;
 		case MOP_POP:		mn_pop( s, i.eax ); break;
 
 		case MOP_CALL:		mn_call( s, i.ax, i.bx ); break;
@@ -1727,11 +1727,10 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		case MOP_GET_UPVAL:
 		case MOP_POP:
 		case MOP_JMP:
-		case MOP_CMP:
 			i.eax = cp_operand(cs);
 			break;
 		case MOP_PUSH:
-			i.ax  = cp_func_const( cs, func );
+			i.eax  = cp_func_const( cs, func );
 			break;
 		case MOP_CALL:
 			i.ax = cp_operand(cs);
