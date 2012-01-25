@@ -1361,7 +1361,8 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 			}
 		case MOP_CMP:
 			{
-				OvBool b = mn_to_boolean(s,i.ax);
+				OvBool b = mn_to_boolean(s,-1);
+				mn_pop(s,1);
 				if ( !b ) ++s->pc;
 			}
 			break;
