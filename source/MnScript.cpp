@@ -1428,6 +1428,8 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 				mn_pop(s,1);
 				mn_push_boolean(s,!b);
 			}
+			break;
+
 		case MOP_CMP:
 			{
 				OvBool b = mn_to_boolean(s,-1);
@@ -1440,18 +1442,23 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 		case MOP_LT:
 		case MOP_GT:
 			{
-				OvBool b = false;
 				if ( mn_is_number(s,-2) && mn_is_number(s,-1) )
 				{
 					OvReal na = mn_to_number(s,-2);
 					OvReal nb = mn_to_number(s,-1);
-					if ( i.op == MOP_EQ ) b = (na == nb);
-					else if ( i.op == MOP_LT ) b = (na < nb);
-					else if ( i.op == MOP_GT ) b = (na > nb);
+					mn_pop(s,2);
+					if ( i.op == MOP_EQ ) mn_push_boolean( s, (na == nb) );
+					else if ( i.op == MOP_LT ) mn_push_boolean( s, (na < nb) );
+					else if ( i.op == MOP_GT ) mn_push_boolean( s, (na > nb) );
+					else mn_push_nil(s);
 				}
 				else if ( mn_is_string(s,-2) && mn_is_string(s,-1) )
 				{
-					if ( i.op == MOP_EQ ) b = (mn_to_string(s,-2) == mn_to_string(s,-1));
+					OvString sa = mn_to_string(s,-2);
+					OvString sb = mn_to_string(s,-1);
+					mn_pop(s,2);
+					if ( i.op == MOP_EQ ) mn_push_boolean( s, ( sa == sb ) );
+					else mn_push_nil(s);
 				}
 				else
 				{
@@ -1713,6 +1720,10 @@ MnOperate cp_operate( MnCompileState* cs )
 		else if ( str == "sub" )   return MOP_SUB;
 		else if ( str == "mul" )   return MOP_MUL;
 		else if ( str == "div" )   return MOP_DIV;
+		else if ( str == "not" )   return MOP_NOT;
+		else if ( str == "eq" )   return MOP_EQ;
+		else if ( str == "lt" )   return MOP_LT;
+		else if ( str == "gt" )   return MOP_GT;
 		else if ( str == "call" )   return MOP_CALL;
 		else
 		{
