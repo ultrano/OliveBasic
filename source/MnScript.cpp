@@ -18,6 +18,7 @@ typedef OvUShort MnOperand;
 enum MnCLType { CCL= 1, MCL = 2 };
 enum MnObjType
 {
+	MOT_UNKNOWN,
 	MOT_NIL,
 	MOT_BOOLEAN,
 	MOT_NUMBER,
@@ -29,7 +30,21 @@ enum MnObjType
 	MOT_CLOSURE,
 	MOT_USER,
 };
+struct MnTypeStr { MnObjType type; const char* str; };
+const MnTypeStr g_type_str[] = 
+{
+	{ MOT_UNKNOWN, "unknown" },
+	{ MOT_NIL, "nil" },
+	{ MOT_BOOLEAN, "boolean" },
+	{ MOT_NUMBER, "number" },
+	{ MOT_STRING, "string" },
 
+	{ MOT_TABLE, "table" },
+	{ MOT_ARRAY, "array" },
+	{ MOT_FUNCPROTO, "funcproto" },
+	{ MOT_CLOSURE, "closure" },
+	{ MOT_USER, "user" },
+};
 //////////////////////////////////////////////////////////////////////////
 
 #define MARKED (1)
@@ -94,6 +109,12 @@ OvBool ut_str2num( const OvString& str, OvReal &num )
 		return true;
 	}
 	return false;
+}
+
+OvBool ut_num2str( const OvReal& num, OvString& str )
+{
+	str = OU::string::format( "%f", num );
+	return true;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -574,6 +595,38 @@ void MnClosure::marking()
 		}
 	}
 }
+
+/////////////////////// type-string convert ////////////////////////////////
+
+const char* ut_type2str( MnObjType type )
+{
+	for each ( const MnTypeStr& elem in g_type_str )
+	{
+		if ( elem.type == type )
+		{
+			return elem.str;
+		}
+	}
+	return g_type_str[MOT_UNKNOWN].str;
+};
+
+MnObjType ut_str2type( const char* str )
+{
+	for each ( const MnTypeStr& elem in g_type_str )
+	{
+		if ( elem.str == str )
+		{
+			return elem.type;
+		}
+	}
+	return g_type_str[MOT_UNKNOWN].type;
+};
+
+MnObjType ut_str2type( const MnValue& val )
+{
+	return ut_str2type( MnIsString(val)? MnToString(val)->get_str().c_str() : "unknown" );
+}
+
 
 ////////////////////*    open and close    *///////////////////
 
@@ -1147,12 +1200,18 @@ OvReal mn_to_number( MnState* s, MnIndex idx )
 	return 0;
 }
 
-const OvString& mn_to_string( MnState* s, MnIndex idx )
+OvString mn_to_string( MnState* s, MnIndex idx )
 {
 	MnValue val = nx_get_stack( s, idx );
 	if ( MnIsString(val) )
 	{
 		return MnToString(val)->get_str();
+	}
+	else if ( MnIsNumber(val) )
+	{
+		OvString str;
+		ut_num2str( MnToNumber(val), str );
+		return str;
 	}
 
 	static OvString empty;
@@ -1297,6 +1356,8 @@ enum MnOperate
 	MOP_DIV,
 
 	MOP_CALL,
+
+	MOP_LOG,
 };
 
 OvInt nx_exec_func( MnState* s, MnMFunction* func )
@@ -1351,7 +1412,15 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 
 		case MOP_CALL:		mn_call( s, i.ax, i.bx ); break;
 
-		case MOP_JMP: s->pc += i.eax; break;
+		case MOP_LOG:
+			{
+				MnValue log = func->consts[i.eax-1];
+				printf( MnToString(log)->get_str().c_str() );
+				printf("\n");
+			}
+			break;
+
+		case MOP_JMP: s->pc += (i.eax - 1); break;
 
 		case MOP_NOT:
 			{
@@ -1624,11 +1693,12 @@ MnOperate cp_operate( MnCompileState* cs )
 	if ( tok == eTIdentifier )
 	{
 		if ( str == "push" ) return MOP_PUSH;
+		if ( str == "log" ) return MOP_LOG;
 		else if ( str == "pop" ) return MOP_POP;
 		else if ( str == "newarray" ) return MOP_NEWARRAY;
 		else if ( str == "newtable" ) return MOP_NEWTABLE;
-		else if ( str == "setstk" ) return MOP_SET_STACK;
-		else if ( str == "getstk" ) return MOP_GET_STACK;
+		else if ( str == "setstack" ) return MOP_SET_STACK;
+		else if ( str == "getstack" ) return MOP_GET_STACK;
 		else if ( str == "setfield" ) return MOP_SET_FIELD;
 		else if ( str == "getfield" ) return MOP_GET_FIELD;
 		else if ( str == "setglobal" ) return MOP_SET_GLOBAL;
@@ -1730,6 +1800,7 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 			i.eax = cp_operand(cs);
 			break;
 		case MOP_PUSH:
+		case MOP_LOG:
 			i.eax  = cp_func_const( cs, func );
 			break;
 		case MOP_CALL:

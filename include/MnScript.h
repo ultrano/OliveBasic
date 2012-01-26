@@ -47,7 +47,7 @@ OvBool			mn_is_string( MnState* s, MnIndex idx );
 
 OvBool			mn_to_boolean( MnState* s, MnIndex idx );
 OvReal			mn_to_number( MnState* s, MnIndex idx );
-const OvString&	mn_to_string( MnState* s, MnIndex idx );
+OvString		mn_to_string( MnState* s, MnIndex idx );
 
 void			mn_call( MnState* s, OvInt nargs, OvInt nrets );
 
