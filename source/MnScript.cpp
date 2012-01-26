@@ -550,6 +550,7 @@ MnMFunction::~MnMFunction()
 
 void MnMFunction::marking()
 {
+	mark = MARKED;
 	for each ( const MnValue& v in consts )
 	{
 		MnMarking( v );
@@ -1218,8 +1219,7 @@ OvString mn_to_string( MnState* s, MnIndex idx )
 	return empty;
 }
 
-
-void mn_collect_garbage( MnState* s )
+OvInt mn_collect_garbage( MnState* s )
 {
 	for ( MnState::map_hash_val::iterator itor = s->global.begin()
 		; itor != s->global.end()
@@ -1249,14 +1249,18 @@ void mn_collect_garbage( MnState* s )
 		heap = next;
 	}
 
+	OvInt num = 0;
 	while ( dead )
 	{
+		++num;
+
 		MnObject* next = dead->next;
 
 		nx_delete_garbage(dead);
 
 		dead = next;
 	}
+	return num;
 }
 
 OvInt mt_global_length(MnState* s)
@@ -1289,15 +1293,36 @@ OvInt mt_global_resize( MnState* s )
 	return 0;
 }
 
+OvInt mt_collect_garbage( MnState* s )
+{
+	mn_push_number( s, mn_collect_garbage(s) );
+	return 1;
+}
+
+OvInt mt_print( MnState* s )
+{
+	printf( mn_to_string(s,1).c_str() );
+	printf( "\n" );
+	return 0;
+}
+
 void mn_default_lib( MnState* s )
 {
 	mn_push_string( s, "length" );
 	mn_push_function( s, mt_global_length );
-	mn_set_field( s, 0 );
+	mn_set_global( s );
 
 	mn_push_string( s, "resize" );
 	mn_push_function( s, mt_global_resize );
-	mn_set_field( s, 0 );
+	mn_set_global( s );
+
+	mn_push_string( s, "collect_garbage" );
+	mn_push_function( s, mt_collect_garbage );
+	mn_set_global( s );
+
+	mn_push_string( s, "print" );
+	mn_push_function( s, mt_print);
+	mn_set_global( s );
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1321,6 +1346,7 @@ enum MnOperate
 
 	MOP_SET_STACK,
 	MOP_GET_STACK,
+	MOP_INSERT,
 
 	MOP_SET_FIELD,
 	MOP_GET_FIELD,
@@ -1409,6 +1435,7 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 
 		case MOP_PUSH:		nx_push_value( s, func->consts[i.eax-1] ); break;
 		case MOP_POP:		mn_pop( s, i.eax ); break;
+		case MOP_INSERT:	mn_insert_stack( s, i.eax ); break;
 
 		case MOP_CALL:		mn_call( s, i.ax, i.bx ); break;
 
@@ -1700,30 +1727,42 @@ MnOperate cp_operate( MnCompileState* cs )
 	if ( tok == eTIdentifier )
 	{
 		if ( str == "push" ) return MOP_PUSH;
-		if ( str == "log" ) return MOP_LOG;
 		else if ( str == "pop" ) return MOP_POP;
+		else if ( str == "insert" ) return MOP_INSERT;
+		if ( str == "log" ) return MOP_LOG;
+
 		else if ( str == "newarray" ) return MOP_NEWARRAY;
 		else if ( str == "newtable" ) return MOP_NEWTABLE;
+
 		else if ( str == "setstack" ) return MOP_SET_STACK;
 		else if ( str == "getstack" ) return MOP_GET_STACK;
+
 		else if ( str == "setfield" ) return MOP_SET_FIELD;
 		else if ( str == "getfield" ) return MOP_GET_FIELD;
+
 		else if ( str == "setglobal" ) return MOP_SET_GLOBAL;
 		else if ( str == "getglobal" ) return MOP_GET_GLOBAL;
+
 		else if ( str == "setmeta" ) return MOP_SET_META;
 		else if ( str == "getmeta" ) return MOP_GET_META;
+
 		else if ( str == "setupval" ) return MOP_SET_UPVAL;
 		else if ( str == "getupval" ) return MOP_GET_UPVAL;
+
 		else if ( str == "jmp" )   return MOP_JMP;
 		else if ( str == "cmp" )   return MOP_CMP;
+
 		else if ( str == "add" )   return MOP_ADD;
 		else if ( str == "sub" )   return MOP_SUB;
 		else if ( str == "mul" )   return MOP_MUL;
 		else if ( str == "div" )   return MOP_DIV;
+
 		else if ( str == "not" )   return MOP_NOT;
+
 		else if ( str == "eq" )   return MOP_EQ;
 		else if ( str == "lt" )   return MOP_LT;
 		else if ( str == "gt" )   return MOP_GT;
+
 		else if ( str == "call" )   return MOP_CALL;
 		else
 		{
@@ -1800,6 +1839,7 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		{
 		case MOP_SET_STACK:
 		case MOP_GET_STACK:
+		case MOP_INSERT:
 		case MOP_SET_FIELD:
 		case MOP_GET_FIELD:
 		case MOP_SET_META:
