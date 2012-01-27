@@ -360,6 +360,7 @@ public:
 	{
 		MnValue  hold;
 		MnValue* link;
+		Upval*	 val;
 	};
 	struct MClosure : OvMemObject
 	{
