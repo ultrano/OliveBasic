@@ -1346,7 +1346,7 @@ enum MnOperate
 
 	MOP_SET_STACK,
 	MOP_GET_STACK,
-	MOP_INSERT,
+	MOP_INSERT_STACK,
 
 	MOP_SET_FIELD,
 	MOP_GET_FIELD,
@@ -1420,6 +1420,7 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 
 		case MOP_SET_STACK:	mn_set_stack( s, i.eax ); break;
 		case MOP_GET_STACK:	mn_get_stack( s, i.eax ); break;
+		case MOP_INSERT_STACK:	mn_insert_stack( s, i.eax ); break;
 
 		case MOP_SET_FIELD:	mn_set_field( s, i.eax); break;
 		case MOP_GET_FIELD:	mn_get_field( s, i.eax); break;
@@ -1435,7 +1436,6 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 
 		case MOP_PUSH:		nx_push_value( s, func->consts[i.eax-1] ); break;
 		case MOP_POP:		mn_pop( s, i.eax ); break;
-		case MOP_INSERT:	mn_insert_stack( s, i.eax ); break;
 
 		case MOP_CALL:		mn_call( s, i.ax, i.bx ); break;
 
@@ -1728,7 +1728,6 @@ MnOperate cp_operate( MnCompileState* cs )
 	{
 		if ( str == "push" ) return MOP_PUSH;
 		else if ( str == "pop" ) return MOP_POP;
-		else if ( str == "insert" ) return MOP_INSERT;
 		if ( str == "log" ) return MOP_LOG;
 
 		else if ( str == "newarray" ) return MOP_NEWARRAY;
@@ -1736,6 +1735,7 @@ MnOperate cp_operate( MnCompileState* cs )
 
 		else if ( str == "setstack" ) return MOP_SET_STACK;
 		else if ( str == "getstack" ) return MOP_GET_STACK;
+		else if ( str == "insertstack" ) return MOP_INSERT_STACK;
 
 		else if ( str == "setfield" ) return MOP_SET_FIELD;
 		else if ( str == "getfield" ) return MOP_GET_FIELD;
@@ -1839,7 +1839,7 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		{
 		case MOP_SET_STACK:
 		case MOP_GET_STACK:
-		case MOP_INSERT:
+		case MOP_INSERT_STACK:
 		case MOP_SET_FIELD:
 		case MOP_GET_FIELD:
 		case MOP_SET_META:
