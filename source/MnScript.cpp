@@ -11,6 +11,7 @@ class MnValue;
 class MnArray;
 class MnMFunction;
 class MnClosure;
+class MnUpval;
 struct MnInstruction;
 
 typedef OvUShort MnOperand;
@@ -28,6 +29,7 @@ enum MnObjType
 	MOT_ARRAY,
 	MOT_FUNCPROTO,
 	MOT_CLOSURE,
+	MOT_UPVAL,
 	MOT_USER,
 };
 struct MnTypeStr { MnObjType type; const char* str; };
@@ -43,6 +45,7 @@ const MnTypeStr g_type_str[] =
 	{ MOT_ARRAY, "array" },
 	{ MOT_FUNCPROTO, "funcproto" },
 	{ MOT_CLOSURE, "closure" },
+	{ MOT_UPVAL, "upval" },
 	{ MOT_USER, "user" },
 };
 //////////////////////////////////////////////////////////////////////////
@@ -63,6 +66,7 @@ const MnTypeStr g_type_str[] =
 #define MnIsArray( v ) ((v).type == MOT_ARRAY)
 #define MnIsFunction( v ) ((v).type == MOT_FUNCPROTO)
 #define MnIsClosure( v ) ((v).type == MOT_CLOSURE)
+#define MnIsUpval( v ) ((v).type == MOT_UPVAL)
 #define MnIsObj( v ) \
 	( \
 	MnIsString((v)) ||  \
@@ -122,14 +126,18 @@ OvBool ut_num2str( const OvReal& num, OvString& str )
 class MnState : public OvMemObject
 {
 public:
-	typedef OvMap<OvHash32,MnValue> map_hash_val;
-	typedef OvMap<OvHash32,MnString*> map_hash_str;
-	typedef OvVector<MnValue>	vec_stack;
+	typedef OvMap<OvHash32,MnValue>		map_hash_val;
+	typedef OvMap<OvHash32,MnString*>	map_hash_str;
+	typedef OvList<MnUpval*>			list_upval;
+	typedef OvVector<MnValue>			vec_value;
 
 	MnObject*	 heap;
 	map_hash_val global;
 	map_hash_str strtable;
-	vec_stack	 stack;
+	vec_value	 stack;
+
+	list_upval	 upvals;
+	list_upval	 openeduv;
 
 	MnCallInfo*	 ci;
 	MnInstruction* pc;
@@ -353,25 +361,35 @@ public:
 
 //////////////////////////////////////////////////////////////////////////
 
+class MnUpval : public MnObject
+{
+	MnUpval( MnState* s ) : link(NULL), val(NULL) 
+	{
+
+	};
+	~MnUpval()
+	{ 
+		if ( val == this ) hold = MnValue(); 
+	}
+	MnValue  hold;
+	MnValue* link;
+	virtual void marking()
+	{
+		if ( val == this ) MnMarking(hold);
+	}
+};
+
 class MnClosure : public MnObject
 {
 public:
-	struct Upval : OvMemObject
-	{
-		MnValue  hold;
-		MnValue* link;
-		Upval*	 val;
-	};
 	struct MClosure : OvMemObject
 	{
 		MnValue  func;
-		OvVector<Upval>	upvals;
 	};
 
 	struct CClosure : OvMemObject
 	{
 		MnCFunction func;
-		OvVector<MnValue>	upvals;
 	};
 
 	const MnCLType type;
@@ -379,6 +397,7 @@ public:
 	{
 		CClosure* c;
 		MClosure* m;
+		OvVector<MnValue>	upvals;
 	} u;
 
 	MnClosure( MnState* s, MnCLType t );
@@ -591,7 +610,7 @@ void MnClosure::marking()
 	else if ( type == MCL )
 	{
 		MnMarking(u.m->func);
-		for each ( const Upval& uv in u.m->upvals )
+		for each ( const MnUpval& uv in u.m->upvals )
 		{
 			MnMarking( uv.hold );
 		}
@@ -699,18 +718,24 @@ void nx_set_stack( MnState* s, MnIndex idx, const MnValue& val )
 	}
 }
 
-MnValue nx_get_stack( MnState* s, MnIndex idx )
+MnValue* nx_get_stack_ptr( MnState* s, MnIndex idx )
 {
 	idx = nx_absidx( s, idx );
 
 	if ( idx >= 0 && idx < s->stack.size() )
 	{
-		return s->stack.at( idx );
+		return &(s->stack.at( idx ));
 	}
 	else
 	{
-		return MnValue();
+		return NULL;
 	}
+}
+
+MnValue nx_get_stack( MnState* s, MnIndex idx )
+{
+	MnValue* v = nx_get_stack_ptr(s,idx);
+	return v? *v : MnValue();
 }
 
 void nx_set_table( MnState* s, MnValue& t, MnValue& n, MnValue& v )
@@ -817,7 +842,7 @@ MnValue nx_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx )
 			if ( upvalidx > 0 && upvalidx <= cls->u.m->upvals.size() )
 			{
 				MnClosure::Upval& upval = cls->u.m->upvals.at( upvalidx - 1 );
-				return *upval.link;
+				return *(upval.val->link);
 			}
 		}
 	}
@@ -1008,6 +1033,11 @@ MnClosure* nx_new_Mclosure( MnState* s )
 	return new(nx_alloc(sizeof(MnClosure))) MnClosure(s,MCL);
 }
 
+MnUpval*  nx_new_upval( MnState* s )
+{
+	return new(nx_alloc(sizeof(MnUpval))) MnUpval(s);
+}
+
 MnMFunction* nx_new_function( MnState* s )
 {
 	return new(nx_alloc(sizeof(MnMFunction))) MnMFunction(s);
@@ -1052,9 +1082,13 @@ MnIndex nx_absidx( MnState* s, MnIndex idx )
 	return abidx;
 }
 
-void nx_reserve_stack( MnState* s, OvInt sz )
+void nx_ensure_stack( MnState* s, OvInt sz )
 {
-	if ( sz > s->stack.size() ) s->stack.resize( sz );
+	if ( sz > s->stack.size() )
+	{
+		void* oldbase = &(s->stack[0]);
+		s->stack.resize( sz );
+	}
 }
 
 ///////////////////////* get/set top *///////////////////////
@@ -1063,7 +1097,7 @@ void mn_set_top( MnState* s, MnIndex idx )
 {
 	idx = nx_absidx( s, idx ) + 1;
 	idx = (idx < s->base)? s->base : idx;
-	nx_reserve_stack( s, idx );
+	nx_ensure_stack( s, idx );
 	while ( s->last > idx ) s->stack[--s->last] = MnValue();
 	s->last = idx;
 }
@@ -1229,7 +1263,6 @@ OvInt mn_collect_garbage( MnState* s )
 		MnMarking(itor->second);
 	}
 	MnIndex idx = s->last;
-	s->stack.resize( idx );
 	while ( idx-- ) MnMarking(s->stack[idx]);
 
 	MnObject* dead = NULL;
@@ -1344,6 +1377,10 @@ enum MnOperate
 	MOP_NONEOP = 0, 
 	MOP_NEWTABLE,
 	MOP_NEWARRAY,
+	MOP_NEWCLOSURE,
+
+	MOP_LINK_UPVAL,
+	MOP_LINK_STACK,
 
 	MOP_SET_STACK,
 	MOP_GET_STACK,
@@ -1418,6 +1455,45 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 		{
 		case MOP_NEWTABLE:	mn_new_table( s ); break;
 		case MOP_NEWARRAY:	mn_new_array( s ); break;
+		case MOP_NEWCLOSURE:
+			{
+				MnClosure* upcls = MnToClosure(nx_get_stack(s,0));
+				MnClosure* cls = nx_new_Mclosure(s);
+				MnClosure::MClosure* mcls = cls->u.m;
+				mcls->func = func->consts[i.ax-1];
+				mcls->upvals.resize( i.bx );
+
+				for( MnIndex idx = 0 ; idx < i.bx ; ++idx ) 
+				{
+					MnUpval* upval = nx_new_upval(s);
+					switch ( i.op )
+					{
+					case MOP_LINK_STACK: 
+						{
+							upval.link = nx_get_stack_ptr( s, i.eax );
+							s->upvals.push_back( upval );
+						}
+						break;
+					case MOP_LINK_UPVAL: 
+						{
+							MnClosure::Upval& upval = mcls->upvals.at( idx );
+							if ( upcls->type == MCL && upcls->u.m->upvals.size() <= i.eax )
+							{
+								upval.link = NULL;
+								upval.val = &(upcls->u.m->upvals.at( i.eax - 1 ));
+							}
+							else
+							{
+								upval.hold = MnValue();
+								upval.link = &upval.hold;
+								upval.val  = &upval;
+							}
+						}
+						break;
+					}
+				}
+			}
+			break;
 
 		case MOP_SET_STACK:	mn_set_stack( s, i.eax ); break;
 		case MOP_GET_STACK:	mn_get_stack( s, i.eax ); break;
@@ -1591,7 +1667,7 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 	MnIndex newlast = oldlast + nrets;
 	MnIndex first_ret  = s->last - r;
 	first_ret = max( oldlast, first_ret );
-	nx_reserve_stack( s, oldlast + max( nrets, r ) );
+	nx_ensure_stack( s, oldlast + max( nrets, r ) );
 
 	if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  s->stack[oldlast++] = s->stack[first_ret++];
 
@@ -1658,7 +1734,7 @@ OvInt cp_token( MnCompileState* cs, OvInt& num, OvString& str )
 	OvChar& c = cs->c;
 	num = 0;
 	str.clear();
-#define cp_read() (cs->is->Read(c))
+#define cp_read() (cs->is->Read(upcls))
 	while ( true )
 	{
 		if ( c == EOF  )
@@ -1733,6 +1809,7 @@ MnOperate cp_operate( MnCompileState* cs )
 
 		else if ( str == "newarray" ) return MOP_NEWARRAY;
 		else if ( str == "newtable" ) return MOP_NEWTABLE;
+		else if ( str == "newclosure" ) return MOP_NEWCLOSURE;
 
 		else if ( str == "setstack" ) return MOP_SET_STACK;
 		else if ( str == "getstack" ) return MOP_GET_STACK;
@@ -1830,9 +1907,6 @@ MnOperand cp_func_const( MnCompileState* cs, MnMFunction* func )
 
 void cp_build_func( MnCompileState* cs, MnMFunction* func )
 {
-	OvString str;
-	OvInt num;
-	OvInt tok;
 	while ( true )
 	{
 		MnInstruction i;
@@ -1858,6 +1932,19 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		case MOP_CALL:
 			i.ax = cp_operand(cs);
 			i.bx = cp_operand(cs);
+			break;
+		case MOP_NEWCLOSURE:
+			{
+// 				i.op = cp_operand(cs);
+// 				if ( i.op == '{' )
+// 				{
+// 					i.op = cp_operand(cs);
+// 					while ( i.op == '}' )
+// 					{
+// 
+// 					}
+// 				}
+			}
 			break;
 		case MOP_NONEOP:
 			func->codes.push_back( i );
