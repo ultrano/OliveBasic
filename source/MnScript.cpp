@@ -85,6 +85,7 @@ const MnTypeStr g_type_str[] =
 #define MnToArray( v ) (MnIsArray(v)? (v).u.cnt->u.arr : MnBadConvert())
 #define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.func: MnBadConvert())
 #define MnToClosure( v ) (MnIsClosure(v)? (v).u.cnt->u.cls: MnBadConvert())
+#define MnToUpval( v ) (MnIsUpval(v)? (v).u.cnt->u.upv: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
 OvBool ut_str2num( const OvString& str, OvReal &num ) 
@@ -128,7 +129,7 @@ class MnState : public OvMemObject
 public:
 	typedef OvMap<OvHash32,MnValue>		map_hash_val;
 	typedef OvMap<OvHash32,MnString*>	map_hash_str;
-	typedef OvList<MnUpval*>			list_upval;
+	typedef OvSet<MnUpval*>				set_upval;
 	typedef OvVector<MnValue>			vec_value;
 
 	MnObject*	 heap;
@@ -136,8 +137,8 @@ public:
 	map_hash_str strtable;
 	vec_value	 stack;
 
-	list_upval	 upvals;
-	list_upval	 openeduv;
+	set_upval	 upvals;
+	set_upval	 openeduv;
 
 	MnCallInfo*	 ci;
 	MnInstruction* pc;
@@ -211,6 +212,7 @@ public:
 		MnArray*  arr;
 		MnMFunction*  func;
 		MnClosure*  cls;
+		MnUpval*  upv;
 	} u;
 };
 
@@ -363,19 +365,22 @@ public:
 
 class MnUpval : public MnObject
 {
-	MnUpval( MnState* s ) : link(NULL), val(NULL) 
+public:
+	MnUpval( MnState* s ) : MnObject(s), link(NULL)
 	{
-
+		state->upvals.insert( this );
 	};
 	~MnUpval()
 	{ 
-		if ( val == this ) hold = MnValue(); 
+		state->upvals.erase( this );
+		if ( link == &hold ) hold = MnValue(); 
 	}
 	MnValue  hold;
 	MnValue* link;
 	virtual void marking()
 	{
-		if ( val == this ) MnMarking(hold);
+		mark = MARKED;
+		if ( link == &hold ) MnMarking(hold);
 	}
 };
 
@@ -393,11 +398,11 @@ public:
 	};
 
 	const MnCLType type;
+	OvVector<MnValue>	upvals;
 	union
 	{
 		CClosure* c;
 		MClosure* m;
-		OvVector<MnValue>	upvals;
 	} u;
 
 	MnClosure( MnState* s, MnCLType t );
@@ -588,32 +593,16 @@ MnClosure::MnClosure( MnState* s, MnCLType t )
 
 MnClosure::~MnClosure()
 {
-	if ( type == CCL )	u.c->upvals.clear();
-	else if ( type == MCL ) 
-	{
-		u.m->upvals.clear();
-		u.m->func = MnValue();
-	}
+	if ( type == MCL ) u.m->func = MnValue();
 	nx_free(u.c);
 }
 
 void MnClosure::marking()
 {
 	mark = MARKED;
-	if ( type == CCL )
+	for each ( const MnValue& uv in upvals )
 	{
-		for each ( const MnValue& uv in u.c->upvals )
-		{
-			MnMarking( uv );
-		}
-	}
-	else if ( type == MCL )
-	{
-		MnMarking(u.m->func);
-		for each ( const MnUpval& uv in u.m->upvals )
-		{
-			MnMarking( uv.hold );
-		}
+		MnMarking( uv );
 	}
 }
 
@@ -670,11 +659,29 @@ void mn_close_state( MnState* s )
 		s->stack.clear();
 		s->global.clear();
 		s->strtable.clear();
+		s->upvals.clear();
+		s->openeduv.clear();
 		mn_collect_garbage(s);
 		nx_free(s);
 	}
 }
 
+/////////////////////////* correct / close upval *//////////////////////////////
+
+void nx_correct_upval( MnState* s, MnValue* oldstack )
+{
+	MnValue* newstack = s->stack.size()? &(s->stack[0]) : NULL;
+	if ( oldstack && newstack )
+	{
+		for each ( MnUpval* upval in s->upvals )
+		{
+			if ( upval->link != &upval->hold )
+			{
+				upval->link = (upval->link - oldstack) + newstack;
+			}
+		}
+	}
+}
 
 ////////////////////////*    get/set stack, field    */////////////////////////////////
 
@@ -816,9 +823,9 @@ void nx_set_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx, MnValue& v )
 	if ( MnIsClosure(c) )
 	{
 		MnClosure* cls = MnToClosure(c);
-		if ( upvalidx > 0 && upvalidx <= cls->u.c->upvals.size() )
+		if ( upvalidx > 0 && upvalidx <= cls->upvals.size() )
 		{
-			cls->u.c->upvals[ upvalidx ] = v;
+			cls->upvals[ upvalidx ] = v;
 			return ;
 		}
 	}
@@ -830,20 +837,9 @@ MnValue nx_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx )
 	if ( MnIsClosure(c) )
 	{
 		MnClosure* cls = MnToClosure(c);
-		if ( cls->type == CCL )
+		if ( upvalidx > 0 && upvalidx <= cls->upvals.size() )
 		{
-			if ( upvalidx > 0 && upvalidx <= cls->u.c->upvals.size() )
-			{
-				return cls->u.c->upvals.at( upvalidx - 1 );
-			}
-		}
-		else
-		{
-			if ( upvalidx > 0 && upvalidx <= cls->u.m->upvals.size() )
-			{
-				MnClosure::Upval& upval = cls->u.m->upvals.at( upvalidx - 1 );
-				return *(upval.val->link);
-			}
+			return cls->upvals.at( upvalidx - 1 );
 		}
 	}
 	return MnValue();
@@ -1086,8 +1082,9 @@ void nx_ensure_stack( MnState* s, OvInt sz )
 {
 	if ( sz > s->stack.size() )
 	{
-		void* oldbase = &(s->stack[0]);
+		MnValue* oldstack = s->stack.size()? &(s->stack[0]) : NULL;
 		s->stack.resize( sz );
+		nx_correct_upval( s, oldstack );
 	}
 }
 
@@ -1140,10 +1137,10 @@ void mn_new_closure( MnState* s, MnCFunction proto, OvInt nupvals )
 {
 	MnClosure* cl = nx_new_Cclosure(s);
 	cl->u.c->func = proto;
-	cl->u.c->upvals.reserve(nupvals);
+	cl->upvals.reserve(nupvals);
 	for ( OvInt i = 0 ; i < nupvals ; ++i )
 	{
-		cl->u.c->upvals.push_back( nx_get_stack(s, i - nupvals ) );
+		cl->upvals.push_back( nx_get_stack(s, i - nupvals ) );
 	}
 	mn_pop(s,nupvals);
 	nx_push_value( s, MnValue(MOT_CLOSURE,cl) );
@@ -1457,36 +1454,37 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 		case MOP_NEWARRAY:	mn_new_array( s ); break;
 		case MOP_NEWCLOSURE:
 			{
-				MnClosure* upcls = MnToClosure(nx_get_stack(s,0));
 				MnClosure* cls = nx_new_Mclosure(s);
 				MnClosure::MClosure* mcls = cls->u.m;
 				mcls->func = func->consts[i.ax-1];
-				mcls->upvals.resize( i.bx );
+				cls->upvals.resize( i.bx );
 
 				for( MnIndex idx = 0 ; idx < i.bx ; ++idx ) 
 				{
-					MnUpval* upval = nx_new_upval(s);
 					switch ( i.op )
 					{
 					case MOP_LINK_STACK: 
 						{
-							upval.link = nx_get_stack_ptr( s, i.eax );
-							s->upvals.push_back( upval );
+							MnUpval* upval = nx_new_upval(s);
+							upval->link = nx_get_stack_ptr( s, i.eax );
+							cls->upvals.push_back( MnValue( MOT_UPVAL, upval ) );
+							s->openeduv.insert( upval );
 						}
 						break;
 					case MOP_LINK_UPVAL: 
 						{
-							MnClosure::Upval& upval = mcls->upvals.at( idx );
-							if ( upcls->type == MCL && upcls->u.m->upvals.size() <= i.eax )
+							MnClosure* upcls = MnToClosure(nx_get_stack(s,0));
+							
+							if ( upcls->upvals.size() <= i.eax )
 							{
-								upval.link = NULL;
-								upval.val = &(upcls->u.m->upvals.at( i.eax - 1 ));
+								cls->upvals.push_back( upcls->upvals.at(i.eax) );
 							}
 							else
 							{
-								upval.hold = MnValue();
-								upval.link = &upval.hold;
-								upval.val  = &upval;
+								MnUpval* upval = nx_new_upval(s);
+								upval->hold = MnValue();
+								upval->link = &upval->hold;
+								cls->upvals.push_back( MnValue( MOT_UPVAL, upval ) );
 							}
 						}
 						break;
@@ -1734,7 +1732,7 @@ OvInt cp_token( MnCompileState* cs, OvInt& num, OvString& str )
 	OvChar& c = cs->c;
 	num = 0;
 	str.clear();
-#define cp_read() (cs->is->Read(upcls))
+#define cp_read() (cs->is->Read(c))
 	while ( true )
 	{
 		if ( c == EOF  )
