@@ -194,8 +194,6 @@ MnValue			 nx_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx );
 
 void			 nx_push_value( MnState* s, const MnValue& v );
 
-void			 nx_call_closure( MnState* s, MnClosure* cls );
-
 //////////////////////////////////////////////////////////////////////////
 
 class MnRefCounter : public OvMemObject
@@ -1480,10 +1478,20 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 					{
 					case MOP_LINK_STACK: 
 						{
-							MnUpval* upval = nx_new_upval(s);
-							upval->link = nx_get_stack_ptr( s, i.eax );
-							cls->upvals.push_back( MnValue( MOT_UPVAL, upval ) );
-							s->openeduv.insert( upval );
+							MnUpval* upval = NULL;
+							MnValue* link = nx_get_stack_ptr( s, i.eax );
+							for each ( MnUpval* itor in s->upvals )
+							{
+								if ( link == itor->link ) {upval = itor; break; }
+							}
+
+							if ( !upval )
+							{
+								upval = nx_new_upval(s);
+								upval->link = link;
+								cls->upvals.push_back( MnValue( MOT_UPVAL, upval ) );
+								s->openeduv.insert( upval );
+							}
 						}
 						break;
 					case MOP_LINK_UPVAL: 
@@ -1675,6 +1683,8 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 			r = nx_exec_func( s, MnToFunction( mcl->func ) );
 		}
 	}
+
+	nx_close_upval( s, &(s->stack[ s->base ]) );
 
 	MnIndex oldlast = s->base - 1;
 	MnIndex newlast = oldlast + nrets;
