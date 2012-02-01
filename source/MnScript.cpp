@@ -600,6 +600,7 @@ MnClosure::~MnClosure()
 void MnClosure::marking()
 {
 	mark = MARKED;
+	if ( type == MCL ) MnMarking( u.m->func );
 	for each ( const MnValue& uv in upvals )
 	{
 		MnMarking( uv );
@@ -679,6 +680,20 @@ void nx_correct_upval( MnState* s, MnValue* oldstack )
 			{
 				upval->link = (upval->link - oldstack) + newstack;
 			}
+		}
+	}
+}
+
+void nx_close_upval( MnState* s, MnValue* stack )
+{
+	MnState::set_upval opened = s->openeduv;
+	for each ( MnUpval* upval in opened )
+	{
+		if ( (upval->link != &upval->hold) && (upval->link >= stack) )
+		{
+			upval->hold = *upval->link;
+			upval->link = &upval->hold;
+			s->openeduv.erase( upval );
 		}
 	}
 }
