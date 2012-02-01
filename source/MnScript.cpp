@@ -682,12 +682,12 @@ void nx_correct_upval( MnState* s, MnValue* oldstack )
 	}
 }
 
-void nx_close_upval( MnState* s, MnValue* stack )
+void nx_close_upval( MnState* s, MnValue* level )
 {
 	MnState::set_upval opened = s->openeduv;
 	for each ( MnUpval* upval in opened )
 	{
-		if ( (upval->link != &upval->hold) && (upval->link >= stack) )
+		if ( (upval->link != &upval->hold) && (upval->link >= level) )
 		{
 			upval->hold = *upval->link;
 			upval->link = &upval->hold;
