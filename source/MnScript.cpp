@@ -742,7 +742,7 @@ MnValue* nx_get_stack_ptr( MnState* s, MnIndex idx )
 {
 	idx = nx_absidx( s, idx );
 
-	if ( idx >= 0 && idx < s->stack.size() )
+	if ( idx >= s->base && idx < s->stack.size() )
 	{
 		return &(s->stack.at( idx ));
 	}
@@ -1657,8 +1657,9 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 	while ( oldlast > s->last ) s->stack[ s->last++ ] = MnValue();
 
 	ci = s->ci;
-	s->last  = newlast;
+	s->last = newlast;
 	s->base = ci->base;
+	s->pc	= ci->savepc;
 	s->ci	= ci->prev;
 	nx_free(ci);
 }
