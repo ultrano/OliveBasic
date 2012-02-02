@@ -639,7 +639,7 @@ MnObjType ut_str2type( const MnValue& val )
 
 ////////////////////*    open and close    *///////////////////
 
-MnState* mn_open_state()
+MnState* mn_openstate()
 {
 	MnState* s = new(nx_alloc(sizeof(MnState))) MnState;
 	s->base = 0;
@@ -649,7 +649,7 @@ MnState* mn_open_state()
 	return s;
 }
 
-void mn_close_state( MnState* s )
+void mn_closestate( MnState* s )
 {
 	if ( s )
 	{
@@ -863,18 +863,18 @@ OvBool nx_is_global( MnState* s, OvHash32 hash )
 	return ( s->global.find( hash ) != s->global.end() );
 }
 
-void mn_set_stack( MnState* s, MnIndex idx )
+void mn_setstack( MnState* s, MnIndex idx )
 {
 	nx_set_stack( s, idx, nx_get_stack(s,-1));
 	mn_pop(s,1);
 }
 
-void mn_get_stack( MnState* s, MnIndex idx )
+void mn_getstack( MnState* s, MnIndex idx )
 {
 	nx_push_value( s, nx_get_stack(s,idx) );
 }
 
-void mn_insert_stack( MnState* s, MnIndex idx )
+void mn_insertstack( MnState* s, MnIndex idx )
 {
 	idx = nx_absidx( s, idx );
 	if ( idx >= 0 && idx < s->last )
@@ -898,9 +898,9 @@ void mn_insert_stack( MnState* s, MnIndex idx )
 	}
 }
 
-void mn_set_field( MnState* s, MnIndex idx )
+void mn_setfield( MnState* s, MnIndex idx )
 {
-	if ( mn_get_top(s) >= 2 )
+	if ( mn_gettop(s) >= 2 )
 	{
 		if ( idx )
 		{
@@ -932,9 +932,9 @@ void mn_set_field( MnState* s, MnIndex idx )
 	}
 }
 
-void mn_get_field( MnState* s, MnIndex idx )
+void mn_getfield( MnState* s, MnIndex idx )
 {
-	if ( mn_get_top(s) >= 1 )
+	if ( mn_gettop(s) >= 1 )
 	{
 		MnValue val;
 		if ( idx )
@@ -966,7 +966,7 @@ void mn_get_field( MnState* s, MnIndex idx )
 	}
 }
 
-void mn_set_metatable( MnState* s, MnIndex idx )
+void mn_setmeta( MnState* s, MnIndex idx )
 {
 	MnValue t = nx_get_stack(s,idx);
 	MnValue v = nx_get_stack(s,-1);
@@ -984,7 +984,7 @@ void mn_set_metatable( MnState* s, MnIndex idx )
 	mn_pop(s,1);
 }
 
-void mn_get_metatable( MnState* s, MnIndex idx )
+void mn_getmeta( MnState* s, MnIndex idx )
 {
 	MnValue t = nx_get_stack(s,idx);
 	if ( MnIsTable(t) )
@@ -997,12 +997,12 @@ void mn_get_metatable( MnState* s, MnIndex idx )
 	}
 }
 
-void mn_set_upval( MnState* s, MnIndex upvalidx )
+void mn_setupval( MnState* s, MnIndex upvalidx )
 {
 	nx_set_upval(s, 0, upvalidx, nx_get_stack(s,-1));
 }
 
-void mn_get_upval( MnState* s, MnIndex upvalidx )
+void mn_getupval( MnState* s, MnIndex upvalidx )
 {
 	nx_push_value(s, nx_get_upval(s, 0, upvalidx ) );
 }
@@ -1081,7 +1081,7 @@ MnIndex nx_absidx( MnState* s, MnIndex idx )
 	MnIndex abidx = 0;
 	if ( idx < 0 )
 	{
-		abidx = mn_get_top(s) + idx;
+		abidx = mn_gettop(s) + idx;
 		abidx = s->base + abidx;
 	}
 	else if ( idx >= 0 )
@@ -1103,7 +1103,7 @@ void nx_ensure_stack( MnState* s, OvInt sz )
 
 ///////////////////////* get/set top *///////////////////////
 
-void mn_set_top( MnState* s, MnIndex idx )
+void mn_settop( MnState* s, MnIndex idx )
 {
 	idx = nx_absidx( s, idx ) + 1;
 	idx = (idx < s->base)? s->base : idx;
@@ -1112,7 +1112,7 @@ void mn_set_top( MnState* s, MnIndex idx )
 	s->last = idx;
 }
 
-MnIndex mn_get_top( MnState* s )
+MnIndex mn_gettop( MnState* s )
 {
 	return s->last - s->base;
 }
@@ -1121,22 +1121,22 @@ MnIndex mn_get_top( MnState* s )
 
 void nx_push_value( MnState* s, const MnValue& v )
 {
-	MnIndex top = mn_get_top(s);
-	mn_set_top( s, ++top );
+	MnIndex top = mn_gettop(s);
+	mn_settop( s, ++top );
 	nx_set_stack( s, top, v );
 }
 
-void mn_new_table( MnState* s )
+void mn_newtable( MnState* s )
 {
 	nx_push_value( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
 }
 
-void mn_new_array( MnState* s )
+void mn_newarray( MnState* s )
 {
 	nx_push_value( s, MnValue( MOT_ARRAY, nx_new_array(s) ) );
 }
 
-void mnd_new_garbege( MnState* s )
+void mnd_newgarbege( MnState* s )
 {
 	MnString* str = nx_new_string(s,"f1");
 	MnTable* t1 = nx_new_table(s);
@@ -1146,7 +1146,7 @@ void mnd_new_garbege( MnState* s )
 	t2->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t1))));
 }
 
-void mn_new_closure( MnState* s, MnCFunction proto, OvInt nupvals )
+void mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals )
 {
 	MnClosure* cl = nx_new_Cclosure(s);
 	cl->u.c->func = proto;
@@ -1159,61 +1159,61 @@ void mn_new_closure( MnState* s, MnCFunction proto, OvInt nupvals )
 	nx_push_value( s, MnValue(MOT_CLOSURE,cl) );
 }
 
-void mn_push_function( MnState* s, MnCFunction proto )
+void mn_pushfunction( MnState* s, MnCFunction proto )
 {
-	mn_new_closure(s,proto,0);
+	mn_newclosure(s,proto,0);
 }
 
-void mn_push_nil( MnState* s )
+void mn_pushnil( MnState* s )
 {
 	nx_push_value( s, MnValue() );
 }
 
-void mn_push_boolean( MnState* s, OvBool v )
+void mn_pushboolean( MnState* s, OvBool v )
 {
 	nx_push_value( s, MnValue( (OvBool)v ) );
 }
 
-void mn_push_number( MnState* s, OvReal v )
+void mn_pushnumber( MnState* s, OvReal v )
 {
 	nx_push_value( s, MnValue( (OvReal)v ) );
 }
 
-void mn_push_string( MnState* s, const OvString& v )
+void mn_pushstring( MnState* s, const OvString& v )
 {
 	nx_push_value( s, MnValue( MOT_STRING, nx_new_string( s, v ) ) );
 }
 
-void mn_push_stack( MnState* s, MnIndex idx )
+void mn_pushstack( MnState* s, MnIndex idx )
 {
 	nx_push_value( s, nx_get_stack(s, idx) );
 }
 
 /////////////////////*  all kinds of "is"    *///////////////////////////
 
-OvBool mn_is_nil( MnState* s, MnIndex idx )
+OvBool mn_isnil( MnState* s, MnIndex idx )
 {
 	return MnIsNil( nx_get_stack( s, idx ) );
 }
 
-OvBool mn_is_boolean( MnState* s, MnIndex idx )
+OvBool mn_isboolean( MnState* s, MnIndex idx )
 {
 	return MnIsBoolean( nx_get_stack( s, idx ) );
 }
 
-OvBool mn_is_number( MnState* s, MnIndex idx )
+OvBool mn_isnumber( MnState* s, MnIndex idx )
 {
 	return MnIsNumber( nx_get_stack( s, idx ) );
 }
 
-OvBool mn_is_string( MnState* s, MnIndex idx )
+OvBool mn_isstring( MnState* s, MnIndex idx )
 {
 	return MnIsString( nx_get_stack( s, idx ) );
 }
 
 /////////////////////*  all kinds of "to"    *///////////////////////////
 
-OvBool mn_to_boolean( MnState* s, MnIndex idx )
+OvBool mn_toboolean( MnState* s, MnIndex idx )
 {
 	MnValue val = nx_get_stack( s, idx );
 	if ( MnIsBoolean(val) )
@@ -1231,7 +1231,7 @@ OvBool mn_to_boolean( MnState* s, MnIndex idx )
 	return false;
 }
 
-OvReal mn_to_number( MnState* s, MnIndex idx )
+OvReal mn_tonumber( MnState* s, MnIndex idx )
 {
 	MnValue val = nx_get_stack( s, idx );
 	if ( MnIsNumber(val) )
@@ -1246,7 +1246,7 @@ OvReal mn_to_number( MnState* s, MnIndex idx )
 	return 0;
 }
 
-OvString mn_to_string( MnState* s, MnIndex idx )
+OvString mn_tostring( MnState* s, MnIndex idx )
 {
 	MnValue val = nx_get_stack( s, idx );
 	if ( MnIsString(val) )
@@ -1313,15 +1313,15 @@ OvInt mt_global_length(MnState* s)
 	MnValue arg1 = nx_get_stack(s,1);
 	if ( MnIsArray(arg1) )
 	{
-		mn_push_number( s, (OvReal)MnToArray(arg1)->array.size() );
+		mn_pushnumber( s, (OvReal)MnToArray(arg1)->array.size() );
 	}
 	else if ( MnIsTable(arg1) )
 	{
-		mn_push_number( s, (OvReal)MnToTable(arg1)->table.size() );
+		mn_pushnumber( s, (OvReal)MnToTable(arg1)->table.size() );
 	}
 	else
 	{
-		mn_push_nil( s );
+		mn_pushnil( s );
 	}
 	return 1;
 }
@@ -1339,34 +1339,34 @@ OvInt mt_global_resize( MnState* s )
 
 OvInt mt_collect_garbage( MnState* s )
 {
-	mn_push_number( s, mn_collect_garbage(s) );
+	mn_pushnumber( s, mn_collect_garbage(s) );
 	return 1;
 }
 
 OvInt mt_print( MnState* s )
 {
-	printf( mn_to_string(s,1).c_str() );
+	printf( mn_tostring(s,1).c_str() );
 	printf( "\n" );
 	return 0;
 }
 
-void mn_default_lib( MnState* s )
+void mn_lib_default( MnState* s )
 {
-	mn_push_string( s, "length" );
-	mn_push_function( s, mt_global_length );
-	mn_set_global( s );
+	mn_pushstring( s, "length" );
+	mn_pushfunction( s, mt_global_length );
+	mn_setglobal( s );
 
-	mn_push_string( s, "resize" );
-	mn_push_function( s, mt_global_resize );
-	mn_set_global( s );
+	mn_pushstring( s, "resize" );
+	mn_pushfunction( s, mt_global_resize );
+	mn_setglobal( s );
 
-	mn_push_string( s, "collect_garbage" );
-	mn_push_function( s, mt_collect_garbage );
-	mn_set_global( s );
+	mn_pushstring( s, "collect_garbage" );
+	mn_pushfunction( s, mt_collect_garbage );
+	mn_setglobal( s );
 
-	mn_push_string( s, "print" );
-	mn_push_function( s, mt_print);
-	mn_set_global( s );
+	mn_pushstring( s, "print" );
+	mn_pushfunction( s, mt_print);
+	mn_setglobal( s );
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1463,8 +1463,8 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 		MnInstruction i = *s->pc; ++s->pc;
 		switch ( i.op )
 		{
-		case MOP_NEWTABLE:	mn_new_table( s ); break;
-		case MOP_NEWARRAY:	mn_new_array( s ); break;
+		case MOP_NEWTABLE:	mn_newtable( s ); break;
+		case MOP_NEWARRAY:	mn_newarray( s ); break;
 		case MOP_NEWCLOSURE:
 			{
 				MnClosure* cls = nx_new_Mclosure(s);
@@ -1475,21 +1475,21 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 			}
 			break;
 
-		case MOP_SET_STACK:	mn_set_stack( s, i.eax ); break;
-		case MOP_GET_STACK:	mn_get_stack( s, i.eax ); break;
-		case MOP_INSERT_STACK:	mn_insert_stack( s, i.eax ); break;
+		case MOP_SET_STACK:	mn_setstack( s, i.eax ); break;
+		case MOP_GET_STACK:	mn_getstack( s, i.eax ); break;
+		case MOP_INSERT_STACK:	mn_insertstack( s, i.eax ); break;
 
-		case MOP_SET_FIELD:	mn_set_field( s, i.eax); break;
-		case MOP_GET_FIELD:	mn_get_field( s, i.eax); break;
+		case MOP_SET_FIELD:	mn_setfield( s, i.eax); break;
+		case MOP_GET_FIELD:	mn_getfield( s, i.eax); break;
 
-		case MOP_SET_GLOBAL:	mn_set_global( s ); break;
-		case MOP_GET_GLOBAL:	mn_get_global( s ); break;
+		case MOP_SET_GLOBAL:	mn_setglobal( s ); break;
+		case MOP_GET_GLOBAL:	mn_getglobal( s ); break;
 
-		case MOP_SET_META:	mn_set_metatable( s, i.eax ); break;
-		case MOP_GET_META:	mn_get_metatable( s, i.eax ); break;
+		case MOP_SET_META:	mn_setmeta( s, i.eax ); break;
+		case MOP_GET_META:	mn_getmeta( s, i.eax ); break;
 
-		case MOP_SET_UPVAL:	mn_set_upval( s, i.eax ); break;
-		case MOP_GET_UPVAL:	mn_get_upval( s, i.eax ); break;
+		case MOP_SET_UPVAL:	mn_setupval( s, i.eax ); break;
+		case MOP_GET_UPVAL:	mn_getupval( s, i.eax ); break;
 
 		case MOP_PUSH:		nx_push_value( s, func->consts[i.eax-1] ); break;
 		case MOP_POP:		mn_pop( s, i.eax ); break;
@@ -1509,15 +1509,15 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 
 		case MOP_NOT:
 			{
-				OvBool b = mn_to_boolean(s,-1);
+				OvBool b = mn_toboolean(s,-1);
 				mn_pop(s,1);
-				mn_push_boolean(s,!b);
+				mn_pushboolean(s,!b);
 			}
 			break;
 
 		case MOP_CMP:
 			{
-				OvBool b = mn_to_boolean(s,-1);
+				OvBool b = mn_toboolean(s,-1);
 				mn_pop(s,1);
 				if ( !b ) ++s->pc;
 			}
@@ -1527,32 +1527,32 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 		case MOP_LT:
 		case MOP_GT:
 			{
-				if ( mn_is_number(s,-2) && mn_is_number(s,-1) )
+				if ( mn_isnumber(s,-2) && mn_isnumber(s,-1) )
 				{
-					OvReal na = mn_to_number(s,-2);
-					OvReal nb = mn_to_number(s,-1);
+					OvReal na = mn_tonumber(s,-2);
+					OvReal nb = mn_tonumber(s,-1);
 					mn_pop(s,2);
-					if ( i.op == MOP_EQ ) mn_push_boolean( s, (na == nb) );
-					else if ( i.op == MOP_LT ) mn_push_boolean( s, (na < nb) );
-					else if ( i.op == MOP_GT ) mn_push_boolean( s, (na > nb) );
-					else mn_push_nil(s);
+					if ( i.op == MOP_EQ ) mn_pushboolean( s, (na == nb) );
+					else if ( i.op == MOP_LT ) mn_pushboolean( s, (na < nb) );
+					else if ( i.op == MOP_GT ) mn_pushboolean( s, (na > nb) );
+					else mn_pushnil(s);
 				}
-				else if ( mn_is_string(s,-2) && mn_is_string(s,-1) )
+				else if ( mn_isstring(s,-2) && mn_isstring(s,-1) )
 				{
-					OvString sa = mn_to_string(s,-2);
-					OvString sb = mn_to_string(s,-1);
+					OvString sa = mn_tostring(s,-2);
+					OvString sb = mn_tostring(s,-1);
 					mn_pop(s,2);
-					if ( i.op == MOP_EQ ) mn_push_boolean( s, ( sa == sb ) );
-					else mn_push_nil(s);
+					if ( i.op == MOP_EQ ) mn_pushboolean( s, ( sa == sb ) );
+					else mn_pushnil(s);
 				}
 				else
 				{
-					mn_get_metatable(s,-2);
-					if ( i.op == MOP_EQ ) mn_push_string(s,"__eq");
-					else if ( i.op == MOP_LT ) mn_push_string(s,"__lt");
-					else if ( i.op == MOP_GT ) mn_push_string(s,"__gt");
-					mn_get_field(s,-2);
-					mn_insert_stack(s,-4);
+					mn_getmeta(s,-2);
+					if ( i.op == MOP_EQ ) mn_pushstring(s,"__eq");
+					else if ( i.op == MOP_LT ) mn_pushstring(s,"__lt");
+					else if ( i.op == MOP_GT ) mn_pushstring(s,"__gt");
+					mn_getfield(s,-2);
+					mn_insertstack(s,-4);
 					mn_pop(s,1);
 					mn_call(s,2,1);
 				}
@@ -1564,10 +1564,10 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 		case MOP_MUL:
 		case MOP_DIV:
 			{
-				if ( mn_is_number(s,-2) )
+				if ( mn_isnumber(s,-2) )
 				{
-					OvReal na = mn_to_number(s,-2);
-					OvReal nb = mn_to_number(s,-1);
+					OvReal na = mn_tonumber(s,-2);
+					OvReal nb = mn_tonumber(s,-1);
 					mn_pop(s,2);
 
 					switch (i.op)
@@ -1578,29 +1578,29 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 					case MOP_DIV: na /= nb; break;
 					}
 
-					mn_push_number( s, na );
+					mn_pushnumber( s, na );
 				}
-				else if ( mn_is_string(s,-2) )
+				else if ( mn_isstring(s,-2) )
 				{
-					OvString sa = mn_to_string(s,-2);
-					OvString sb = mn_to_string(s,-1);
+					OvString sa = mn_tostring(s,-2);
+					OvString sb = mn_tostring(s,-1);
 					
 					if ( i.op == MOP_ADD )
 					{
 						mn_pop(s,2);
-						mn_push_string( s, sa+sb );
+						mn_pushstring( s, sa+sb );
 					}
 					else mn_pop(s,1);
 				}
 				else
 				{
-					mn_get_metatable(s,-2);
-					if ( i.op == MOP_ADD ) mn_push_string(s,"__add");
-					else if ( i.op == MOP_SUB ) mn_push_string(s,"__sub");
-					else if ( i.op == MOP_MUL ) mn_push_string(s,"__mul");
-					else if ( i.op == MOP_DIV ) mn_push_string(s,"__div");
-					mn_get_field(s,-2);
-					mn_insert_stack(s,-4);
+					mn_getmeta(s,-2);
+					if ( i.op == MOP_ADD ) mn_pushstring(s,"__add");
+					else if ( i.op == MOP_SUB ) mn_pushstring(s,"__sub");
+					else if ( i.op == MOP_MUL ) mn_pushstring(s,"__mul");
+					else if ( i.op == MOP_DIV ) mn_pushstring(s,"__div");
+					mn_getfield(s,-2);
+					mn_insertstack(s,-4);
 					mn_pop(s,1);
 					mn_call(s,2,1);
 				}
@@ -1699,8 +1699,8 @@ enum eErrCode
 void cp_call_errfunc( MnCompileState* cs, OvInt errcode, const OvString& msg )
 {
 	nx_push_value( cs->state, cs->errfunc );
-	mn_push_number( cs->state, errcode );
-	mn_push_string( cs->state, msg );
+	mn_pushnumber( cs->state, errcode );
+	mn_pushstring( cs->state, msg );
 	mn_call( cs->state, 2, 0 );
 }
 

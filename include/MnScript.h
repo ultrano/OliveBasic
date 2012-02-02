@@ -5,49 +5,49 @@ typedef OvInt	MnIndex;
 class MnState;
 typedef OvInt (*MnCFunction)(MnState*);
 
-MnState*		mn_open_state();
-void			mn_close_state( MnState* s );
-void			mn_default_lib( MnState* s );
+MnState*		mn_openstate();
+void			mn_closestate( MnState* s );
+void			mn_lib_default( MnState* s );
 
-void			mn_set_stack( MnState* s, MnIndex idx );
-void			mn_get_stack( MnState* s, MnIndex idx );
-void			mn_insert_stack( MnState* s, MnIndex idx );
+void			mn_setstack( MnState* s, MnIndex idx );
+void			mn_getstack( MnState* s, MnIndex idx );
+void			mn_insertstack( MnState* s, MnIndex idx );
 
-void			mn_set_field( MnState* s, MnIndex idx );
-void			mn_get_field( MnState* s, MnIndex idx );
+void			mn_setfield( MnState* s, MnIndex idx );
+void			mn_getfield( MnState* s, MnIndex idx );
 
-#define			mn_set_global(s) mn_set_field((s),0)
-#define			mn_get_global(s) mn_get_field((s),0)
+#define			mn_setglobal(s) mn_setfield((s),0)
+#define			mn_getglobal(s) mn_getfield((s),0)
 
-void			mn_set_metatable( MnState* s, MnIndex idx );
-void			mn_get_metatable( MnState* s, MnIndex idx );
+void			mn_setmeta( MnState* s, MnIndex idx );
+void			mn_getmeta( MnState* s, MnIndex idx );
 
-void			mn_set_upval( MnState* s, MnIndex upvalidx );
-void			mn_get_upval( MnState* s, MnIndex upvalidx );
+void			mn_setupval( MnState* s, MnIndex upvalidx );
+void			mn_getupval( MnState* s, MnIndex upvalidx );
 
-void			mn_set_top( MnState* s, MnIndex idx );
-MnIndex			mn_get_top( MnState* s );
-#define			mn_pop(s,n) mn_set_top( (s), -(n)-1 )
+void			mn_settop( MnState* s, MnIndex idx );
+MnIndex			mn_gettop( MnState* s );
+#define			mn_pop(s,n) mn_settop( (s), -(n)-1 )
 
-void			mn_new_table( MnState* s );
-void			mn_new_array( MnState* s );
-void			mnd_new_garbege( MnState* s );
-void			mn_new_closure( MnState* s, MnCFunction proto, OvInt nupvals );
-void			mn_push_function( MnState* s, MnCFunction proto );
-void			mn_push_nil( MnState* s );
-void			mn_push_boolean( MnState* s, OvBool v );
-void			mn_push_number( MnState* s, OvReal v );
-void			mn_push_string( MnState* s, const OvString& v );
-void			mn_push_stack( MnState* s, MnIndex idx );
+void			mn_newtable( MnState* s );
+void			mn_newarray( MnState* s );
+void			mnd_newgarbege( MnState* s );
+void			mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals );
+void			mn_pushfunction( MnState* s, MnCFunction proto );
+void			mn_pushnil( MnState* s );
+void			mn_pushboolean( MnState* s, OvBool v );
+void			mn_pushnumber( MnState* s, OvReal v );
+void			mn_pushstring( MnState* s, const OvString& v );
+void			mn_pushstack( MnState* s, MnIndex idx );
 
-OvBool			mn_is_nil( MnState* s, MnIndex idx );
-OvBool			mn_is_boolean( MnState* s, MnIndex idx );
-OvBool			mn_is_number( MnState* s, MnIndex idx );
-OvBool			mn_is_string( MnState* s, MnIndex idx );
+OvBool			mn_isnil( MnState* s, MnIndex idx );
+OvBool			mn_isboolean( MnState* s, MnIndex idx );
+OvBool			mn_isnumber( MnState* s, MnIndex idx );
+OvBool			mn_isstring( MnState* s, MnIndex idx );
 
-OvBool			mn_to_boolean( MnState* s, MnIndex idx );
-OvReal			mn_to_number( MnState* s, MnIndex idx );
-OvString		mn_to_string( MnState* s, MnIndex idx );
+OvBool			mn_toboolean( MnState* s, MnIndex idx );
+OvReal			mn_tonumber( MnState* s, MnIndex idx );
+OvString		mn_tostring( MnState* s, MnIndex idx );
 
 void			mn_call( MnState* s, OvInt nargs, OvInt nrets );
 

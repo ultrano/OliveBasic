@@ -9,13 +9,13 @@ using namespace std;
 OvRTTI_IMPL(OvObject);
 
 OvObject::OvObject()
-: m_state( mn_open_state() )
+: m_state( mn_openstate() )
 {
 	m_idObjectID = OvObjectManager::GetInstance()->AllocObjectID(this);
 }
 OvObject::~OvObject()
 {
-	mn_close_state( m_state );
+	mn_closestate( m_state );
 	OvObjectManager::GetInstance()->RecallObjectID( GetObjectID() );
 }
 
