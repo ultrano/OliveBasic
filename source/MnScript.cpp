@@ -1674,7 +1674,7 @@ struct MnCompileState : public OvMemObject
 };
 
 void cp_build_func( MnCompileState* cs, MnMFunction* func );
-void mn_load_asm( MnState* s, const OvString& file, MnIndex idx )
+void mn_do_asm( MnState* s, const OvString& file, MnIndex idx )
 {
 	OvFileInputStream fis( file );
 	MnCompileState cs;

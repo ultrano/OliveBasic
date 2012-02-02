@@ -1,6 +1,8 @@
 #pragma once
 #include "OvTypeDef.h"
 
+/* Mini Script version_lite */
+
 typedef OvInt	MnIndex;
 class MnState;
 typedef OvInt (*MnCFunction)(MnState*);
@@ -54,4 +56,4 @@ void			mn_call( MnState* s, OvInt nargs, OvInt nrets );
 OvInt			mn_collect_garbage( MnState* s );
 
 
-void mn_load_asm( MnState* s, const OvString& file, MnIndex idx );
+void mn_do_asm( MnState* s, const OvString& file, MnIndex idx );
