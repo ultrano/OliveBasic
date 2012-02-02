@@ -1422,7 +1422,7 @@ enum MnOperate
 	MOP_NOT,
 	MOP_CMP,
 	MOP_JMP,
-
+	MOP_RET,
 
 	MOP_ADD,
 	MOP_SUB,
@@ -1505,6 +1505,7 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 			break;
 
 		case MOP_JMP: s->pc += (i.eax - 1); break;
+		case MOP_RET: return i.eax;
 
 		case MOP_NOT:
 			{
@@ -1815,6 +1816,7 @@ MnOperate cp_str2op( OvString str )
 	else if ( str == "gt" )   return MOP_GT;
 
 	else if ( str == "call" )   return MOP_CALL;
+	else if ( str == "ret" )   return MOP_RET;
 
 	else if ( str == "linkstack" )   return MOP_LINK_STACK;
 	else if ( str == "linkupval" )   return MOP_LINK_UPVAL;
@@ -1931,6 +1933,7 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		case MOP_GET_UPVAL:
 		case MOP_POP:
 		case MOP_JMP:
+		case MOP_RET:
 			i.eax = cp_operand(cs);
 			break;
 		case MOP_PUSH:
