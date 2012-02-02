@@ -1883,21 +1883,41 @@ MnOperand cp_func_const( MnCompileState* cs, MnMFunction* func )
 	{
 		if ( str == "false" || str == "true" )
 		{
+			for ( MnIndex i = 0 ; i < func->consts.size() ; ++i )
+			{
+				MnValue& val = func->consts[i];
+				if ( MnIsBoolean(val) && MnToBoolean(val) == (str=="true") ) return (i+1);
+			}
 			func->consts.push_back( MnValue( (OvBool)(str=="true") ) );
 		}
 		else if ( str == "nil" )
 		{
+			for ( MnIndex i = 0 ; i < func->consts.size() ; ++i )
+			{
+				MnValue& val = func->consts[i];
+				if ( MnIsNil(val) ) return (i+1);
+			}
 			func->consts.push_back( MnValue() );
 		}
 		return func->consts.size();
 	}
 	else if ( tok == eTString )
 	{
+		for ( MnIndex i = 0 ; i < func->consts.size() ; ++i )
+		{
+			MnValue& val = func->consts[i];
+			if ( MnIsString(val) && MnToString(val)->get_str() == str ) return (i+1);
+		}
 		func->consts.push_back( MnValue( MOT_STRING, nx_new_string(cs->state,str) ) );
 		return func->consts.size();
 	}
 	else if ( tok == eTNumber )
 	{
+		for ( MnIndex i = 0 ; i < func->consts.size() ; ++i )
+		{
+			MnValue& val = func->consts[i];
+			if ( MnIsNumber(val) && MnToNumber(val) == num ) return (i+1);
+		}
 		func->consts.push_back( MnValue( (OvReal)num ) );
 		return func->consts.size();
 	}
