@@ -49,11 +49,11 @@ const MnTypeStr g_type_str[] =
 	{ MOT_UPVAL, "upval" },
 	{ MOT_USER, "user" },
 };
-#define META_EQ ("__eq")
-#define META_LT ("__lt")
-#define META_GT ("__gt")
-#define META_SF ("__setfield")
-#define META_GF ("__getfield")
+#define METHOD_EQ ("__eq")
+#define METHOD_LT ("__lt")
+#define METHOD_GT ("__gt")
+#define METHOD_SF ("__setfield")
+#define METHOD_GF ("__getfield")
 //////////////////////////////////////////////////////////////////////////
 
 #define MARKED (1)
@@ -797,7 +797,7 @@ MnValue ut_getstack( MnState* s, MnIndex idx )
 void ut_callmeta_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v ) 
 {
 	ut_pushvalue( s, ut_getmeta( s, c ) );
-	mn_pushstring( s, META_SF );
+	mn_pushstring( s, METHOD_SF );
 	mn_getfield( s, -2 );
 
 	ut_pushvalue( s, c );
@@ -829,7 +829,7 @@ void ut_settable( MnState* s, MnValue& t, MnValue& n, MnValue& v )
 MnValue ut_callmeta_getfield( MnState* s, MnValue& c, MnValue& n ) 
 {
 	ut_pushvalue( s, ut_getmeta( s, c ) );
-	mn_pushstring( s, META_GF );
+	mn_pushstring( s, METHOD_GF );
 	mn_getfield( s, -2 );
 
 	ut_pushvalue( s, c );
@@ -1598,9 +1598,9 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 				else
 				{
 					mn_getmeta(s,-2);
-					if ( i.op == MOP_EQ ) mn_pushstring(s,"__eq");
-					else if ( i.op == MOP_LT ) mn_pushstring(s,"__lt");
-					else if ( i.op == MOP_GT ) mn_pushstring(s,"__gt");
+					if ( i.op == MOP_EQ ) mn_pushstring(s,METHOD_EQ);
+					else if ( i.op == MOP_LT ) mn_pushstring(s,METHOD_LT);
+					else if ( i.op == MOP_GT ) mn_pushstring(s,METHOD_GT);
 					mn_getfield(s,-2);
 					mn_insertstack(s,-4);
 					mn_pop(s,1);
