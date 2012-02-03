@@ -49,11 +49,17 @@ const MnTypeStr g_type_str[] =
 	{ MOT_UPVAL, "upval" },
 	{ MOT_USER, "user" },
 };
+
 #define METHOD_EQ ("__eq")
 #define METHOD_LT ("__lt")
 #define METHOD_GT ("__gt")
 #define METHOD_SF ("__setfield")
 #define METHOD_GF ("__getfield")
+#define METHOD_ADD ("__add")
+#define METHOD_SUB ("__sub")
+#define METHOD_MUL ("__mul")
+#define METHOD_DIV ("__div")
+
 //////////////////////////////////////////////////////////////////////////
 
 #define MARKED (1)
@@ -1263,9 +1269,8 @@ OvBool mn_isstring( MnState* s, MnIndex idx )
 
 /////////////////////*  all kinds of "to"    *///////////////////////////
 
-OvBool mn_toboolean( MnState* s, MnIndex idx )
+OvBool ut_toboolean( MnValue val ) 
 {
-	MnValue val = ut_getstack( s, idx );
 	if ( MnIsBoolean(val) )
 	{
 		return MnToBoolean(val);
@@ -1281,9 +1286,14 @@ OvBool mn_toboolean( MnState* s, MnIndex idx )
 	return false;
 }
 
-OvReal mn_tonumber( MnState* s, MnIndex idx )
+OvBool mn_toboolean( MnState* s, MnIndex idx )
 {
-	MnValue val = ut_getstack( s, idx );
+	return ut_toboolean( ut_getstack( s, idx ) );
+
+}
+
+OvReal ut_tonumber( MnValue val ) 
+{
 	if ( MnIsNumber(val) )
 	{
 		return MnToNumber(val);
@@ -1296,9 +1306,14 @@ OvReal mn_tonumber( MnState* s, MnIndex idx )
 	return 0;
 }
 
-OvString mn_tostring( MnState* s, MnIndex idx )
+OvReal mn_tonumber( MnState* s, MnIndex idx )
 {
-	MnValue val = ut_getstack( s, idx );
+	return ut_tonumber( ut_getstack( s, idx ) );
+
+}
+
+OvString ut_tostring( MnValue val ) 
+{
 	if ( MnIsString(val) )
 	{
 		return MnToString(val)->get_str();
@@ -1309,9 +1324,13 @@ OvString mn_tostring( MnState* s, MnIndex idx )
 		ut_num2str( MnToNumber(val), str );
 		return str;
 	}
-
 	static OvString empty;
 	return empty;
+}
+
+OvString mn_tostring( MnState* s, MnIndex idx )
+{
+	return ut_tostring( ut_getstack( s, idx ) );
 }
 
 OvInt mn_collect_garbage( MnState* s )
@@ -1421,6 +1440,44 @@ void mn_lib_default( MnState* s )
 
 //////////////////////////////////////////////////////////////////////////
 
+MnValue ut_callmeta_arith( MnState* s,const OvString& op, MnValue& a, MnValue& b )
+{
+	if ( MnIsNumber(a) )
+	{
+		OvReal ret = MnToNumber(a);
+		if ( op == METHOD_ADD ) ret += ut_tonumber(b);
+		else if ( op == METHOD_SUB ) ret -= ut_tonumber(b);
+		else if ( op == METHOD_MUL ) ret *= ut_tonumber(b);
+		else if ( op == METHOD_DIV ) ret /= ut_tonumber(b);
+		return MnValue( ret );
+	}
+	else if ( MnIsString(a) )
+	{
+		OvString ret = MnToString(a);
+		OvString sb = ut_tostring(b);
+
+		if ( op == METHOD_ADD )
+		{
+			mn_pop(s,2);
+			mn_pushstring( s, sa+sb );
+		}
+		else mn_pop(s,1);
+	}
+	else
+	{
+		mn_getmeta(s,-2);
+		if ( i.op == MOP_ADD ) mn_pushstring(s,"__add");
+		else if ( i.op == MOP_SUB ) mn_pushstring(s,"__sub");
+		else if ( i.op == MOP_MUL ) mn_pushstring(s,"__mul");
+		else if ( i.op == MOP_DIV ) mn_pushstring(s,"__div");
+		mn_getfield(s,-2);
+		mn_insertstack(s,-4);
+		mn_pop(s,1);
+		mn_call(s,2,1);
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
 struct MnInstruction : public OvMemObject
 {
 	OvByte op;
