@@ -12,6 +12,7 @@ class MnArray;
 class MnMFunction;
 class MnClosure;
 class MnUpval;
+class MnUserData;
 struct MnInstruction;
 
 typedef OvUShort MnOperand;
@@ -67,6 +68,7 @@ const MnTypeStr g_type_str[] =
 #define MnIsFunction( v ) ((v).type == MOT_FUNCPROTO)
 #define MnIsClosure( v ) ((v).type == MOT_CLOSURE)
 #define MnIsUpval( v ) ((v).type == MOT_UPVAL)
+#define MnIsUser( v ) ((v).type == MOT_USER)
 #define MnIsObj( v ) \
 	( \
 	MnIsString((v)) ||  \
@@ -86,6 +88,7 @@ const MnTypeStr g_type_str[] =
 #define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.func: MnBadConvert())
 #define MnToClosure( v ) (MnIsClosure(v)? (v).u.cnt->u.cls: MnBadConvert())
 #define MnToUpval( v ) (MnIsUpval(v)? (v).u.cnt->u.upv: MnBadConvert())
+#define MnToUser( v ) (MnIsUser(v)? (v).u.cnt->u.user: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
 OvBool ut_str2num( const OvString& str, OvReal &num ) 
@@ -176,23 +179,23 @@ MnIndex			 nx_absidx( MnState* s, MnIndex idx );
 
 OvBool			 nx_is_global( MnState* s, OvHash32 hash );
 
-void			 nx_set_global( MnState* s, MnValue& n, const MnValue& val );
-MnValue			 nx_get_global( MnState* s, MnValue& n );
+void			 ut_setglobal( MnState* s, MnValue& n, const MnValue& val );
+MnValue			 ut_getglobal( MnState* s, MnValue& n );
 
 
 void			 nx_set_stack( MnState* s, MnIndex idx, const MnValue& val );
-MnValue			 nx_get_stack( MnState* s, MnIndex idx );
+MnValue			 ut_getstack( MnState* s, MnIndex idx );
 
 void			 nx_set_table( MnState* s, MnValue& t, MnValue& n, MnValue& v );
-MnValue			 nx_get_table( MnState* s, MnValue& t, MnValue& n );
+MnValue			 ut_gettable( MnState* s, MnValue& t, MnValue& n );
 
 void			 nx_set_array( MnState* s, MnValue& t, MnValue& n, MnValue& v );
-MnValue			 nx_get_array( MnState* s, MnValue& t, MnValue& n );
+MnValue			 ut_getarray( MnState* s, MnValue& t, MnValue& n );
 
 void			 nx_set_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx,MnValue& v );
 MnValue			 nx_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx );
 
-void			 nx_push_value( MnState* s, const MnValue& v );
+void			 ut_pushvalue( MnState* s, const MnValue& v );
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -204,13 +207,14 @@ public:
 	OvInt		wcnt;
 	union
 	{
-		MnObject* obj;
-		MnString* str;
-		MnTable*  tbl;
-		MnArray*  arr;
-		MnMFunction*  func;
-		MnClosure*  cls;
-		MnUpval*  upv;
+		MnObject* 		obj;
+		MnString* 		str;
+		MnTable*  		tbl;
+		MnArray*  		arr;
+		MnMFunction*	func;
+		MnClosure*		cls;
+		MnUpval*		upv;
+		MnUserData*		user;
 	} u;
 };
 
@@ -382,6 +386,8 @@ public:
 	}
 };
 
+//////////////////////////////////////////////////////////////////////////
+
 class MnClosure : public MnObject
 {
 public:
@@ -408,6 +414,25 @@ public:
 
 	virtual void marking();
 
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+class MnUserData : public MnObject
+{
+public:
+
+	MnUserData( MnState* s ) : MnObject(s), ptr(NULL) {};
+	~MnUserData() { ptr = NULL; };
+
+	void* ptr;
+	MnValue	metatable;
+
+	virtual void marking() 
+	{
+		mark = MARKED;
+		MnMarking( metatable );
+	};
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -698,7 +723,7 @@ void nx_close_upval( MnState* s, MnValue* level )
 
 ////////////////////////*    get/set stack, field    */////////////////////////////////
 
-void nx_set_global( MnState* s, MnValue& n, const MnValue& val )
+void ut_setglobal( MnState* s, MnValue& n, const MnValue& val )
 {
 	if ( MnIsString(n) )
 	{
@@ -715,7 +740,7 @@ void nx_set_global( MnState* s, MnValue& n, const MnValue& val )
 	}
 }
 
-MnValue nx_get_global( MnState* s, MnValue& n )
+MnValue ut_getglobal( MnState* s, MnValue& n )
 {
 	if ( MnIsString(n) )
 	{
@@ -752,7 +777,7 @@ MnValue* nx_get_stack_ptr( MnState* s, MnIndex idx )
 	}
 }
 
-MnValue nx_get_stack( MnState* s, MnIndex idx )
+MnValue ut_getstack( MnState* s, MnIndex idx )
 {
 	MnValue* v = nx_get_stack_ptr(s,idx);
 	return v? *v : MnValue();
@@ -774,7 +799,7 @@ void nx_set_table( MnState* s, MnValue& t, MnValue& n, MnValue& v )
 	}
 }
 
-MnValue nx_get_table( MnState* s, MnValue& t, MnValue& n )
+MnValue ut_gettable( MnState* s, MnValue& t, MnValue& n )
 {
 	if ( MnIsTable(t) && MnIsString(n) )
 	{
@@ -788,7 +813,7 @@ MnValue nx_get_table( MnState* s, MnValue& t, MnValue& n )
 		}
 		else if ( MnIsTable(tbl->metatable) )
 		{
-			return nx_get_table(s,tbl->metatable,n);
+			return ut_gettable(s,tbl->metatable,n);
 		}
 	}
 	return MnValue();
@@ -809,7 +834,7 @@ void nx_set_array( MnState* s, MnValue& a, MnValue& n, MnValue& v )
 	}
 }
 
-MnValue nx_get_array( MnState* s, MnValue& a, MnValue& n )
+MnValue ut_getarray( MnState* s, MnValue& a, MnValue& n )
 {
 	if ( MnIsArray(a) )
 	{
@@ -824,7 +849,7 @@ MnValue nx_get_array( MnState* s, MnValue& a, MnValue& n )
 		}
 		else
 		{
-			return nx_get_table( s, MnToArray(a)->metatable, n );
+			return ut_gettable( s, MnToArray(a)->metatable, n );
 		}
 	}
 	return MnValue();
@@ -832,7 +857,7 @@ MnValue nx_get_array( MnState* s, MnValue& a, MnValue& n )
 
 void nx_set_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx, MnValue& v )
 {
-	MnValue c = nx_get_stack(s,clsidx);
+	MnValue c = ut_getstack(s,clsidx);
 	if ( MnIsClosure(c) )
 	{
 		MnClosure* cls = MnToClosure(c);
@@ -846,7 +871,7 @@ void nx_set_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx, MnValue& v )
 
 MnValue nx_get_upval( MnState* s, MnIndex clsidx, MnIndex upvalidx )
 {
-	MnValue c = nx_get_stack(s,clsidx);
+	MnValue c = ut_getstack(s,clsidx);
 	if ( MnIsClosure(c) )
 	{
 		MnClosure* cls = MnToClosure(c);
@@ -865,13 +890,13 @@ OvBool nx_is_global( MnState* s, OvHash32 hash )
 
 void mn_setstack( MnState* s, MnIndex idx )
 {
-	nx_set_stack( s, idx, nx_get_stack(s,-1));
+	nx_set_stack( s, idx, ut_getstack(s,-1));
 	mn_pop(s,1);
 }
 
 void mn_getstack( MnState* s, MnIndex idx )
 {
-	nx_push_value( s, nx_get_stack(s,idx) );
+	ut_pushvalue( s, ut_getstack(s,idx) );
 }
 
 void mn_insertstack( MnState* s, MnIndex idx )
@@ -898,38 +923,26 @@ void mn_insertstack( MnState* s, MnIndex idx )
 	}
 }
 
+void ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v )
+{
+	if ( MnIsTable(c) )		 nx_set_table( s, c, n, v);
+	else if ( MnIsArray(c) ) nx_set_array( s, c, n, v);
+}
 void mn_setfield( MnState* s, MnIndex idx )
 {
 	if ( mn_gettop(s) >= 2 )
 	{
-		if ( idx )
-		{
-			MnValue c = nx_get_stack(s,idx);
-
-			if ( MnIsTable(c) )
-			{
-				nx_set_table( s
-					, c
-					, nx_get_stack(s,-2)
-					, nx_get_stack(s,-1));
-			}
-			else if ( MnIsArray(c) )
-			{
-				nx_set_array( s
-					, c
-					, nx_get_stack(s,-2)
-					, nx_get_stack(s,-1));
-			}
-		}
-		else
-		{
-			nx_set_global( s
-				, nx_get_stack(s,-2)
-				, nx_get_stack(s,-1));
-		}
-
+		if ( idx )	ut_setfield( s, ut_getstack(s,idx), ut_getstack(s,-2), ut_getstack(s,-1) );
+		else		ut_setglobal( s, ut_getstack(s,-2), ut_getstack(s,-1));
 		mn_pop(s,2);
 	}
+}
+
+MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
+{
+	if ( MnIsTable(c) )		return ut_gettable( s, c, n);
+	else if ( MnIsArray(c) )return ut_getarray( s, c, n);
+	return MnValue();
 }
 
 void mn_getfield( MnState* s, MnIndex idx )
@@ -937,74 +950,67 @@ void mn_getfield( MnState* s, MnIndex idx )
 	if ( mn_gettop(s) >= 1 )
 	{
 		MnValue val;
-		if ( idx )
-		{
-			MnValue c = nx_get_stack(s,idx);
-
-			if ( MnIsTable(c) )
-			{
-				val = nx_get_table( s
-					, c
-					, nx_get_stack(s,-1));
-			}
-			else if ( MnIsArray(c) )
-			{
-				val = nx_get_array( s
-					, c
-					, nx_get_stack(s,-1));
-			}
-		}
-		else
-		{
-			val = nx_get_global( s
-				, nx_get_stack(s,-1));
-		}
-
+		if ( idx )	val = ut_getfield( s, ut_getstack(s,idx), ut_getstack(s,-1) );
+		else		val = ut_getglobal( s, ut_getstack(s,-1) );
 		mn_pop(s,1);
+		ut_pushvalue( s, val );
+	}
+}
 
-		nx_push_value( s, val );
+void ut_setmeta( MnState* s, MnValue& v, MnValue& m )
+{
+	if ( MnIsTable(v) )
+	{
+		MnToTable(v)->metatable = m;
+	}
+	else if ( MnIsArray(v) )
+	{
+		MnToArray(v)->metatable = m;
+	}
+	else if ( MnIsUser(v) )
+	{
+		MnToUser(v)->metatable = m;
 	}
 }
 
 void mn_setmeta( MnState* s, MnIndex idx )
 {
-	MnValue t = nx_get_stack(s,idx);
-	MnValue v = nx_get_stack(s,-1);
+	MnValue v = ut_getstack(s,idx);
+	MnValue m = ut_getstack(s,-1);
+	ut_setmeta(s,v,m);
+	mn_pop(s,1);
+}
+
+MnValue ut_getmeta( MnState* s, MnValue& v )
+{
 	if ( MnIsTable(v) )
 	{
-		if ( MnIsTable(t) )
-		{
-			MnToTable(t)->metatable = v;
-		}
-		else if ( MnIsArray(t) )
-		{
-			MnToArray(t)->metatable = v;
-		}
+		return MnToTable(v)->metatable;
 	}
-	mn_pop(s,1);
+	else if ( MnIsArray(v) )
+	{
+		return MnToArray(v)->metatable;
+	}
+	else if ( MnIsUser(v) )
+	{
+		return MnToUser(v)->metatable;
+	}
+	return MnValue();
 }
 
 void mn_getmeta( MnState* s, MnIndex idx )
 {
-	MnValue t = nx_get_stack(s,idx);
-	if ( MnIsTable(t) )
-	{
-		nx_push_value(s,MnToTable(t)->metatable);
-	}
-	else if ( MnIsArray(t) )
-	{
-		nx_push_value(s,MnToArray(t)->metatable);
-	}
+	ut_pushvalue( s, ut_getmeta(s,ut_getstack(s,idx)) );
 }
 
 void mn_setupval( MnState* s, MnIndex upvalidx )
 {
-	nx_set_upval(s, 0, upvalidx, nx_get_stack(s,-1));
+	nx_set_upval(s, 0, upvalidx, ut_getstack(s,-1));
 }
 
 void mn_getupval( MnState* s, MnIndex upvalidx )
 {
-	nx_push_value(s, nx_get_upval(s, 0, upvalidx ) );
+	ut_pushvalue(s, nx_get_upval(s, 0, upvalidx ) );
 }
 
 MnString* nx_new_string( MnState* s, const OvString& str )
@@ -1119,7 +1125,7 @@ MnIndex mn_gettop( MnState* s )
 
 ///////////////////////*   kind of push    *//////////////////////
 
-void nx_push_value( MnState* s, const MnValue& v )
+void ut_pushvalue( MnState* s, const MnValue& v )
 {
 	MnIndex top = mn_gettop(s);
 	mn_settop( s, ++top );
@@ -1128,12 +1134,12 @@ void nx_push_value( MnState* s, const MnValue& v )
 
 void mn_newtable( MnState* s )
 {
-	nx_push_value( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
+	ut_pushvalue( s, MnValue( MOT_TABLE, nx_new_table(s) ) );
 }
 
 void mn_newarray( MnState* s )
 {
-	nx_push_value( s, MnValue( MOT_ARRAY, nx_new_array(s) ) );
+	ut_pushvalue( s, MnValue( MOT_ARRAY, nx_new_array(s) ) );
 }
 
 void mnd_newgarbege( MnState* s )
@@ -1153,10 +1159,10 @@ void mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals )
 	cl->upvals.reserve(nupvals);
 	for ( OvInt i = 0 ; i < nupvals ; ++i )
 	{
-		cl->upvals.push_back( nx_get_stack(s, i - nupvals ) );
+		cl->upvals.push_back( ut_getstack(s, i - nupvals ) );
 	}
 	mn_pop(s,nupvals);
-	nx_push_value( s, MnValue(MOT_CLOSURE,cl) );
+	ut_pushvalue( s, MnValue(MOT_CLOSURE,cl) );
 }
 
 void mn_pushfunction( MnState* s, MnCFunction proto )
@@ -1166,56 +1172,56 @@ void mn_pushfunction( MnState* s, MnCFunction proto )
 
 void mn_pushnil( MnState* s )
 {
-	nx_push_value( s, MnValue() );
+	ut_pushvalue( s, MnValue() );
 }
 
 void mn_pushboolean( MnState* s, OvBool v )
 {
-	nx_push_value( s, MnValue( (OvBool)v ) );
+	ut_pushvalue( s, MnValue( (OvBool)v ) );
 }
 
 void mn_pushnumber( MnState* s, OvReal v )
 {
-	nx_push_value( s, MnValue( (OvReal)v ) );
+	ut_pushvalue( s, MnValue( (OvReal)v ) );
 }
 
 void mn_pushstring( MnState* s, const OvString& v )
 {
-	nx_push_value( s, MnValue( MOT_STRING, nx_new_string( s, v ) ) );
+	ut_pushvalue( s, MnValue( MOT_STRING, nx_new_string( s, v ) ) );
 }
 
 void mn_pushstack( MnState* s, MnIndex idx )
 {
-	nx_push_value( s, nx_get_stack(s, idx) );
+	ut_pushvalue( s, ut_getstack(s, idx) );
 }
 
 /////////////////////*  all kinds of "is"    *///////////////////////////
 
 OvBool mn_isnil( MnState* s, MnIndex idx )
 {
-	return MnIsNil( nx_get_stack( s, idx ) );
+	return MnIsNil( ut_getstack( s, idx ) );
 }
 
 OvBool mn_isboolean( MnState* s, MnIndex idx )
 {
-	return MnIsBoolean( nx_get_stack( s, idx ) );
+	return MnIsBoolean( ut_getstack( s, idx ) );
 }
 
 OvBool mn_isnumber( MnState* s, MnIndex idx )
 {
-	return MnIsNumber( nx_get_stack( s, idx ) );
+	return MnIsNumber( ut_getstack( s, idx ) );
 }
 
 OvBool mn_isstring( MnState* s, MnIndex idx )
 {
-	return MnIsString( nx_get_stack( s, idx ) );
+	return MnIsString( ut_getstack( s, idx ) );
 }
 
 /////////////////////*  all kinds of "to"    *///////////////////////////
 
 OvBool mn_toboolean( MnState* s, MnIndex idx )
 {
-	MnValue val = nx_get_stack( s, idx );
+	MnValue val = ut_getstack( s, idx );
 	if ( MnIsBoolean(val) )
 	{
 		return MnToBoolean(val);
@@ -1233,7 +1239,7 @@ OvBool mn_toboolean( MnState* s, MnIndex idx )
 
 OvReal mn_tonumber( MnState* s, MnIndex idx )
 {
-	MnValue val = nx_get_stack( s, idx );
+	MnValue val = ut_getstack( s, idx );
 	if ( MnIsNumber(val) )
 	{
 		return MnToNumber(val);
@@ -1248,7 +1254,7 @@ OvReal mn_tonumber( MnState* s, MnIndex idx )
 
 OvString mn_tostring( MnState* s, MnIndex idx )
 {
-	MnValue val = nx_get_stack( s, idx );
+	MnValue val = ut_getstack( s, idx );
 	if ( MnIsString(val) )
 	{
 		return MnToString(val)->get_str();
@@ -1310,7 +1316,7 @@ OvInt mn_collect_garbage( MnState* s )
 OvInt mt_global_length(MnState* s)
 {
 	OvReal nsize = 0.0;
-	MnValue arg1 = nx_get_stack(s,1);
+	MnValue arg1 = ut_getstack(s,1);
 	if ( MnIsArray(arg1) )
 	{
 		mn_pushnumber( s, (OvReal)MnToArray(arg1)->array.size() );
@@ -1328,8 +1334,8 @@ OvInt mt_global_length(MnState* s)
 
 OvInt mt_global_resize( MnState* s )
 {
-	MnValue arg1 = nx_get_stack(s,1);
-	MnValue arg2 = nx_get_stack(s,2);
+	MnValue arg1 = ut_getstack(s,1);
+	MnValue arg2 = ut_getstack(s,2);
 	if ( MnIsArray(arg1) && MnIsNumber(arg2) )
 	{
 		MnToArray(arg1)->array.resize( (OvSize)MnToNumber(arg2) );
@@ -1471,7 +1477,7 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 				MnClosure::MClosure* mcls = cls->u.m;
 				mcls->func = func->consts[i.ax-1];
 				cls->upvals.resize( i.bx );
-				nx_push_value(s,MnValue(MOT_CLOSURE,cls));
+				ut_pushvalue(s,MnValue(MOT_CLOSURE,cls));
 			}
 			break;
 
@@ -1491,7 +1497,7 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 		case MOP_SET_UPVAL:	mn_setupval( s, i.eax ); break;
 		case MOP_GET_UPVAL:	mn_getupval( s, i.eax ); break;
 
-		case MOP_PUSH:		nx_push_value( s, func->consts[i.eax-1] ); break;
+		case MOP_PUSH:		ut_pushvalue( s, func->consts[i.eax-1] ); break;
 		case MOP_POP:		mn_pop( s, i.eax ); break;
 
 		case MOP_CALL:		mn_call( s, i.ax, i.bx ); break;
@@ -1618,7 +1624,7 @@ OvInt nx_exec_func( MnState* s, MnMFunction* func )
 void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 {
 	nargs = max(nargs,0);
-	MnValue v = nx_get_stack(s, -(1 + nargs) );
+	MnValue v = ut_getstack(s, -(1 + nargs) );
 	MnCallInfo* ci = ( MnCallInfo* )nx_alloc( sizeof( MnCallInfo ) );
 	ci->prev = s->ci;
 	ci->savepc = s->pc;
@@ -1681,13 +1687,13 @@ void mn_do_asm( MnState* s, const OvString& file, MnIndex idx )
 	cs.state = s;
 	cs.is = &fis;
 	cs.is->Read(cs.c);
-	cs.errfunc = nx_get_stack(s,idx);
+	cs.errfunc = ut_getstack(s,idx);
 
 	MnMFunction* func = nx_new_function(s);
 	cp_build_func(&cs,func);
 	MnClosure* cls = nx_new_Mclosure( s );
 	cls->u.m->func = MnValue(MOT_FUNCPROTO,func);
-	nx_push_value(s,MnValue(MOT_CLOSURE,cls));
+	ut_pushvalue(s,MnValue(MOT_CLOSURE,cls));
 	mn_call(s,0,0);
 }
 
@@ -1698,7 +1704,7 @@ enum eErrCode
 
 void cp_call_errfunc( MnCompileState* cs, OvInt errcode, const OvString& msg )
 {
-	nx_push_value( cs->state, cs->errfunc );
+	ut_pushvalue( cs->state, cs->errfunc );
 	mn_pushnumber( cs->state, errcode );
 	mn_pushstring( cs->state, msg );
 	mn_call( cs->state, 2, 0 );
