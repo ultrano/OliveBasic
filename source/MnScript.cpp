@@ -53,8 +53,8 @@ const MnTypeStr g_type_str[] =
 #define METHOD_EQ ("__eq")
 #define METHOD_LT ("__lt")
 #define METHOD_GT ("__gt")
-#define METHOD_SF ("__setfield")
-#define METHOD_GF ("__getfield")
+#define METHOD_NEWINDEX ("__newindex")
+#define METHOD_INDEX ("__index")
 #define METHOD_ADD ("__add")
 #define METHOD_SUB ("__sub")
 #define METHOD_MUL ("__mul")
@@ -800,16 +800,26 @@ MnValue ut_getstack( MnState* s, MnIndex idx )
 	return v? *v : MnValue();
 }
 
-void ut_callmeta_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v ) 
+OvBool ut_meta_newindex( MnState* s, MnValue& c, MnValue& n, MnValue& v ) 
 {
 	ut_pushvalue( s, ut_getmeta( s, c ) );
-	mn_pushstring( s, METHOD_SF );
+	mn_pushstring( s, METHOD_NEWINDEX );
 	mn_getfield( s, -2 );
 
-	ut_pushvalue( s, c );
-	ut_pushvalue( s, n );
-	ut_pushvalue( s, v );
-	mn_call( s, 3, 0 );
+	if ( mn_isfunction( s, -1 ) )
+	{
+		ut_pushvalue( s, c );
+		ut_pushvalue( s, n );
+		ut_pushvalue( s, v );
+		mn_call( s, 3, 0 );
+		return true;
+	}
+	else
+	{
+		mn_pop( s, 2 );
+		return false;
+	}
+	return false;
 }
 
 void ut_settable( MnState* s, MnValue& t, MnValue& n, MnValue& v )
@@ -827,24 +837,31 @@ void ut_settable( MnState* s, MnValue& t, MnValue& n, MnValue& v )
 				else				itor->second = make_pair(n,v);
 				return;
 			}
+			else if ( !ut_meta_newindex(s, t, n, v) )
+			{
+				tbl->table.insert( make_pair(hash,make_pair(n,v)) );
+			}
 		}
-		ut_callmeta_setfield(s, t, n, v);
 	}
 }
 
-MnValue ut_callmeta_getfield( MnState* s, MnValue& c, MnValue& n ) 
+MnValue ut_meta_index( MnState* s, MnValue& c, MnValue& n ) 
 {
 	ut_pushvalue( s, ut_getmeta( s, c ) );
-	mn_pushstring( s, METHOD_GF );
+	mn_pushstring( s, METHOD_INDEX );
 	mn_getfield( s, -2 );
+	if ( mn_isfunction( s, -1 ) )
+	{
+		ut_pushvalue( s, c );
+		ut_pushvalue( s, n );
+		mn_call( s, 2, 1 );
 
-	ut_pushvalue( s, c );
-	ut_pushvalue( s, n );
-	mn_call( s, 2, 1 );
-
-	MnValue ret = ut_getstack( s, -1 );
-	mn_pop( s, 1 );
-	return ret;
+		MnValue ret = ut_getstack( s, -1 );
+		mn_pop( s, 1 );
+		return ret;
+	}
+	mn_pop(s,1);
+	return MnValue();
 }
 
 MnValue ut_gettable( MnState* s, MnValue& t, MnValue& n )
@@ -862,7 +879,7 @@ MnValue ut_gettable( MnState* s, MnValue& t, MnValue& n )
 				return itor->second.second;
 			}
 		}
-		return ut_callmeta_getfield(s, t, n);
+		return ut_meta_index(s, t, n);
 	}
 	return MnValue();
 }
@@ -878,10 +895,9 @@ void ut_setarray( MnState* s, MnValue& a, MnValue& n, MnValue& v )
 			if ( idx >= 0 && idx < arr->array.size() )
 			{
 				arr->array[idx] = v;
-				return;
 			}
+			else ut_meta_newindex(s, a, n, v);
 		}
-		ut_callmeta_setfield( s, a, n, v );
 	}
 }
 
@@ -898,7 +914,7 @@ MnValue ut_getarray( MnState* s, MnValue& a, MnValue& n )
 				return arr->array.at(idx);
 			}
 		}
-		return ut_callmeta_getfield( s, a, n );
+		return ut_meta_index( s, a, n );
 	}
 	return MnValue();
 }
@@ -975,7 +991,7 @@ void ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v )
 {
 	if ( MnIsTable(c) )		 ut_settable( s, c, n, v);
 	else if ( MnIsArray(c) ) ut_setarray( s, c, n, v);
-	else if ( MnIsUser(c) )  ut_callmeta_setfield( s, c, n, v );
+	else if ( MnIsUser(c) )  ut_meta_newindex( s, c, n, v );
 }
 void mn_setfield( MnState* s, MnIndex idx )
 {
@@ -991,7 +1007,7 @@ MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 {
 	if ( MnIsTable(c) )		return ut_gettable( s, c, n);
 	else if ( MnIsArray(c) )return ut_getarray( s, c, n);
-	else if ( MnIsUser(c) ) return ut_callmeta_getfield( s, c, n );
+	else if ( MnIsUser(c) ) return ut_meta_index( s, c, n );
 	return MnValue();
 }
 
@@ -1267,6 +1283,11 @@ OvBool mn_isstring( MnState* s, MnIndex idx )
 	return MnIsString( ut_getstack( s, idx ) );
 }
 
+OvBool mn_isfunction( MnState* s, MnIndex idx )
+{
+	return MnIsClosure( ut_getstack( s, idx ) );
+}
+
 /////////////////////*  all kinds of "to"    *///////////////////////////
 
 OvBool ut_toboolean( MnValue val ) 
@@ -1524,7 +1545,7 @@ enum MnOperate
 };
 //////////////////////////////////////////////////////////////////////////
 
-MnValue ut_callmeta_arith( MnState* s, MnOperate op, MnValue& a, MnValue& b )
+MnValue ut_method_arith( MnState* s, MnOperate op, MnValue& a, MnValue& b )
 {
 	if ( MnIsNumber(a) )
 	{
@@ -1543,29 +1564,26 @@ MnValue ut_callmeta_arith( MnState* s, MnOperate op, MnValue& a, MnValue& b )
 	}
 	else
 	{
-		OvString method =	(op == MOP_ADD)? METHOD_ADD : 
-			(op == MOP_SUB)? METHOD_SUB : 
-			(op == MOP_MUL)? METHOD_MUL : 
-			(op == MOP_DIV)? METHOD_DIV : "";
-	ut_pushvalue( s, ut_getmeta( s, a ) );
-	mn_pushstring(s,method);
-	mn_getfield(s,-2);
+		OvString method =	(op == MOP_ADD)? METHOD_ADD : (op == MOP_SUB)? METHOD_SUB : (op == MOP_MUL)? METHOD_MUL : (op == MOP_DIV)? METHOD_DIV : "";
+		ut_pushvalue( s, ut_getmeta( s, a ) );
+		mn_pushstring(s,method);
+		mn_getfield(s,-2);
 
-	ut_pushvalue( s, a );
-	ut_pushvalue( s, b );
-	mn_call(s,2,1);
+		ut_pushvalue( s, a );
+		ut_pushvalue( s, b );
+		mn_call(s,2,1);
 
-	MnValue ret = ut_getstack( s, -1 );
-	mn_pop(s,1);
+		MnValue ret = ut_getstack( s, -1 );
+		mn_pop(s,2);
 
-	return ret;
+		return ret;
 	}
 	return MnValue();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-MnValue ut_callmeta_logical( MnState* s,MnOperate op, MnValue& a, MnValue& b )
+MnValue ut_method_logical( MnState* s,MnOperate op, MnValue& a, MnValue& b )
 {
 	if ( MnIsNumber(a) && MnIsNumber(b) )
 	{
@@ -1579,21 +1597,19 @@ MnValue ut_callmeta_logical( MnState* s,MnOperate op, MnValue& a, MnValue& b )
 	}
 	else
 	{
-		OvString method =	(op == MOP_EQ)? METHOD_EQ : 
-			(op == MOP_LT)? METHOD_LT : 
-			(op == MOP_GT)? METHOD_GT : "";
-	ut_pushvalue( s, ut_getmeta( s, a ) );
-	mn_pushstring(s,method);
-	mn_getfield(s,-2);
+		OvString method =	(op == MOP_EQ)? METHOD_EQ : (op == MOP_LT)? METHOD_LT : (op == MOP_GT)? METHOD_GT : "";
+		ut_pushvalue( s, ut_getmeta( s, a ) );
+		mn_pushstring(s,method);
+		mn_getfield(s,-2);
 
-	ut_pushvalue( s, a );
-	ut_pushvalue( s, b );
-	mn_call(s,2,1);
+		ut_pushvalue( s, a );
+		ut_pushvalue( s, b );
+		mn_call(s,2,1);
 
-	MnValue ret = ut_getstack( s, -1 );
-	mn_pop(s,1);
+		MnValue ret = ut_getstack( s, -1 );
+		mn_pop(s,2);
 
-	return ret;
+		return ret;
 	}
 	return MnValue();
 }
@@ -1693,7 +1709,7 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 		case MOP_LT:
 		case MOP_GT:
 			{
-				ut_callmeta_logical( s, (MnOperate)i.op, ut_getstack( s, -2 ), ut_getstack( s, -1 ) );
+				ut_method_logical( s, (MnOperate)i.op, ut_getstack( s, -2 ), ut_getstack( s, -1 ) );
 			}
 			break;
 
@@ -1702,7 +1718,7 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 		case MOP_MUL:
 		case MOP_DIV:
 			{
-				ut_callmeta_arith( s, (MnOperate)i.op, ut_getstack( s, -2 ), ut_getstack( s, -1 ) );
+				ut_method_arith( s, (MnOperate)i.op, ut_getstack( s, -2 ), ut_getstack( s, -1 ) );
 			}
 			break;
 

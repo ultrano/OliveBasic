@@ -46,6 +46,7 @@ OvBool			mn_isnil( MnState* s, MnIndex idx );
 OvBool			mn_isboolean( MnState* s, MnIndex idx );
 OvBool			mn_isnumber( MnState* s, MnIndex idx );
 OvBool			mn_isstring( MnState* s, MnIndex idx );
+OvBool			mn_isfunction( MnState* s, MnIndex idx );
 
 OvBool			mn_toboolean( MnState* s, MnIndex idx );
 OvReal			mn_tonumber( MnState* s, MnIndex idx );
