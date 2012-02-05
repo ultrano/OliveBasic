@@ -182,6 +182,7 @@ MnArray*		ut_newarray( MnState* s );
 MnClosure*		ut_newCclosure( MnState* s, MnCLType t );
 MnClosure*		ut_newMclosure( MnState* s );
 MnMFunction*	ut_newfunction( MnState* s );
+MnUserData*		ut_newuserdata( MnState* s, void* p );
 
 void			ut_delete_object( MnObject* o );
 void			ut_delete_garbage( MnObject* o );
@@ -439,7 +440,7 @@ class MnUserData : public MnObject
 {
 public:
 
-	MnUserData( MnState* s ) : MnObject(s), ptr(NULL) {};
+	MnUserData( MnState* s, void* p ) : MnObject(s), ptr(p) {};
 	~MnUserData() { ptr = NULL; };
 
 	void* ptr;
@@ -1094,6 +1095,11 @@ MnString* ut_newstring( MnState* s, const OvString& str )
 	return ret;
 }
 
+MnUserData* ut_newuserdata( MnState* s, void* p )
+{
+	return new(ut_alloc(sizeof(MnUserData))) MnUserData(s,p);
+}
+
 MnTable* ut_newtable( MnState* s )
 {
 	return new(ut_alloc(sizeof(MnTable))) MnTable(s);
@@ -1256,6 +1262,11 @@ void mn_pushstring( MnState* s, const OvString& v )
 	ut_pushvalue( s, MnValue( MOT_STRING, ut_newstring( s, v ) ) );
 }
 
+void mn_pushuserdata( MnState* s, void* v )
+{
+	ut_pushvalue( s, MnValue( MOT_USER, ut_newuserdata(s,v) ) );
+}
+
 void mn_pushstack( MnState* s, MnIndex idx )
 {
 	ut_pushvalue( s, ut_getstack(s, idx) );
@@ -1288,9 +1299,14 @@ OvBool mn_isfunction( MnState* s, MnIndex idx )
 	return MnIsClosure( ut_getstack( s, idx ) );
 }
 
+OvBool mn_isuserdata( MnState* s, MnIndex idx )
+{
+	return MnIsUser( ut_getstack( s, idx ) );
+}
+
 /////////////////////*  all kinds of "to"    *///////////////////////////
 
-OvBool ut_toboolean( MnValue val ) 
+OvBool ut_toboolean( MnValue& val ) 
 {
 	if ( MnIsBoolean(val) )
 	{
@@ -1313,7 +1329,7 @@ OvBool mn_toboolean( MnState* s, MnIndex idx )
 
 }
 
-OvReal ut_tonumber( MnValue val ) 
+OvReal ut_tonumber( MnValue& val ) 
 {
 	if ( MnIsNumber(val) )
 	{
@@ -1333,7 +1349,7 @@ OvReal mn_tonumber( MnState* s, MnIndex idx )
 
 }
 
-OvString ut_tostring( MnValue val ) 
+OvString ut_tostring( MnValue& val ) 
 {
 	if ( MnIsString(val) )
 	{
@@ -1352,6 +1368,20 @@ OvString ut_tostring( MnValue val )
 OvString mn_tostring( MnState* s, MnIndex idx )
 {
 	return ut_tostring( ut_getstack( s, idx ) );
+}
+
+void* ut_touserdata( MnValue& val )
+{
+	if ( MnIsUser(val) )
+	{
+		return MnToUser(val)->ptr;
+	}
+	return NULL;
+}
+
+void* mn_touserdata( MnState* s, MnIndex idx )
+{
+	return ut_touserdata( ut_getstack( s, idx ) );
 }
 
 OvInt mn_collect_garbage( MnState* s )

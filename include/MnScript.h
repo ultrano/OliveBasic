@@ -40,6 +40,7 @@ void			mn_pushnil( MnState* s );
 void			mn_pushboolean( MnState* s, OvBool v );
 void			mn_pushnumber( MnState* s, OvReal v );
 void			mn_pushstring( MnState* s, const OvString& v );
+void			mn_pushuserdata( MnState* s, void* v );
 void			mn_pushstack( MnState* s, MnIndex idx );
 
 OvBool			mn_isnil( MnState* s, MnIndex idx );
@@ -47,10 +48,12 @@ OvBool			mn_isboolean( MnState* s, MnIndex idx );
 OvBool			mn_isnumber( MnState* s, MnIndex idx );
 OvBool			mn_isstring( MnState* s, MnIndex idx );
 OvBool			mn_isfunction( MnState* s, MnIndex idx );
+OvBool			mn_isuserdata( MnState* s, MnIndex idx );
 
 OvBool			mn_toboolean( MnState* s, MnIndex idx );
 OvReal			mn_tonumber( MnState* s, MnIndex idx );
 OvString		mn_tostring( MnState* s, MnIndex idx );
+void*			mn_touserdata( MnState* s, MnIndex idx );
 
 void			mn_call( MnState* s, OvInt nargs, OvInt nrets );
 
