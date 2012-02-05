@@ -1376,7 +1376,7 @@ OvInt mn_collect_garbage( MnState* s )
 	return num;
 }
 
-OvInt mt_global_length(MnState* s)
+OvInt ex_global_length(MnState* s)
 {
 	OvReal nsize = 0.0;
 	MnValue arg1 = ut_getstack(s,1);
@@ -1395,7 +1395,7 @@ OvInt mt_global_length(MnState* s)
 	return 1;
 }
 
-OvInt mt_global_resize( MnState* s )
+OvInt ex_global_resize( MnState* s )
 {
 	MnValue arg1 = ut_getstack(s,1);
 	MnValue arg2 = ut_getstack(s,2);
@@ -1406,76 +1406,58 @@ OvInt mt_global_resize( MnState* s )
 	return 0;
 }
 
-OvInt mt_collect_garbage( MnState* s )
+OvInt ex_collect_garbage( MnState* s )
 {
 	mn_pushnumber( s, mn_collect_garbage(s) );
 	return 1;
 }
 
-OvInt mt_print( MnState* s )
+OvInt ex_print( MnState* s )
 {
 	printf( mn_tostring(s,1).c_str() );
 	printf( "\n" );
 	return 0;
 }
 
+OvInt ex_tostring( MnState* s )
+{
+	mn_pushstring( s, ut_tostring( ut_getstack( s, 1 ) ) );
+	return 1;
+}
+
+OvInt ex_tonumber( MnState* s )
+{
+	mn_pushnumber( s, ut_tonumber( ut_getstack( s, 1 ) ) );
+	return 1;
+}
+
 void mn_lib_default( MnState* s )
 {
 	mn_pushstring( s, "length" );
-	mn_pushfunction( s, mt_global_length );
+	mn_pushfunction( s, ex_global_length );
 	mn_setglobal( s );
 
 	mn_pushstring( s, "resize" );
-	mn_pushfunction( s, mt_global_resize );
+	mn_pushfunction( s, ex_global_resize );
 	mn_setglobal( s );
 
 	mn_pushstring( s, "collect_garbage" );
-	mn_pushfunction( s, mt_collect_garbage );
+	mn_pushfunction( s, ex_collect_garbage );
 	mn_setglobal( s );
 
 	mn_pushstring( s, "print" );
-	mn_pushfunction( s, mt_print);
+	mn_pushfunction( s, ex_print);
+	mn_setglobal( s );
+
+	mn_pushstring( s, "tostring" );
+	mn_pushfunction( s, ex_tostring);
+	mn_setglobal( s );
+
+	mn_pushstring( s, "tonumber" );
+	mn_pushfunction( s, ex_tonumber);
 	mn_setglobal( s );
 }
 
-//////////////////////////////////////////////////////////////////////////
-
-MnValue ut_callmeta_arith( MnState* s,const OvString& op, MnValue& a, MnValue& b )
-{
-	if ( MnIsNumber(a) )
-	{
-		OvReal ret = MnToNumber(a);
-		if ( op == METHOD_ADD ) ret += ut_tonumber(b);
-		else if ( op == METHOD_SUB ) ret -= ut_tonumber(b);
-		else if ( op == METHOD_MUL ) ret *= ut_tonumber(b);
-		else if ( op == METHOD_DIV ) ret /= ut_tonumber(b);
-		return MnValue( ret );
-	}
-	else if ( MnIsString(a) )
-	{
-		OvString ret = MnToString(a);
-		OvString sb = ut_tostring(b);
-
-		if ( op == METHOD_ADD )
-		{
-			mn_pop(s,2);
-			mn_pushstring( s, sa+sb );
-		}
-		else mn_pop(s,1);
-	}
-	else
-	{
-		mn_getmeta(s,-2);
-		if ( i.op == MOP_ADD ) mn_pushstring(s,"__add");
-		else if ( i.op == MOP_SUB ) mn_pushstring(s,"__sub");
-		else if ( i.op == MOP_MUL ) mn_pushstring(s,"__mul");
-		else if ( i.op == MOP_DIV ) mn_pushstring(s,"__div");
-		mn_getfield(s,-2);
-		mn_insertstack(s,-4);
-		mn_pop(s,1);
-		mn_call(s,2,1);
-	}
-}
 
 //////////////////////////////////////////////////////////////////////////
 struct MnInstruction : public OvMemObject
@@ -1540,6 +1522,83 @@ enum MnOperate
 
 	MOP_LOG,
 };
+//////////////////////////////////////////////////////////////////////////
+
+MnValue ut_callmeta_arith( MnState* s, MnOperate op, MnValue& a, MnValue& b )
+{
+	if ( MnIsNumber(a) )
+	{
+		OvReal ret = MnToNumber(a);
+		if ( op == MOP_ADD ) ret += ut_tonumber(b);
+		else if ( op == MOP_SUB ) ret -= ut_tonumber(b);
+		else if ( op == MOP_MUL ) ret *= ut_tonumber(b);
+		else if ( op == MOP_DIV ) ret /= ut_tonumber(b);
+		return MnValue( ret );
+	}
+	else if ( MnIsString(a) )
+	{
+		OvString ret = MnToString(a)->get_str();
+		if ( op == MOP_ADD ) ret += ut_tostring(b);
+		return MnValue( MOT_STRING, ut_newstring( s, ret ) );
+	}
+	else
+	{
+		OvString method =	(op == MOP_ADD)? METHOD_ADD : 
+			(op == MOP_SUB)? METHOD_SUB : 
+			(op == MOP_MUL)? METHOD_MUL : 
+			(op == MOP_DIV)? METHOD_DIV : "";
+	ut_pushvalue( s, ut_getmeta( s, a ) );
+	mn_pushstring(s,method);
+	mn_getfield(s,-2);
+
+	ut_pushvalue( s, a );
+	ut_pushvalue( s, b );
+	mn_call(s,2,1);
+
+	MnValue ret = ut_getstack( s, -1 );
+	mn_pop(s,1);
+
+	return ret;
+	}
+	return MnValue();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+MnValue ut_callmeta_logical( MnState* s,MnOperate op, MnValue& a, MnValue& b )
+{
+	if ( MnIsNumber(a) && MnIsNumber(b) )
+	{
+		if ( op == MOP_EQ ) return MnValue((OvBool)(ut_tonumber(a) == ut_tonumber(b)));
+		else if ( op == MOP_LT ) return MnValue((OvBool)(ut_tonumber(a) < ut_tonumber(b)));
+		else if ( op == MOP_GT ) return MnValue((OvBool)(ut_tonumber(a) > ut_tonumber(b)));
+	}
+	else if ( MnIsString(a) && MnIsString(b) )
+	{
+		if ( op == MOP_EQ ) return MnValue( (OvBool)( ut_tostring(a) == ut_tostring(b) ) );
+	}
+	else
+	{
+		OvString method =	(op == MOP_EQ)? METHOD_EQ : 
+			(op == MOP_LT)? METHOD_LT : 
+			(op == MOP_GT)? METHOD_GT : "";
+	ut_pushvalue( s, ut_getmeta( s, a ) );
+	mn_pushstring(s,method);
+	mn_getfield(s,-2);
+
+	ut_pushvalue( s, a );
+	ut_pushvalue( s, b );
+	mn_call(s,2,1);
+
+	MnValue ret = ut_getstack( s, -1 );
+	mn_pop(s,1);
+
+	return ret;
+	}
+	return MnValue();
+}
+
+//////////////////////////////////////////////////////////////////////////
 
 OvInt ut_exec_func( MnState* s, MnMFunction* func )
 {
@@ -1634,35 +1693,7 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 		case MOP_LT:
 		case MOP_GT:
 			{
-				if ( mn_isnumber(s,-2) && mn_isnumber(s,-1) )
-				{
-					OvReal na = mn_tonumber(s,-2);
-					OvReal nb = mn_tonumber(s,-1);
-					mn_pop(s,2);
-					if ( i.op == MOP_EQ ) mn_pushboolean( s, (na == nb) );
-					else if ( i.op == MOP_LT ) mn_pushboolean( s, (na < nb) );
-					else if ( i.op == MOP_GT ) mn_pushboolean( s, (na > nb) );
-					else mn_pushnil(s);
-				}
-				else if ( mn_isstring(s,-2) && mn_isstring(s,-1) )
-				{
-					OvString sa = mn_tostring(s,-2);
-					OvString sb = mn_tostring(s,-1);
-					mn_pop(s,2);
-					if ( i.op == MOP_EQ ) mn_pushboolean( s, ( sa == sb ) );
-					else mn_pushnil(s);
-				}
-				else
-				{
-					mn_getmeta(s,-2);
-					if ( i.op == MOP_EQ ) mn_pushstring(s,METHOD_EQ);
-					else if ( i.op == MOP_LT ) mn_pushstring(s,METHOD_LT);
-					else if ( i.op == MOP_GT ) mn_pushstring(s,METHOD_GT);
-					mn_getfield(s,-2);
-					mn_insertstack(s,-4);
-					mn_pop(s,1);
-					mn_call(s,2,1);
-				}
+				ut_callmeta_logical( s, (MnOperate)i.op, ut_getstack( s, -2 ), ut_getstack( s, -1 ) );
 			}
 			break;
 
@@ -1671,46 +1702,7 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 		case MOP_MUL:
 		case MOP_DIV:
 			{
-				if ( mn_isnumber(s,-2) )
-				{
-					OvReal na = mn_tonumber(s,-2);
-					OvReal nb = mn_tonumber(s,-1);
-					mn_pop(s,2);
-
-					switch (i.op)
-					{
-					case MOP_ADD: na += nb; break;
-					case MOP_SUB: na -= nb; break;
-					case MOP_MUL: na *= nb; break;
-					case MOP_DIV: na /= nb; break;
-					}
-
-					mn_pushnumber( s, na );
-				}
-				else if ( mn_isstring(s,-2) )
-				{
-					OvString sa = mn_tostring(s,-2);
-					OvString sb = mn_tostring(s,-1);
-					
-					if ( i.op == MOP_ADD )
-					{
-						mn_pop(s,2);
-						mn_pushstring( s, sa+sb );
-					}
-					else mn_pop(s,1);
-				}
-				else
-				{
-					mn_getmeta(s,-2);
-					if ( i.op == MOP_ADD ) mn_pushstring(s,"__add");
-					else if ( i.op == MOP_SUB ) mn_pushstring(s,"__sub");
-					else if ( i.op == MOP_MUL ) mn_pushstring(s,"__mul");
-					else if ( i.op == MOP_DIV ) mn_pushstring(s,"__div");
-					mn_getfield(s,-2);
-					mn_insertstack(s,-4);
-					mn_pop(s,1);
-					mn_call(s,2,1);
-				}
+				ut_callmeta_arith( s, (MnOperate)i.op, ut_getstack( s, -2 ), ut_getstack( s, -1 ) );
 			}
 			break;
 
