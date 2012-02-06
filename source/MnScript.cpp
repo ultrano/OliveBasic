@@ -207,8 +207,8 @@ MnValue			ut_getarray( MnState* s, MnValue& t, MnValue& n );
 void			ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v );
 MnValue			ut_getfield( MnState* s, MnValue& c, MnValue& n );
 
-MnValue			ut_getmeta( MnState* s, MnValue& c );
-void			ut_setmeta( MnState* s, MnValue& c, MnValue& m );
+MnValue			ut_getmeta( MnState* s, const MnValue& c );
+void			ut_setmeta( MnState* s, MnValue& c, const MnValue& m );
 
 void			ut_setupval( MnState* s, MnIndex clsidx, MnIndex upvalidx,MnValue& v );
 MnValue			ut_getupval( MnState* s, MnIndex clsidx, MnIndex upvalidx );
@@ -1048,7 +1048,7 @@ void mn_setmeta( MnState* s, MnIndex idx )
 	mn_pop(s,1);
 }
 
-MnValue ut_getmeta( MnState* s, MnValue& c )
+MnValue ut_getmeta( MnState* s, const MnValue& c )
 {
 	if ( MnIsTable(c) )
 	{
@@ -1329,7 +1329,7 @@ OvBool mn_toboolean( MnState* s, MnIndex idx )
 
 }
 
-OvReal ut_tonumber( MnValue& val ) 
+OvReal ut_tonumber( const MnValue& val ) 
 {
 	if ( MnIsNumber(val) )
 	{
@@ -1349,7 +1349,7 @@ OvReal mn_tonumber( MnState* s, MnIndex idx )
 
 }
 
-OvString ut_tostring( MnValue& val ) 
+OvString ut_tostring( const MnValue& val ) 
 {
 	if ( MnIsString(val) )
 	{
@@ -1575,7 +1575,7 @@ enum MnOperate
 };
 //////////////////////////////////////////////////////////////////////////
 
-MnValue ut_method_arith( MnState* s, MnOperate op, MnValue& a, MnValue& b )
+MnValue ut_method_arith( MnState* s, MnOperate op, const MnValue& a, const MnValue& b )
 {
 	if ( MnIsNumber(a) )
 	{
