@@ -106,6 +106,7 @@ OvBool ut_str2num( const OvString& str, OvReal &num )
 {
 	OvInt i = 0;
 	OvChar c = str[i];
+	num = 0;
 	if ( isdigit(c) )
 	{
 		OvInt mult = 10;
@@ -123,7 +124,8 @@ OvBool ut_str2num( const OvString& str, OvReal &num )
 		while ( true )
 		{
 			if ( isdigit(c) ) num = (num * mult) + (c-'0'); else break;
-			if ( !(i >= str.size()) ) break;
+			if ( i >= str.size() ) break;
+			c = str[++i];
 		}
 		return true;
 	}
@@ -1739,7 +1741,9 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 		case MOP_LT:
 		case MOP_GT:
 			{
-				ut_method_logical( s, (MnOperate)i.op, ut_getstack( s, -2 ), ut_getstack( s, -1 ) );
+				MnValue ret = ut_method_logical( s, (MnOperate)i.op, ut_getstack( s, -2 ), ut_getstack( s, -1 ) );
+				mn_pop(s,2);
+				ut_pushvalue(s,ret);
 			}
 			break;
 
@@ -1748,7 +1752,9 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 		case MOP_MUL:
 		case MOP_DIV:
 			{
-				ut_method_arith( s, (MnOperate)i.op, ut_getstack( s, -2 ), ut_getstack( s, -1 ) );
+				MnValue ret = ut_method_arith( s, (MnOperate)i.op, ut_getstack( s, -2 ), ut_getstack( s, -1 ) );
+				mn_pop(s,2);
+				ut_pushvalue(s,ret);
 			}
 			break;
 

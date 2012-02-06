@@ -35,6 +35,7 @@ void			mn_newtable( MnState* s );
 void			mn_newarray( MnState* s );
 void			mnd_newgarbege( MnState* s );
 void			mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals );
+
 void			mn_pushfunction( MnState* s, MnCFunction proto );
 void			mn_pushnil( MnState* s );
 void			mn_pushboolean( MnState* s, OvBool v );
