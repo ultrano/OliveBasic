@@ -152,14 +152,16 @@ public:
 	map_hash_val global;
 	map_hash_str strtable;
 	vec_value	 stack;
+	MnValue*	 begin;
+	MnValue*	 end;
+	MnValue*	 base;
+	MnValue*	 top;
 
 	set_upval	 upvals;
 	set_upval	 openeduv;
 
 	MnCallInfo*	 ci;
 	MnInstruction* pc;
-	MnIndex		 base;
-	MnIndex		 roof;
 
 };
 
@@ -178,6 +180,8 @@ public:
 void*			ut_alloc( OvSize sz ) { return OvMemAlloc(sz); };
 void			ut_free( void* p ) { OvMemFree(p); };
 
+void			ut_ensure_stack( MnState* s, OvInt sz );
+
 MnString*		ut_newstring( MnState* s, const OvString& str );
 MnTable*		ut_newtable( MnState* s );
 MnArray*		ut_newarray( MnState* s );
@@ -188,8 +192,6 @@ MnUserData*		ut_newuserdata( MnState* s, void* p );
 
 void			ut_delete_object( MnObject* o );
 void			ut_delete_garbage( MnObject* o );
-
-MnIndex			ut_absidx( MnState* s, MnIndex idx );
 
 OvBool			ut_isglobal( MnState* s, OvHash32 hash );
 
@@ -212,8 +214,8 @@ MnValue			ut_getfield( MnState* s, MnValue& c, MnValue& n );
 MnValue			ut_getmeta( MnState* s, const MnValue& c );
 void			ut_setmeta( MnState* s, MnValue& c, const MnValue& m );
 
-void			ut_setupval( MnState* s, MnIndex clsidx, MnIndex upvalidx,MnValue& v );
-MnValue			ut_getupval( MnState* s, MnIndex clsidx, MnIndex upvalidx );
+void			ut_setupval( MnState* s, MnIndex upvalidx,MnValue& v );
+MnValue			ut_getupval( MnState* s, MnIndex upvalidx );
 
 void			ut_pushvalue( MnState* s, const MnValue& v );
 
@@ -687,10 +689,10 @@ MnObjType ut_str2type( const MnValue& val )
 MnState* mn_openstate()
 {
 	MnState* s = new(ut_alloc(sizeof(MnState))) MnState;
-	s->base = 0;
-	s->roof  = 0;
+	s->begin = s->end = s->base = s->top = NULL;
 	s->ci	= NULL;
 	s->pc	= NULL;
+	ut_ensure_stack(s,1);
 	return s;
 }
 
@@ -699,7 +701,7 @@ void mn_closestate( MnState* s )
 	if ( s )
 	{
 		while ( s->ci ) { MnCallInfo* ci = s->ci; s->ci = ci->prev; ut_free(ci); }
-		s->base = s->roof = 0;
+		s->begin = s->end = s->base = s->top = NULL;
 		s->stack.clear();
 		s->global.clear();
 		s->strtable.clear();
@@ -714,7 +716,7 @@ void mn_closestate( MnState* s )
 
 void ut_correct_upval( MnState* s, MnValue* oldstack )
 {
-	MnValue* newstack = s->stack.size()? &(s->stack[0]) : NULL;
+	MnValue* newstack = s->begin;
 	if ( oldstack && newstack )
 	{
 		for each ( MnUpval* upval in s->upvals )
@@ -776,25 +778,33 @@ MnValue ut_getglobal( MnState* s, MnValue& n )
 
 void ut_setstack( MnState* s, MnIndex idx, const MnValue& val )
 {
-	idx = ut_absidx( s, idx );
-	if ( idx >= 0 && idx < s->stack.size() )
+	if ( idx < 0 )
 	{
-		s->stack[idx] = val;
+		MnValue* ret = s->top + ( idx + 1 );
+		if ( ret >= s->base ) *ret = val;
+	}
+	else if ( idx > 0 )
+	{
+		MnValue* ret = s->base + ( idx - 1 );
+		if ( ret <= s->top ) *ret = val;
 	}
 }
 
 MnValue* ut_getstack_ptr( MnState* s, MnIndex idx )
 {
-	idx = ut_absidx( s, idx );
-
-	if ( idx >= s->base && idx < s->stack.size() )
+	if ( idx < 0 )
 	{
-		return &(s->stack.at( idx ));
+		MnValue* ret = s->top + ( idx + 1 );
+		if ( ret < s->base ) return NULL;
+		else return ret;
 	}
-	else
+	else if ( idx > 0 )
 	{
-		return NULL;
+		MnValue* ret = s->base + ( idx - 1 );
+		if ( ret > s->top ) return NULL;
+		else return ret;
 	}
+	return NULL;
 }
 
 MnValue ut_getstack( MnState* s, MnIndex idx )
@@ -922,9 +932,11 @@ MnValue ut_getarray( MnState* s, MnValue& a, MnValue& n )
 	return MnValue();
 }
 
-void ut_setupval( MnState* s, MnIndex clsidx, MnIndex upvalidx, MnValue& v )
+void ut_setupval( MnState* s, MnIndex upvalidx, MnValue& v )
 {
-	MnValue c = ut_getstack(s,clsidx);
+	MnValue c;
+	if ( (s->base - 1) >= s->begin ) c  = *(s->base - 1);
+	
 	if ( MnIsClosure(c) )
 	{
 		MnClosure* cls = MnToClosure(c);
@@ -936,9 +948,11 @@ void ut_setupval( MnState* s, MnIndex clsidx, MnIndex upvalidx, MnValue& v )
 	}
 }
 
-MnValue ut_getupval( MnState* s, MnIndex clsidx, MnIndex upvalidx )
+MnValue ut_getupval( MnState* s, MnIndex upvalidx )
 {
-	MnValue c = ut_getstack(s,clsidx);
+	MnValue c;
+	if ( (s->base - 1) >= s->begin ) c  = *(s->base - 1);
+
 	if ( MnIsClosure(c) )
 	{
 		MnClosure* cls = MnToClosure(c);
@@ -968,25 +982,18 @@ void mn_getstack( MnState* s, MnIndex idx )
 
 void mn_insertstack( MnState* s, MnIndex idx )
 {
-	idx = ut_absidx( s, idx );
-	if ( idx >= 0 && idx < s->roof )
+	MnValue* val = ut_getstack_ptr( s, idx );
+	if ( val )
 	{
-		MnIndex i = idx;
-		MnValue val = s->stack[idx];
-		while ( i < s->roof )
+		MnValue temp = *val;
+		MnValue* itor = val;
+		while ( itor < s->top )
 		{
-			if ( i+1 == s->roof )
-			{
-				s->stack[idx] = val;
-			}
-			else
-			{
-				MnValue temp = s->stack[i+1];
-				s->stack[i+1] = val;
-				val = temp;
-			}
-			++i;
+			MnValue next = *(++itor);
+			*itor = temp;
+			temp = next;
 		}
+		*val = *itor;
 	}
 }
 
@@ -998,10 +1005,9 @@ void ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v )
 }
 void mn_setfield( MnState* s, MnIndex idx )
 {
-	if ( mn_gettop(s) >= 2 )
+	if ( idx && mn_gettop(s) >= 2 )
 	{
 		if ( idx )	ut_setfield( s, ut_getstack(s,idx), ut_getstack(s,-2), ut_getstack(s,-1) );
-		else		ut_setglobal( s, ut_getstack(s,-2), ut_getstack(s,-1));
 		mn_pop(s,2);
 	}
 }
@@ -1016,11 +1022,29 @@ MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 
 void mn_getfield( MnState* s, MnIndex idx )
 {
-	if ( mn_gettop(s) >= 1 )
+	if ( idx && mn_gettop(s) >= 1 )
 	{
 		MnValue val;
 		if ( idx )	val = ut_getfield( s, ut_getstack(s,idx), ut_getstack(s,-1) );
-		else		val = ut_getglobal( s, ut_getstack(s,-1) );
+		mn_pop(s,1);
+		ut_pushvalue( s, val );
+	}
+}
+
+void mn_setglobal( MnState* s )
+{
+	if ( mn_gettop(s) >= 2 )
+	{
+		ut_setglobal( s, ut_getstack(s,-2), ut_getstack(s,-1));
+		mn_pop(s,2);
+	}
+}
+
+void mn_getglobal( MnState* s )
+{
+	if (  mn_gettop(s) >= 1 )
+	{
+		MnValue val = ut_getglobal( s, ut_getstack(s,-1) );
 		mn_pop(s,1);
 		ut_pushvalue( s, val );
 	}
@@ -1074,12 +1098,12 @@ void mn_getmeta( MnState* s, MnIndex idx )
 
 void mn_setupval( MnState* s, MnIndex upvalidx )
 {
-	ut_setupval(s, 0, upvalidx, ut_getstack(s,-1));
+	ut_setupval(s, upvalidx, ut_getstack(s,-1));
 }
 
 void mn_getupval( MnState* s, MnIndex upvalidx )
 {
-	ut_pushvalue(s, ut_getupval(s, 0, upvalidx ) );
+	ut_pushvalue(s, ut_getupval(s, upvalidx ) );
 }
 
 MnString* ut_newstring( MnState* s, const OvString& str )
@@ -1156,45 +1180,56 @@ void ut_delete_garbage( MnObject* o )
 	}
 }
 
-MnIndex ut_absidx( MnState* s, MnIndex idx )
-{
-	MnIndex abidx = 0;
-	if ( idx < 0 )
-	{
-		abidx = mn_gettop(s) + idx;
-		abidx = s->base + abidx;
-	}
-	else if ( idx >= 0 )
-	{
-		abidx = s->base + idx - 1;
-	}
-	return abidx;
-}
 
 void ut_ensure_stack( MnState* s, OvInt sz )
 {
 	if ( sz > s->stack.size() )
 	{
-		MnValue* oldstack = s->stack.size()? &(s->stack[0]) : NULL;
+		MnValue* oldstack = s->begin;
 		s->stack.resize( sz );
+		s->begin	= &(s->stack[0]);
+		s->end		= &(s->stack[s->stack.size() - 1]);
+		s->base		= (s->base - oldstack) + s->begin;
+		s->top		= (s->top - oldstack) + s->begin;
 		ut_correct_upval( s, oldstack );
 	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+OvInt ut_stack_size( MnState* s )
+{
+	return s->stack.size();
 }
 
 ///////////////////////* get/set top *///////////////////////
 
 void mn_settop( MnState* s, MnIndex idx )
 {
-	idx = ut_absidx( s, idx ) + 1;
-	idx = (idx < s->base)? s->base : idx;
-	ut_ensure_stack( s, idx );
-	while ( s->roof > idx ) s->stack[--s->roof] = MnValue();
-	s->roof = idx;
+	MnValue* newtop = s->top;
+	if ( idx < 0 )
+	{
+		newtop = s->top + ( idx + 1 );
+		if ( newtop < s->base ) newtop = s->base;
+	}
+	else if ( idx > 0 )
+	{
+		--idx;
+		newtop = s->base + idx;
+		if ( newtop > s->end )
+		{
+			ut_ensure_stack( s, (newtop+1) - s->begin );
+			newtop = s->base + ( idx - 1 );
+		}
+	}
+	
+	if ( s->top > newtop ) while ( s->top != newtop ) (*s->top--) = MnValue();
+	else s->top = newtop;
 }
 
 MnIndex mn_gettop( MnState* s )
 {
-	return s->roof - s->base;
+	return s->top - s->base;
 }
 
 ///////////////////////*   kind of push    *//////////////////////
@@ -1394,8 +1429,8 @@ OvInt mn_collect_garbage( MnState* s )
 	{
 		MnMarking(itor->second);
 	}
-	MnIndex idx = s->roof;
-	while ( idx-- ) MnMarking(s->stack[idx]);
+	MnValue* itor = s->top;
+	while ( itor != s->begin ) MnMarking(*itor--);
 
 	MnObject* dead = NULL;
 	MnObject* heap = s->heap;
@@ -1538,6 +1573,7 @@ void mn_lib_default( MnState* s )
 	mn_pushstring( s, "dumpstack" );
 	mn_pushfunction( s, ex_dumpstack);
 	mn_setglobal( s );
+
 }
 
 
@@ -1798,19 +1834,19 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 {
 	nargs = max(nargs,0);
-	MnValue v = ut_getstack(s, -(1 + nargs) );
+	MnValue* func = ut_getstack_ptr(s, -(1 + nargs) );
 	MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
-	ci->prev = s->ci;
-	ci->savepc = s->pc;
-	ci->base = s->base;
+	ci->prev	= s->ci;
+	ci->savepc	= s->pc;
+	ci->base	= s->base - s->begin;
 
 	s->ci    = ci;
-	s->base  = s->roof - nargs;
+	s->base  = (func + 1);
 
 	OvInt r = 0;
-	if ( MnIsClosure(v) )
+	if ( func && MnIsClosure(*func) )
 	{
-		MnClosure* cls = MnToClosure(v);
+		MnClosure* cls = MnToClosure(*func);
 		ci->cls  = cls;
 		if ( cls->type == CCL )
 		{
@@ -1824,22 +1860,23 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 		}
 	}
 
-	ut_close_upval( s, &(s->stack[ s->base - 1 ]) );
+	func = s->base - 1;
+	ut_close_upval( s, func );
 
-	MnIndex oldlast = s->base - 1;
-	MnIndex newlast = oldlast + nrets;
-	MnIndex first_ret  = s->roof - r;
-	first_ret = max( oldlast, first_ret );
-	ut_ensure_stack( s, oldlast + max( nrets, r ) );
+	ut_ensure_stack( s, (func - s->begin) + max( nrets, r ) );
+	MnValue* oldtop = func;
+	MnValue* newtop = func + nrets;
+	MnValue* first_ret  = s->top - r;
+	first_ret = max( func, first_ret );
 
-	if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  s->stack[oldlast++] = s->stack[first_ret++];
+	if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  (*oldtop++) = (*first_ret++);
 
-	while ( oldlast < s->roof ) s->stack[ --s->roof ] = MnValue();
-	while ( oldlast > s->roof ) s->stack[ s->roof++ ] = MnValue();
+	mn_settop( s, nrets );
+	while ( oldtop < newtop ) *(++oldtop) = MnValue();
 
 	ci = s->ci;
-	s->roof = newlast;
-	s->base = ci->base;
+	s->top	= newtop;
+	s->base = ci->base + s->begin;
 	s->pc	= ci->savepc;
 	s->ci	= ci->prev;
 	ut_free(ci);

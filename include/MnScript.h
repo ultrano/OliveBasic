@@ -18,8 +18,8 @@ void			mn_insertstack( MnState* s, MnIndex idx );
 void			mn_setfield( MnState* s, MnIndex idx );
 void			mn_getfield( MnState* s, MnIndex idx );
 
-#define			mn_setglobal(s) mn_setfield((s),0)
-#define			mn_getglobal(s) mn_getfield((s),0)
+void			mn_setglobal( MnState* s );
+void			mn_getglobal( MnState* s );
 
 void			mn_setmeta( MnState* s, MnIndex idx );
 void			mn_getmeta( MnState* s, MnIndex idx );
