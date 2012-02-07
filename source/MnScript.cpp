@@ -689,7 +689,9 @@ MnObjType ut_str2type( const MnValue& val )
 MnState* mn_openstate()
 {
 	MnState* s = new(ut_alloc(sizeof(MnState))) MnState;
-	s->begin = s->end = s->base = s->top = NULL;
+	s->begin = s->end = NULL;
+	s->base = (MnValue*)-1;
+	s->top  = (MnValue*)+0;
 	s->ci	= NULL;
 	s->pc	= NULL;
 	ut_ensure_stack(s,1);
@@ -780,13 +782,13 @@ void ut_setstack( MnState* s, MnIndex idx, const MnValue& val )
 {
 	if ( idx < 0 )
 	{
-		MnValue* ret = s->top + ( idx + 1 );
-		if ( ret >= s->base ) *ret = val;
+		MnValue* ret = s->top + idx;
+		if ( ret > s->base ) *ret = val;
 	}
 	else if ( idx > 0 )
 	{
-		MnValue* ret = s->base + ( idx - 1 );
-		if ( ret <= s->top ) *ret = val;
+		MnValue* ret = s->base + idx;
+		if ( ret < s->top ) *ret = val;
 	}
 }
 
@@ -794,15 +796,15 @@ MnValue* ut_getstack_ptr( MnState* s, MnIndex idx )
 {
 	if ( idx < 0 )
 	{
-		MnValue* ret = s->top + ( idx + 1 );
-		if ( ret < s->base ) return NULL;
-		else return ret;
+		MnValue* ret = s->top + idx;
+		if ( ret > s->base ) return ret;
+		else return NULL;
 	}
 	else if ( idx > 0 )
 	{
-		MnValue* ret = s->base + ( idx - 1 );
-		if ( ret > s->top ) return NULL;
-		else return ret;
+		MnValue* ret = s->base + idx;
+		if ( ret < s->top ) return ret;
+		else return NULL;
 	}
 	return NULL;
 }
@@ -935,7 +937,7 @@ MnValue ut_getarray( MnState* s, MnValue& a, MnValue& n )
 void ut_setupval( MnState* s, MnIndex upvalidx, MnValue& v )
 {
 	MnValue c;
-	if ( (s->base - 1) >= s->begin ) c  = *(s->base - 1);
+	if ( s->base >= s->begin ) c  = *s->base;
 	
 	if ( MnIsClosure(c) )
 	{
@@ -951,7 +953,7 @@ void ut_setupval( MnState* s, MnIndex upvalidx, MnValue& v )
 MnValue ut_getupval( MnState* s, MnIndex upvalidx )
 {
 	MnValue c;
-	if ( (s->base - 1) >= s->begin ) c  = *(s->base - 1);
+	if ( s->base >= s->begin ) c  = *s->base;
 
 	if ( MnIsClosure(c) )
 	{
@@ -1210,26 +1212,22 @@ void mn_settop( MnState* s, MnIndex idx )
 	if ( idx < 0 )
 	{
 		newtop = s->top + ( idx + 1 );
-		if ( newtop < s->base ) newtop = s->base;
+		if ( newtop <= s->base ) newtop = s->base + 1;
 	}
-	else if ( idx > 0 )
+	else if ( idx >= 0 )
 	{
-		--idx;
-		newtop = s->base + idx;
-		if ( newtop > s->end )
-		{
-			ut_ensure_stack( s, (newtop+1) - s->begin );
-			newtop = s->base + ( idx - 1 );
-		}
+		OvSize sz = idx + (s->base - s->begin + 1);
+		if ( ut_stack_size(s) < sz ) ut_ensure_stack( s, sz );
+		newtop = s->base + ( idx + 1 );
 	}
-	
-	if ( s->top > newtop ) while ( s->top != newtop ) (*s->top--) = MnValue();
-	else s->top = newtop;
+
+	if ( s->top > newtop ) while ( s->top != newtop ) *(--s->top) = MnValue();
+	s->top = newtop;
 }
 
 MnIndex mn_gettop( MnState* s )
 {
-	return s->top - s->base;
+	return (s->top - s->base) - 1;
 }
 
 ///////////////////////*   kind of push    *//////////////////////
@@ -1841,7 +1839,7 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 	ci->base	= s->base - s->begin;
 
 	s->ci    = ci;
-	s->base  = (func + 1);
+	s->base  = func;
 
 	OvInt r = 0;
 	if ( func && MnIsClosure(*func) )
@@ -1860,19 +1858,18 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 		}
 	}
 
-	func = s->base - 1;
+	func = s->base;
 	ut_close_upval( s, func );
-
 	ut_ensure_stack( s, (func - s->begin) + max( nrets, r ) );
-	MnValue* oldtop = func;
+
 	MnValue* newtop = func + nrets;
 	MnValue* first_ret  = s->top - r;
 	first_ret = max( func, first_ret );
 
-	if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  (*oldtop++) = (*first_ret++);
+	if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  (*func++) = (*first_ret++);
 
-	mn_settop( s, nrets );
-	while ( oldtop < newtop ) *(++oldtop) = MnValue();
+	mn_settop( s, nrets - 1 );
+	while ( func < newtop ) (*func++) = MnValue();
 
 	ci = s->ci;
 	s->top	= newtop;
