@@ -151,6 +151,7 @@ public:
 	MnObject*	 heap;
 	map_hash_val global;
 	map_hash_str strtable;
+
 	vec_value	 stack;
 	MnValue*	 begin;
 	MnValue*	 end;
