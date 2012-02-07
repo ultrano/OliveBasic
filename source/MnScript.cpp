@@ -159,7 +159,7 @@ public:
 	MnCallInfo*	 ci;
 	MnInstruction* pc;
 	MnIndex		 base;
-	MnIndex		 last;
+	MnIndex		 roof;
 
 };
 
@@ -688,7 +688,7 @@ MnState* mn_openstate()
 {
 	MnState* s = new(ut_alloc(sizeof(MnState))) MnState;
 	s->base = 0;
-	s->last  = 0;
+	s->roof  = 0;
 	s->ci	= NULL;
 	s->pc	= NULL;
 	return s;
@@ -699,7 +699,7 @@ void mn_closestate( MnState* s )
 	if ( s )
 	{
 		while ( s->ci ) { MnCallInfo* ci = s->ci; s->ci = ci->prev; ut_free(ci); }
-		s->base = s->last = 0;
+		s->base = s->roof = 0;
 		s->stack.clear();
 		s->global.clear();
 		s->strtable.clear();
@@ -969,13 +969,13 @@ void mn_getstack( MnState* s, MnIndex idx )
 void mn_insertstack( MnState* s, MnIndex idx )
 {
 	idx = ut_absidx( s, idx );
-	if ( idx >= 0 && idx < s->last )
+	if ( idx >= 0 && idx < s->roof )
 	{
 		MnIndex i = idx;
 		MnValue val = s->stack[idx];
-		while ( i < s->last )
+		while ( i < s->roof )
 		{
-			if ( i+1 == s->last )
+			if ( i+1 == s->roof )
 			{
 				s->stack[idx] = val;
 			}
@@ -1188,13 +1188,13 @@ void mn_settop( MnState* s, MnIndex idx )
 	idx = ut_absidx( s, idx ) + 1;
 	idx = (idx < s->base)? s->base : idx;
 	ut_ensure_stack( s, idx );
-	while ( s->last > idx ) s->stack[--s->last] = MnValue();
-	s->last = idx;
+	while ( s->roof > idx ) s->stack[--s->roof] = MnValue();
+	s->roof = idx;
 }
 
 MnIndex mn_gettop( MnState* s )
 {
-	return s->last - s->base;
+	return s->roof - s->base;
 }
 
 ///////////////////////*   kind of push    *//////////////////////
@@ -1394,7 +1394,7 @@ OvInt mn_collect_garbage( MnState* s )
 	{
 		MnMarking(itor->second);
 	}
-	MnIndex idx = s->last;
+	MnIndex idx = s->roof;
 	while ( idx-- ) MnMarking(s->stack[idx]);
 
 	MnObject* dead = NULL;
@@ -1484,6 +1484,31 @@ OvInt ex_tonumber( MnState* s )
 	return 1;
 }
 
+OvInt ex_dumpstack( MnState* s )
+{
+	MnIndex i = s->stack.size();
+	printf("--stack top--\n");
+	while ( i-- )
+	{
+		printf( "%3d : ", i );
+		MnValue& v = s->stack[i];
+		if ( MnIsNumber(v) )		printf( "[number] : %d", ut_tonumber(v) );
+		else if ( MnIsString(v) )	printf( "[string] : %s", ut_tostring(v).c_str() );
+		else if ( MnIsTable(v) )	printf( "[table]" );
+		else if ( MnIsArray(v) )	printf( "[array]" );
+		else if ( MnIsClosure(v) )	printf( "[closure]" );
+		else if ( MnIsFunction(v) )	printf( "[function]" );
+		else if ( MnIsUser(v) )		printf( "[userdata]" );
+		else if ( MnIsUpval(v) )	printf( "[upval]" );
+		else if ( MnIsNil(v) )		printf( "[nil]" );
+		else if ( MnIsBoolean(v) )	printf( "[boolean] : %s", ut_toboolean(v)? "true":"false" );
+		else						printf("[unknown]");
+		printf("\n");
+	}
+	printf("--stack bottom--\n");
+	return 0;
+}
+
 void mn_lib_default( MnState* s )
 {
 	mn_pushstring( s, "length" );
@@ -1508,6 +1533,10 @@ void mn_lib_default( MnState* s )
 
 	mn_pushstring( s, "tonumber" );
 	mn_pushfunction( s, ex_tonumber);
+	mn_setglobal( s );
+
+	mn_pushstring( s, "dumpstack" );
+	mn_pushfunction( s, ex_dumpstack);
 	mn_setglobal( s );
 }
 
@@ -1776,7 +1805,7 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 	ci->base = s->base;
 
 	s->ci    = ci;
-	s->base  = s->last - nargs;
+	s->base  = s->roof - nargs;
 
 	OvInt r = 0;
 	if ( MnIsClosure(v) )
@@ -1799,17 +1828,17 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 
 	MnIndex oldlast = s->base - 1;
 	MnIndex newlast = oldlast + nrets;
-	MnIndex first_ret  = s->last - r;
+	MnIndex first_ret  = s->roof - r;
 	first_ret = max( oldlast, first_ret );
 	ut_ensure_stack( s, oldlast + max( nrets, r ) );
 
 	if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  s->stack[oldlast++] = s->stack[first_ret++];
 
-	while ( oldlast < s->last ) s->stack[ --s->last ] = MnValue();
-	while ( oldlast > s->last ) s->stack[ s->last++ ] = MnValue();
+	while ( oldlast < s->roof ) s->stack[ --s->roof ] = MnValue();
+	while ( oldlast > s->roof ) s->stack[ s->roof++ ] = MnValue();
 
 	ci = s->ci;
-	s->last = newlast;
+	s->roof = newlast;
 	s->base = ci->base;
 	s->pc	= ci->savepc;
 	s->ci	= ci->prev;
