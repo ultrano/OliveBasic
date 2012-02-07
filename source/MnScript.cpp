@@ -984,18 +984,18 @@ void mn_getstack( MnState* s, MnIndex idx )
 
 void mn_insertstack( MnState* s, MnIndex idx )
 {
-	MnValue* val = ut_getstack_ptr( s, idx );
-	if ( val )
+	MnValue* itor = ut_getstack_ptr( s, idx );;
+	if ( itor && itor < s->top )
 	{
-		MnValue temp = *val;
-		MnValue* itor = val;
-		while ( itor < s->top )
+		MnValue temp = *itor;
+		MnValue val = ut_getstack( s, -1 );
+		*itor = val;
+		while ( ++itor < s->top )
 		{
-			MnValue next = *(++itor);
+			MnValue next = *itor;
 			*itor = temp;
 			temp = next;
 		}
-		*val = *itor;
 	}
 }
 
@@ -1519,12 +1519,12 @@ OvInt ex_tonumber( MnState* s )
 
 OvInt ex_dumpstack( MnState* s )
 {
-	MnIndex i = s->stack.size();
-	printf("--stack top--\n");
-	while ( i-- )
+	MnValue* itor = s->end;
+	printf("\n--stack top--\n");
+	while ( s->begin != itor-- )
 	{
-		printf( "%3d : ", i );
-		MnValue& v = s->stack[i];
+		printf( "%3d : ", itor - s->begin + 1 );
+		MnValue& v =*itor;
 		if ( MnIsNumber(v) )		printf( "[number] : %d", ut_tonumber(v) );
 		else if ( MnIsString(v) )	printf( "[string] : %s", ut_tostring(v).c_str() );
 		else if ( MnIsTable(v) )	printf( "[table]" );
