@@ -2,7 +2,7 @@
 
 push "dumpstack"
 getglobal
-call 0 50
+call 0 5
 
 push "dumpstack"
 getglobal

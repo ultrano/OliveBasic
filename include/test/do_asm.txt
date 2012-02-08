@@ -1,5 +1,25 @@
 
 push "do_asm"
 getglobal
-push "D:\olive\mnscript\OliveBasic\include\test\dumpstack.txt"
+push "D:\olive\mnscript\OliveBasic\include\test\include.txt"
 call 1 0
+
+push "count"
+push 100
+setglobal
+
+push "count"
+push "count"
+getglobal
+push 1
+sub
+setglobal
+
+push "func"
+getglobal
+call 0 0
+
+push "count"
+getglobal
+cmp
+jmp -12

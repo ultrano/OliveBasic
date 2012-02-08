@@ -1896,6 +1896,7 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 
 	mn_settop( s, nrets - 1 );
 	while ( func < newtop ) (*func++) = MnValue();
+	while ( newtop < s->top ) *(--s->top) = MnValue();
 
 	ci = s->ci;
 	s->top	= newtop;

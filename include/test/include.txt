@@ -1,0 +1,9 @@
+
+push "func"
+newclosure :func
+push "print"
+getglobal
+push "func"
+call 1 0
+:end
+setglobal
