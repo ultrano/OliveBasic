@@ -733,6 +733,14 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="TestCases"
+				>
+				<File
+					RelativePath=".\include\test\ScriptTest.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<File
 			RelativePath=".\ReadMe.txt"

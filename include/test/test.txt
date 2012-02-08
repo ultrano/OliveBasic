@@ -1,0 +1,24 @@
+
+push "user"
+getglobal
+
+newtable
+
+push "__add"
+newclosure :func
+push "print"
+getglobal
+push "__add called"
+call 1 0
+:end
+
+setfield -3
+
+setmeta -2
+
+push "test"
+add
+
+push "dumpstack"
+getglobal
+call 0 0
