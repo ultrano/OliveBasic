@@ -86,7 +86,9 @@ const MnTypeStr g_type_str[] =
 	MnIsArray((v)) ||  \
 	MnIsFunction((v)) ||  \
 	MnIsClosure((v)) ||  \
-	MnIsTable((v)) \
+	MnIsTable((v)) ||  \
+	MnIsUpval((v)) ||  \
+	MnIsUser((v)) \
 	)
 
 #define MnBadConvert()	(NULL)
@@ -276,7 +278,6 @@ public:
 
 	/* field */
 	MnState*const 	state;
-	MnObjType		type;
 	MnRefCounter*	refcnt;
 
 	MnObject*	next;
@@ -445,17 +446,13 @@ class MnUserData : public MnObject
 {
 public:
 
-	MnUserData( MnState* s, void* p ) : MnObject(s), ptr(p) {};
-	~MnUserData() { ptr = NULL; };
+	MnUserData( MnState* s, void* p );;
+	~MnUserData();;
 
 	void* ptr;
 	MnValue	metatable;
 
-	virtual void marking() 
-	{
-		mark = MARKED;
-		MnMarking( metatable );
-	};
+	virtual void marking();;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -651,6 +648,25 @@ void MnClosure::marking()
 	{
 		MnMarking( uv );
 	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+MnUserData::MnUserData( MnState* s, void* p ) : MnObject(s), ptr(p)
+{
+
+}
+
+MnUserData::~MnUserData()
+{
+	ptr = NULL; 
+	metatable = MnValue();
+}
+
+void MnUserData::marking()
+{
+	mark = MARKED;
+	MnMarking( metatable );
 }
 
 /////////////////////// type-string convert ////////////////////////////////
