@@ -18,22 +18,7 @@ struct MnInstruction;
 typedef OvUShort MnOperand;
 
 enum MnCLType { CCL= 1, MCL = 2 };
-enum MnObjType
-{
-	MOT_UNKNOWN,
-	MOT_NIL,
-	MOT_BOOLEAN,
-	MOT_NUMBER,
-	MOT_STRING,
-
-	MOT_TABLE,
-	MOT_ARRAY,
-	MOT_FUNCPROTO,
-	MOT_CLOSURE,
-	MOT_UPVAL,
-	MOT_USER,
-};
-struct MnTypeStr { MnObjType type; const char* str; };
+struct MnTypeStr { OvInt type; const char* str; };
 const MnTypeStr g_type_str[] = 
 {
 	{ MOT_UNKNOWN, "unknown" },
@@ -248,7 +233,7 @@ public:
 class MnValue : public OvMemObject
 {
 public:
-	MnObjType type;
+	OvInt type;
 	union
 	{
 		MnRefCounter* cnt;
@@ -260,7 +245,7 @@ public:
 	MnValue( const MnValue &v );
 	MnValue( OvBool b );
 	MnValue( OvReal n );
-	MnValue( MnObjType t, MnObject* o );
+	MnValue( OvInt t, MnObject* o );
 	~MnValue();
 
 	const MnValue& operator =( const MnValue& v );
@@ -510,7 +495,7 @@ MnValue::MnValue( OvReal n )
 	u.num = n;
 }
 
-MnValue::MnValue( MnObjType t, MnObject* o )
+MnValue::MnValue( OvInt t, MnObject* o )
 {
 	type	 = t;
 	u.cnt = o->refcnt;
@@ -671,7 +656,7 @@ void MnUserData::marking()
 
 /////////////////////// type-string convert ////////////////////////////////
 
-const char* ut_type2str( MnObjType type )
+const char* ut_type2str( OvInt type )
 {
 	for each ( const MnTypeStr& elem in g_type_str )
 	{
@@ -683,7 +668,7 @@ const char* ut_type2str( MnObjType type )
 	return g_type_str[MOT_UNKNOWN].str;
 };
 
-MnObjType ut_str2type( const char* str )
+OvInt ut_str2type( const char* str )
 {
 	for each ( const MnTypeStr& elem in g_type_str )
 	{
@@ -695,7 +680,7 @@ MnObjType ut_str2type( const char* str )
 	return g_type_str[MOT_UNKNOWN].type;
 };
 
-MnObjType ut_str2type( const MnValue& val )
+OvInt ut_str2type( const MnValue& val )
 {
 	return ut_str2type( MnIsString(val)? MnToString(val)->get_str().c_str() : "unknown" );
 }
@@ -1433,6 +1418,11 @@ void* ut_touserdata( MnValue& val )
 void* mn_touserdata( MnState* s, MnIndex idx )
 {
 	return ut_touserdata( ut_getstack( s, idx ) );
+}
+
+OvInt mn_type( MnState* s, MnIndex idx )
+{
+	return ut_getstack( s, idx ).type;
 }
 
 OvInt mn_collect_garbage( MnState* s )

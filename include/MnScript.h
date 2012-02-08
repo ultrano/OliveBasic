@@ -7,6 +7,18 @@ typedef OvInt	MnIndex;
 class MnState;
 typedef OvInt (*MnCFunction)(MnState*);
 
+#define	MOT_UNKNOWN		(0)
+#define	MOT_NIL			(1)
+#define	MOT_BOOLEAN		(2)
+#define	MOT_NUMBER		(3)
+#define	MOT_STRING		(4)
+#define	MOT_TABLE		(5)
+#define	MOT_ARRAY		(6)
+#define	MOT_FUNCPROTO	(7)
+#define	MOT_CLOSURE		(8)
+#define	MOT_UPVAL		(9)
+#define	MOT_USER		(10)
+
 MnState*		mn_openstate();
 void			mn_closestate( MnState* s );
 void			mn_lib_default( MnState* s );
@@ -55,6 +67,8 @@ OvBool			mn_toboolean( MnState* s, MnIndex idx );
 OvReal			mn_tonumber( MnState* s, MnIndex idx );
 OvString		mn_tostring( MnState* s, MnIndex idx );
 void*			mn_touserdata( MnState* s, MnIndex idx );
+
+OvInt			mn_type( MnState* s, MnIndex idx );
 
 void			mn_call( MnState* s, OvInt nargs, OvInt nrets );
 

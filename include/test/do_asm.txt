@@ -21,5 +21,12 @@ call 0 0
 
 push "count"
 getglobal
+
+getstack -1
+push "print"
+getglobal
+insertstack -2
+call 1 0
+
 cmp
-jmp -12
+jmp -17
