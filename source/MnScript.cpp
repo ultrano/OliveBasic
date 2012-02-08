@@ -1559,6 +1559,12 @@ OvInt ex_dumpstack( MnState* s )
 	return 0;
 }
 
+OvInt ex_do_asm( MnState* s )
+{
+	mn_do_asm( s, mn_tostring(s,1), 0 );
+	return 0;
+}
+
 void mn_lib_default( MnState* s )
 {
 	mn_pushstring( s, "length" );
@@ -1589,6 +1595,9 @@ void mn_lib_default( MnState* s )
 	mn_pushfunction( s, ex_dumpstack);
 	mn_setglobal( s );
 
+	mn_pushstring( s, "do_asm" );
+	mn_pushfunction( s, ex_do_asm);
+	mn_setglobal( s );
 }
 
 

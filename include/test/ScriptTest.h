@@ -51,3 +51,14 @@ void test_do_asm_dumpstack()
 
 	mn_closestate(s);
 }
+
+void test_do_asm_do_asm_func()
+{
+	MnState* s = mn_openstate();
+	mn_lib_default(s);
+
+	mn_pushfunction(s,native1);
+	mn_do_asm( s, "../OliveBasic/include/test/do_asm.txt", mn_gettop(s) );
+
+	mn_closestate(s);
+}
