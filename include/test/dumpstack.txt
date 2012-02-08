@@ -1,0 +1,9 @@
+
+
+push "dumpstack"
+getglobal
+call 0 5
+
+push "dumpstack"
+getglobal
+call 0 0

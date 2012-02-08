@@ -707,9 +707,9 @@ void mn_closestate( MnState* s )
 		s->begin = s->end = s->base = s->top = NULL;
 		s->stack.clear();
 		s->global.clear();
-		s->strtable.clear();
-		s->upvals.clear();
 		s->openeduv.clear();
+		s->upvals.clear();
+		s->strtable.clear();
 		mn_collect_garbage(s);
 		ut_free(s);
 	}
@@ -1859,10 +1859,10 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 		}
 	}
 
-	func = s->base;
-	ut_close_upval( s, func );
-	ut_ensure_stack( s, (func - s->begin) + max( nrets, r ) );
+	ut_close_upval( s, s->base );
+	ut_ensure_stack( s, (s->base - s->begin) + max( nrets, r ) );
 
+	func = s->base;
 	MnValue* newtop = func + nrets;
 	MnValue* first_ret  = s->top - r;
 	first_ret = max( func, first_ret );

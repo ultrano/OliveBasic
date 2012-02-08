@@ -18,7 +18,3 @@ setmeta -2
 
 push "test"
 add
-
-push "dumpstack"
-getglobal
-call 0 0

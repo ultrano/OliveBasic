@@ -36,7 +36,18 @@ void test_do_asm_userdata()
 	mn_setglobal(s);
 
 	mn_pushfunction(s,native1);
-	mn_do_asm( s, "../OliveBasic/include/test/test.txt", mn_gettop(s) );
+	mn_do_asm( s, "../OliveBasic/include/test/userdata.txt", mn_gettop(s) );
 
 	mn_closestate(s);
 };
+
+void test_do_asm_dumpstack()
+{
+	MnState* s = mn_openstate();
+	mn_lib_default(s);
+
+	mn_pushfunction(s,native1);
+	mn_do_asm( s, "../OliveBasic/include/test/dumpstack.txt", mn_gettop(s) );
+
+	mn_closestate(s);
+}
