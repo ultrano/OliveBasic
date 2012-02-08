@@ -775,8 +775,7 @@ void ut_setglobal( MnState* s, MnValue& n, const MnValue& val )
 		}
 		else
 		{
-			s->global.insert( make_pair( hash, val ) );
-
+			s->global[hash] = val;
 		}
 	}
 }
