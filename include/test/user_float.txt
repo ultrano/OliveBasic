@@ -8,3 +8,13 @@ call 0 1
 push 3
 add
 call 1 0
+
+newclosure :func
+push "test stack"
+push 123
+push "wtf"
+push "dump_stack"
+getglobal
+call 0 0
+:end
+call 0 0

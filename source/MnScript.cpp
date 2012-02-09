@@ -1541,11 +1541,11 @@ OvInt ex_tonumber( MnState* s )
 OvInt ex_dump_stack( MnState* s )
 {
 	MnValue* itor = s->end;
-	printf("\n--stack top--\n");
+	printf("\n--stack end--\n");
 	while ( s->begin <= itor )
 	{
 		printf( "%3d : ", itor - s->begin + 1 );
-		MnValue& v =*itor;
+		MnValue& v =*itor--;
 		if ( MnIsNumber(v) )		printf( "[number] : %d", ut_tonumber(v) );
 		else if ( MnIsString(v) )	printf( "[string] : %s", ut_tostring(v).c_str() );
 		else if ( MnIsTable(v) )	printf( "[table]" );
@@ -1558,12 +1558,9 @@ OvInt ex_dump_stack( MnState* s )
 		else if ( MnIsBoolean(v) )	printf( "[boolean] : %s", ut_toboolean(v)? "true":"false" );
 		else						printf("[unknown]");
 		
-		if ( s->base == itor )		printf( "\t <- base" );
-		if ( s->top  == itor )		printf( "\t <- top" );
-		--itor;
 		printf("\n");
 	}
-	printf("--stack bottom--\n");
+	printf("--stack begin--\n");
 	return 0;
 }
 
