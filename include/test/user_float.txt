@@ -1,0 +1,10 @@
+
+
+push "ensure_stack"
+getglobal
+push "stack_size"
+getglobal
+call 0 1
+push 3
+add
+call 1 0

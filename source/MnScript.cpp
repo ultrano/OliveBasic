@@ -1477,6 +1477,12 @@ OvInt ex_ensure_stack( MnState* s )
 	return 0;
 }
 
+OvInt ex_stack_size( MnState* s )
+{
+	mn_pushnumber( s, ut_stack_size(s) );
+	return 1;
+}
+
 OvInt ex_global_length(MnState* s)
 {
 	OvReal nsize = 0.0;
@@ -1532,14 +1538,14 @@ OvInt ex_tonumber( MnState* s )
 	return 1;
 }
 
-OvInt ex_dumpstack( MnState* s )
+OvInt ex_dump_stack( MnState* s )
 {
 	MnValue* itor = s->end;
 	printf("\n--stack top--\n");
 	while ( s->begin <= itor )
 	{
 		printf( "%3d : ", itor - s->begin + 1 );
-		MnValue& v =*itor--;
+		MnValue& v =*itor;
 		if ( MnIsNumber(v) )		printf( "[number] : %d", ut_tonumber(v) );
 		else if ( MnIsString(v) )	printf( "[string] : %s", ut_tostring(v).c_str() );
 		else if ( MnIsTable(v) )	printf( "[table]" );
@@ -1551,6 +1557,10 @@ OvInt ex_dumpstack( MnState* s )
 		else if ( MnIsNil(v) )		printf( "[nil]" );
 		else if ( MnIsBoolean(v) )	printf( "[boolean] : %s", ut_toboolean(v)? "true":"false" );
 		else						printf("[unknown]");
+		
+		if ( s->base == itor )		printf( "\t <- base" );
+		if ( s->top  == itor )		printf( "\t <- top" );
+		--itor;
 		printf("\n");
 	}
 	printf("--stack bottom--\n");
@@ -1589,8 +1599,8 @@ void mn_lib_default( MnState* s )
 	mn_pushfunction( s, ex_tonumber);
 	mn_setglobal( s );
 
-	mn_pushstring( s, "dumpstack" );
-	mn_pushfunction( s, ex_dumpstack);
+	mn_pushstring( s, "dump_stack" );
+	mn_pushfunction( s, ex_dump_stack);
 	mn_setglobal( s );
 
 	mn_pushstring( s, "do_asm" );
@@ -1599,6 +1609,10 @@ void mn_lib_default( MnState* s )
 
 	mn_pushstring( s, "ensure_stack" );
 	mn_pushfunction( s, ex_ensure_stack);
+	mn_setglobal( s );
+
+	mn_pushstring( s, "stack_size" );
+	mn_pushfunction( s, ex_stack_size);
 	mn_setglobal( s );
 }
 

@@ -4,29 +4,29 @@ getglobal
 push "D:\olive\mnscript\OliveBasic\include\test\include.txt"
 call 1 0
 
-push "count"
-push 100
-setglobal
-
-push "count"
-push "count"
-getglobal
-push 1
-sub
-setglobal
-
-push "func"
+push "dump_stack"
 getglobal
 call 0 0
 
-push "count"
-getglobal
-
-getstack -1
 push "print"
 getglobal
-insertstack -2
+push "-------------------------------------------------------------"
 call 1 0
 
-cmp
-jmp -17
+push "dump_stack"
+getglobal
+call 0 0
+
+
+push "dumpstack"
+getglobal
+call 0 0
+
+push "do_asm"
+getglobal
+push "D:\olive\mnscript\OliveBasic\include\test\user_float.txt"
+call 1 0
+
+push "dump_stack"
+getglobal
+call 0 0
