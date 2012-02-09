@@ -18,6 +18,8 @@ typedef OvInt (*MnCFunction)(MnState*);
 #define	MOT_UPVAL		(9)
 #define	MOT_USER		(10)
 
+void			mn_version( OvByte& major, OvByte& minor, OvByte& patch );
+
 MnState*		mn_openstate();
 void			mn_closestate( MnState* s );
 void			mn_lib_default( MnState* s );

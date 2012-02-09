@@ -5,7 +5,7 @@ getglobal
 push "stack_size"
 getglobal
 call 0 1
-push 3
+push 4
 add
 call 1 0
 

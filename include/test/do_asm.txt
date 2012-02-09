@@ -13,3 +13,7 @@ push "do_asm"
 getglobal
 push "D:\olive\mnscript\OliveBasic\include\test\user_float.txt"
 call 1 0
+
+push "dump_stack"
+getglobal
+call 0 0

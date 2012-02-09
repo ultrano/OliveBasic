@@ -3,6 +3,10 @@
 #include "OvSolidString.h"
 #include "OvFile.h"
 
+#define VERSION_MAJOR	(0)
+#define VERSION_MINOR	(0)
+#define VERSION_PATCH	(0)
+
 class MnCallInfo;
 class MnObject;
 class MnString;
@@ -685,6 +689,14 @@ OvInt ut_str2type( const MnValue& val )
 	return ut_str2type( MnIsString(val)? MnToString(val)->get_str().c_str() : "unknown" );
 }
 
+////////////////////*    version info    *///////////////////
+
+void mn_version( OvByte& major, OvByte& minor, OvByte& patch )
+{
+	major = VERSION_MAJOR;
+	minor = VERSION_MINOR;
+	patch = VERSION_PATCH;
+}
 
 ////////////////////*    open and close    *///////////////////
 
