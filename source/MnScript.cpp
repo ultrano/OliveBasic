@@ -1446,7 +1446,7 @@ OvInt mn_collect_garbage( MnState* s )
 		MnMarking(itor->second);
 	}
 	MnValue* itor = s->top;
-	while ( itor != s->begin ) MnMarking(*itor--);
+	while ( itor && --itor >= s->begin ) MnMarking((*itor));
 
 	MnObject* dead = NULL;
 	MnObject* heap = s->heap;
