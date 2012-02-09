@@ -3,9 +3,12 @@
 
 /* Mini Script version_lite */
 
-typedef OvInt	MnIndex;
 class MnState;
+
+typedef OvReal	MnNumber;
+typedef OvInt	MnIndex;
 typedef OvInt (*MnCFunction)(MnState*);
+
 #define	MOT_UNKNOWN		(0)
 #define	MOT_NIL			(1)
 #define	MOT_BOOLEAN		(2)
@@ -52,7 +55,7 @@ void			mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals );
 void			mn_pushfunction( MnState* s, MnCFunction proto );
 void			mn_pushnil( MnState* s );
 void			mn_pushboolean( MnState* s, OvBool v );
-void			mn_pushnumber( MnState* s, OvReal v );
+void			mn_pushnumber( MnState* s, MnNumber v );
 void			mn_pushstring( MnState* s, const OvString& v );
 void			mn_pushuserdata( MnState* s, void* v );
 void			mn_pushstack( MnState* s, MnIndex idx );
@@ -65,7 +68,7 @@ OvBool			mn_isfunction( MnState* s, MnIndex idx );
 OvBool			mn_isuserdata( MnState* s, MnIndex idx );
 
 OvBool			mn_toboolean( MnState* s, MnIndex idx );
-OvReal			mn_tonumber( MnState* s, MnIndex idx );
+MnNumber		mn_tonumber( MnState* s, MnIndex idx );
 OvString		mn_tostring( MnState* s, MnIndex idx );
 void*			mn_touserdata( MnState* s, MnIndex idx );
 

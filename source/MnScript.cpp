@@ -93,7 +93,7 @@ const MnTypeStr g_type_str[] =
 #define MnToUser( v ) (MnIsUser(v)? (v).u.cnt->u.user: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
-OvBool ut_str2num( const OvString& str, OvReal &num ) 
+OvBool ut_str2num( const OvString& str, MnNumber &num ) 
 {
 	OvInt i = 0;
 	OvChar c = str[i];
@@ -123,7 +123,7 @@ OvBool ut_str2num( const OvString& str, OvReal &num )
 	return false;
 }
 
-OvBool ut_num2str( const OvReal& num, OvString& str )
+OvBool ut_num2str( const MnNumber& num, OvString& str )
 {
 	str = OU::string::format( "%f", num );
 	return true;
@@ -241,14 +241,14 @@ public:
 	union
 	{
 		MnRefCounter* cnt;
-		OvReal num;
+		MnNumber num;
 		OvBool bln;
 	} u;
 
 	MnValue();
 	MnValue( const MnValue &v );
 	MnValue( OvBool b );
-	MnValue( OvReal n );
+	MnValue( MnNumber n );
 	MnValue( OvInt t, MnObject* o );
 	~MnValue();
 
@@ -493,7 +493,7 @@ MnValue::MnValue( OvBool b )
 	u.bln = b;
 }
 
-MnValue::MnValue( OvReal n )
+MnValue::MnValue( MnNumber n )
 {
 	type = MOT_NUMBER;
 	u.num = n;
@@ -1300,9 +1300,9 @@ void mn_pushboolean( MnState* s, OvBool v )
 	ut_pushvalue( s, MnValue( (OvBool)v ) );
 }
 
-void mn_pushnumber( MnState* s, OvReal v )
+void mn_pushnumber( MnState* s, MnNumber v )
 {
-	ut_pushvalue( s, MnValue( (OvReal)v ) );
+	ut_pushvalue( s, MnValue( (MnNumber)v ) );
 }
 
 void mn_pushstring( MnState* s, const OvString& v )
@@ -1377,7 +1377,7 @@ OvBool mn_toboolean( MnState* s, MnIndex idx )
 
 }
 
-OvReal ut_tonumber( const MnValue& val ) 
+MnNumber ut_tonumber( const MnValue& val ) 
 {
 	if ( MnIsNumber(val) )
 	{
@@ -1385,13 +1385,13 @@ OvReal ut_tonumber( const MnValue& val )
 	}
 	else if ( MnIsString(val) )
 	{
-		OvReal num; 
+		MnNumber num; 
 		if (ut_str2num( MnToString(val)->get_str(), num ) ) return num;;
 	}
 	return 0;
 }
 
-OvReal mn_tonumber( MnState* s, MnIndex idx )
+MnNumber mn_tonumber( MnState* s, MnIndex idx )
 {
 	return ut_tonumber( ut_getstack( s, idx ) );
 
@@ -1497,15 +1497,15 @@ OvInt ex_stack_size( MnState* s )
 
 OvInt ex_global_length(MnState* s)
 {
-	OvReal nsize = 0.0;
+	MnNumber nsize = 0.0;
 	MnValue arg1 = ut_getstack(s,1);
 	if ( MnIsArray(arg1) )
 	{
-		mn_pushnumber( s, (OvReal)MnToArray(arg1)->array.size() );
+		mn_pushnumber( s, (MnNumber)MnToArray(arg1)->array.size() );
 	}
 	else if ( MnIsTable(arg1) )
 	{
-		mn_pushnumber( s, (OvReal)MnToTable(arg1)->table.size() );
+		mn_pushnumber( s, (MnNumber)MnToTable(arg1)->table.size() );
 	}
 	else
 	{
@@ -1695,7 +1695,7 @@ MnValue ut_method_arith( MnState* s, MnOperate op, const MnValue& a, const MnVal
 {
 	if ( MnIsNumber(a) )
 	{
-		OvReal ret = MnToNumber(a);
+		MnNumber ret = MnToNumber(a);
 		if ( op == MOP_ADD ) ret += ut_tonumber(b);
 		else if ( op == MOP_SUB ) ret -= ut_tonumber(b);
 		else if ( op == MOP_MUL ) ret *= ut_tonumber(b);
@@ -2184,7 +2184,7 @@ MnOperand cp_func_const( MnCompileState* cs, MnMFunction* func )
 			MnValue& val = func->consts[i];
 			if ( MnIsNumber(val) && MnToNumber(val) == num ) return (i+1);
 		}
-		func->consts.push_back( MnValue( (OvReal)num ) );
+		func->consts.push_back( MnValue( (MnNumber)num ) );
 		return func->consts.size();
 	}
 	else if ( (OvChar)tok == ':' )
