@@ -1,0 +1,17 @@
+
+newtable
+push "garbage"
+getstack -2
+setfield -3
+pop 1
+
+push "collected garbage count : "
+push "collect_garbage"
+getglobal
+call 0 1
+add
+
+push "print"
+getglobal
+insertstack -2
+call 1 0
