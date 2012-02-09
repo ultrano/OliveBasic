@@ -6,7 +6,6 @@
 typedef OvInt	MnIndex;
 class MnState;
 typedef OvInt (*MnCFunction)(MnState*);
-
 #define	MOT_UNKNOWN		(0)
 #define	MOT_NIL			(1)
 #define	MOT_BOOLEAN		(2)
@@ -75,4 +74,4 @@ void			mn_call( MnState* s, OvInt nargs, OvInt nrets );
 OvInt			mn_collect_garbage( MnState* s );
 
 
-void mn_do_asm( MnState* s, const OvString& file, MnIndex idx );
+void			mn_do_asm( MnState* s, const OvString& file, MnIndex idx );

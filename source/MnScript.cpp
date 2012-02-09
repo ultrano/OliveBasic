@@ -1468,6 +1468,15 @@ OvInt mn_collect_garbage( MnState* s )
 	return num;
 }
 
+OvInt ex_ensure_stack( MnState* s )
+{
+	if ( mn_isnumber( s, 1 ) )
+	{
+		ut_ensure_stack( s, mn_tonumber(s,1) );
+	}
+	return 0;
+}
+
 OvInt ex_global_length(MnState* s)
 {
 	OvReal nsize = 0.0;
@@ -1586,6 +1595,10 @@ void mn_lib_default( MnState* s )
 
 	mn_pushstring( s, "do_asm" );
 	mn_pushfunction( s, ex_do_asm);
+	mn_setglobal( s );
+
+	mn_pushstring( s, "ensure_stack" );
+	mn_pushfunction( s, ex_ensure_stack);
 	mn_setglobal( s );
 }
 

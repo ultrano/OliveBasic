@@ -3,6 +3,8 @@
 #include "MnScript.h"
 #include "OvObject.h"
 
+//////////////////////////////////////////////////////////////////////////
+
 OvInt	native1(MnState* s)
 {
 	OvString a1 = mn_tostring(s,1);
@@ -41,6 +43,8 @@ void test_do_asm_userdata()
 	mn_closestate(s);
 };
 
+//////////////////////////////////////////////////////////////////////////
+
 void test_do_asm_dumpstack()
 {
 	MnState* s = mn_openstate();
@@ -51,6 +55,8 @@ void test_do_asm_dumpstack()
 
 	mn_closestate(s);
 }
+
+//////////////////////////////////////////////////////////////////////////
 
 void test_do_asm_do_asm_func()
 {
