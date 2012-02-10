@@ -9,17 +9,15 @@ typedef OvReal	MnNumber;
 typedef OvInt	MnIndex;
 typedef OvInt (*MnCFunction)(MnState*);
 
-#define	MOT_UNKNOWN		(0)
 #define	MOT_NIL			(1)
 #define	MOT_BOOLEAN		(2)
 #define	MOT_NUMBER		(3)
 #define	MOT_STRING		(4)
 #define	MOT_TABLE		(5)
 #define	MOT_ARRAY		(6)
-#define	MOT_FUNCPROTO	(7)
-#define	MOT_CLOSURE		(8)
-#define	MOT_UPVAL		(9)
-#define	MOT_USER		(10)
+#define	MOT_CLOSURE		(7)
+#define	MOT_USERDATA	(8)
+
 
 void			mn_version( OvByte& major, OvByte& minor, OvByte& patch );
 

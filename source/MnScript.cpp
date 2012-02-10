@@ -3,6 +3,10 @@
 #include "OvSolidString.h"
 #include "OvFile.h"
 
+#define	MOT_UNKNOWN		(0)
+#define	MOT_UPVAL		(10)
+#define	MOT_FUNCPROTO	(11)
+
 #define VERSION_MAJOR	(0)
 #define VERSION_MINOR	(0)
 #define VERSION_PATCH	(0)
@@ -33,10 +37,10 @@ const MnTypeStr g_type_str[] =
 
 	{ MOT_TABLE, "table" },
 	{ MOT_ARRAY, "array" },
-	{ MOT_FUNCPROTO, "funcproto" },
 	{ MOT_CLOSURE, "closure" },
+	{ MOT_USERDATA, "userdata" },
 	{ MOT_UPVAL, "upval" },
-	{ MOT_USER, "user" },
+	{ MOT_FUNCPROTO, "funcproto" },
 };
 
 #define METHOD_EQ ("__eq")
@@ -68,7 +72,7 @@ const MnTypeStr g_type_str[] =
 #define MnIsFunction( v ) ((v).type == MOT_FUNCPROTO)
 #define MnIsClosure( v ) ((v).type == MOT_CLOSURE)
 #define MnIsUpval( v ) ((v).type == MOT_UPVAL)
-#define MnIsUser( v ) ((v).type == MOT_USER)
+#define MnIsUserData( v ) ((v).type == MOT_USERDATA)
 #define MnIsObj( v ) \
 	( \
 	MnIsString((v)) ||  \
@@ -77,7 +81,7 @@ const MnTypeStr g_type_str[] =
 	MnIsClosure((v)) ||  \
 	MnIsTable((v)) ||  \
 	MnIsUpval((v)) ||  \
-	MnIsUser((v)) \
+	MnIsUserData((v)) \
 	)
 
 #define MnBadConvert()	(NULL)
@@ -90,7 +94,7 @@ const MnTypeStr g_type_str[] =
 #define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.func: MnBadConvert())
 #define MnToClosure( v ) (MnIsClosure(v)? (v).u.cnt->u.cls: MnBadConvert())
 #define MnToUpval( v ) (MnIsUpval(v)? (v).u.cnt->u.upv: MnBadConvert())
-#define MnToUser( v ) (MnIsUser(v)? (v).u.cnt->u.user: MnBadConvert())
+#define MnToUserData( v ) (MnIsUserData(v)? (v).u.cnt->u.user: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
 OvBool ut_str2num( const OvString& str, MnNumber &num ) 
@@ -1016,7 +1020,7 @@ void ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v )
 {
 	if ( MnIsTable(c) )		 ut_settable( s, c, n, v);
 	else if ( MnIsArray(c) ) ut_setarray( s, c, n, v);
-	else if ( MnIsUser(c) )  ut_meta_newindex( s, c, n, v );
+	else if ( MnIsUserData(c) )  ut_meta_newindex( s, c, n, v );
 }
 void mn_setfield( MnState* s, MnIndex idx )
 {
@@ -1031,7 +1035,7 @@ MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 {
 	if ( MnIsTable(c) )		return ut_gettable( s, c, n);
 	else if ( MnIsArray(c) )return ut_getarray( s, c, n);
-	else if ( MnIsUser(c) ) return ut_meta_index( s, c, n );
+	else if ( MnIsUserData(c) ) return ut_meta_index( s, c, n );
 	return MnValue();
 }
 
@@ -1075,9 +1079,9 @@ void ut_setmeta( MnState* s, MnValue& c, MnValue& m )
 	{
 		MnToArray(c)->metatable = m;
 	}
-	else if ( MnIsUser(c) )
+	else if ( MnIsUserData(c) )
 	{
-		MnToUser(c)->metatable = m;
+		MnToUserData(c)->metatable = m;
 	}
 }
 
@@ -1099,9 +1103,9 @@ MnValue ut_getmeta( MnState* s, const MnValue& c )
 	{
 		return MnToArray(c)->metatable;
 	}
-	else if ( MnIsUser(c) )
+	else if ( MnIsUserData(c) )
 	{
-		return MnToUser(c)->metatable;
+		return MnToUserData(c)->metatable;
 	}
 	return MnValue();
 }
@@ -1312,7 +1316,7 @@ void mn_pushstring( MnState* s, const OvString& v )
 
 void mn_pushuserdata( MnState* s, void* v )
 {
-	ut_pushvalue( s, MnValue( MOT_USER, ut_newuserdata(s,v) ) );
+	ut_pushvalue( s, MnValue( MOT_USERDATA, ut_newuserdata(s,v) ) );
 }
 
 void mn_pushstack( MnState* s, MnIndex idx )
@@ -1349,7 +1353,7 @@ OvBool mn_isfunction( MnState* s, MnIndex idx )
 
 OvBool mn_isuserdata( MnState* s, MnIndex idx )
 {
-	return MnIsUser( ut_getstack( s, idx ) );
+	return MnIsUserData( ut_getstack( s, idx ) );
 }
 
 /////////////////////*  all kinds of "to"    *///////////////////////////
@@ -1420,9 +1424,9 @@ OvString mn_tostring( MnState* s, MnIndex idx )
 
 void* ut_touserdata( MnValue& val )
 {
-	if ( MnIsUser(val) )
+	if ( MnIsUserData(val) )
 	{
-		return MnToUser(val)->ptr;
+		return MnToUserData(val)->ptr;
 	}
 	return NULL;
 }
@@ -1564,7 +1568,7 @@ OvInt ex_dump_stack( MnState* s )
 		else if ( MnIsArray(v) )	printf( "[array]" );
 		else if ( MnIsClosure(v) )	printf( "[closure]" );
 		else if ( MnIsFunction(v) )	printf( "[function]" );
-		else if ( MnIsUser(v) )		printf( "[userdata]" );
+		else if ( MnIsUserData(v) )		printf( "[userdata]" );
 		else if ( MnIsUpval(v) )	printf( "[upval]" );
 		else if ( MnIsNil(v) )		printf( "[nil]" );
 		else if ( MnIsBoolean(v) )	printf( "[boolean] : %s", ut_toboolean(v)? "true":"false" );
