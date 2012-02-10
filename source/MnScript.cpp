@@ -1299,7 +1299,7 @@ void mn_newarray( MnState* s )
 void* mn_newminidata( MnState* s, OvInt sz )
 {
 	MnMiniData* mini = ut_newminidata(s,sz);
-	ut_pushvalue( s, MnValue( MOT_MINIDATA, ut_newminidata(s,sz) ) );
+	ut_pushvalue( s, MnValue( MOT_MINIDATA, mini ) );
 	return mini->ptr;
 }
 

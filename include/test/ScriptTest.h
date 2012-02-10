@@ -58,13 +58,33 @@ void test_do_asm_dumpstack()
 
 //////////////////////////////////////////////////////////////////////////
 
+OvInt _miniadd( MnState* s )
+{
+	OvInt* a = (OvInt*)mn_tominidata(s,1);
+	OvInt  b = mn_tonumber(s,2);
+	*a += b;
+	mn_pushnumber(s,*a);
+	return 1;
+}
+
 void test_do_asm_do_asm_func()
 {
 	MnState* s = mn_openstate();
 	mn_lib_default(s);
 
+	mn_pushstring(s,"mini");
+	OvInt* p = (OvInt*)mn_newminidata(s,400); *p = 12;
+	mn_newtable(s);
+	mn_pushstring(s,"__add");
+	mn_pushfunction(s,_miniadd);
+	mn_setfield(s,-3);
+	mn_setmeta(s,-2);
+	mn_setglobal(s);
+
 	mn_pushfunction(s,native1);
 	mn_do_asm( s, "../OliveBasic/include/test/do_asm.txt", mn_gettop(s) );
+
+
 
 	mn_closestate(s);
 }
