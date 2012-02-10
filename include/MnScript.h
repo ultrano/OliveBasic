@@ -47,7 +47,7 @@ MnIndex			mn_gettop( MnState* s );
 
 void			mn_newtable( MnState* s );
 void			mn_newarray( MnState* s );
-void			mn_newminidata( MnState* s, OvInt sz );
+void*			mn_newminidata( MnState* s, OvInt sz );
 void			mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals );
 
 void			mn_pushfunction( MnState* s, MnCFunction proto );

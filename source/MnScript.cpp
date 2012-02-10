@@ -1296,9 +1296,11 @@ void mn_newarray( MnState* s )
 	ut_pushvalue( s, MnValue( MOT_ARRAY, ut_newarray(s) ) );
 }
 
-void mn_newminidata( MnState* s, OvInt sz )
+void* mn_newminidata( MnState* s, OvInt sz )
 {
+	MnMiniData* mini = ut_newminidata(s,sz);
 	ut_pushvalue( s, MnValue( MOT_MINIDATA, ut_newminidata(s,sz) ) );
+	return mini->ptr;
 }
 
 void mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals )
