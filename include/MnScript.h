@@ -17,7 +17,7 @@ typedef OvInt (*MnCFunction)(MnState*);
 #define	MOT_ARRAY		(6)
 #define	MOT_CLOSURE		(7)
 #define	MOT_USERDATA	(8)
-
+#define	MOT_MINIDATA	(9)
 
 void			mn_version( OvByte& major, OvByte& minor, OvByte& patch );
 
@@ -47,7 +47,7 @@ MnIndex			mn_gettop( MnState* s );
 
 void			mn_newtable( MnState* s );
 void			mn_newarray( MnState* s );
-void			mnd_newgarbege( MnState* s );
+void			mn_newminidata( MnState* s, OvInt sz );
 void			mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals );
 
 void			mn_pushfunction( MnState* s, MnCFunction proto );
@@ -64,11 +64,13 @@ OvBool			mn_isnumber( MnState* s, MnIndex idx );
 OvBool			mn_isstring( MnState* s, MnIndex idx );
 OvBool			mn_isfunction( MnState* s, MnIndex idx );
 OvBool			mn_isuserdata( MnState* s, MnIndex idx );
+OvBool			mn_isminidata( MnState* s, MnIndex idx );
 
 OvBool			mn_toboolean( MnState* s, MnIndex idx );
 MnNumber		mn_tonumber( MnState* s, MnIndex idx );
 OvString		mn_tostring( MnState* s, MnIndex idx );
 void*			mn_touserdata( MnState* s, MnIndex idx );
+void*			mn_tominidata( MnState* s, MnIndex idx );
 
 OvInt			mn_type( MnState* s, MnIndex idx );
 

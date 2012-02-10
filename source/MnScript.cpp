@@ -21,6 +21,7 @@ class MnMFunction;
 class MnClosure;
 class MnUpval;
 class MnUserData;
+class MnMiniData;
 struct MnInstruction;
 
 typedef OvUShort MnOperand;
@@ -39,6 +40,7 @@ const MnTypeStr g_type_str[] =
 	{ MOT_ARRAY, "array" },
 	{ MOT_CLOSURE, "closure" },
 	{ MOT_USERDATA, "userdata" },
+	{ MOT_MINIDATA, "minidata" },
 	{ MOT_UPVAL, "upval" },
 	{ MOT_FUNCPROTO, "funcproto" },
 };
@@ -73,15 +75,17 @@ const MnTypeStr g_type_str[] =
 #define MnIsClosure( v ) ((v).type == MOT_CLOSURE)
 #define MnIsUpval( v ) ((v).type == MOT_UPVAL)
 #define MnIsUserData( v ) ((v).type == MOT_USERDATA)
+#define MnIsMiniData( v ) ((v).type == MOT_MINIDATA)
 #define MnIsObj( v ) \
 	( \
 	MnIsString((v)) ||  \
 	MnIsArray((v)) ||  \
-	MnIsFunction((v)) ||  \
 	MnIsClosure((v)) ||  \
 	MnIsTable((v)) ||  \
+	MnIsUserData((v)) ||  \
+	MnIsMiniData((v)) ||  \
 	MnIsUpval((v)) ||  \
-	MnIsUserData((v)) \
+	MnIsFunction((v))   \
 	)
 
 #define MnBadConvert()	(NULL)
@@ -91,10 +95,11 @@ const MnTypeStr g_type_str[] =
 #define MnToString( v ) (MnIsString(v)? (v).u.cnt->u.str : MnBadConvert())
 #define MnToTable( v ) (MnIsTable(v)? (v).u.cnt->u.tbl : MnBadConvert())
 #define MnToArray( v ) (MnIsArray(v)? (v).u.cnt->u.arr : MnBadConvert())
-#define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.func: MnBadConvert())
 #define MnToClosure( v ) (MnIsClosure(v)? (v).u.cnt->u.cls: MnBadConvert())
-#define MnToUpval( v ) (MnIsUpval(v)? (v).u.cnt->u.upv: MnBadConvert())
 #define MnToUserData( v ) (MnIsUserData(v)? (v).u.cnt->u.user: MnBadConvert())
+#define MnToMiniData( v ) (MnIsMiniData(v)? (v).u.cnt->u.mini: MnBadConvert())
+#define MnToUpval( v ) (MnIsUpval(v)? (v).u.cnt->u.upv: MnBadConvert())
+#define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.func: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
 OvBool ut_str2num( const OvString& str, MnNumber &num ) 
@@ -173,7 +178,7 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
-void*			ut_alloc( OvSize sz ) { return OvMemAlloc(sz); };
+void*			ut_alloc( OvSize sz ) { return sz>0? OvMemAlloc(sz) : NULL ; };
 void			ut_free( void* p ) { OvMemFree(p); };
 
 void			ut_ensure_stack( MnState* s, OvInt sz );
@@ -185,6 +190,7 @@ MnClosure*		ut_newCclosure( MnState* s, MnCLType t );
 MnClosure*		ut_newMclosure( MnState* s );
 MnMFunction*	ut_newfunction( MnState* s );
 MnUserData*		ut_newuserdata( MnState* s, void* p );
+MnMiniData*		ut_newminidata( MnState* s, OvInt sz );
 
 void			ut_delete_object( MnObject* o );
 void			ut_delete_garbage( MnObject* o );
@@ -233,6 +239,7 @@ public:
 		MnClosure*		cls;
 		MnUpval*		upv;
 		MnUserData*		user;
+		MnMiniData*		mini;
 	} u;
 };
 
@@ -439,13 +446,28 @@ class MnUserData : public MnObject
 {
 public:
 
-	MnUserData( MnState* s, void* p );;
-	~MnUserData();;
+	MnUserData( MnState* s, void* p );
+	~MnUserData();
 
 	void* ptr;
 	MnValue	metatable;
 
-	virtual void marking();;
+	virtual void marking();
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+class MnMiniData : public MnObject
+{
+public:
+
+	MnMiniData( MnState* s, OvInt sz );
+	~MnMiniData();
+
+	void* ptr;
+	MnValue	metatable;
+
+	virtual void marking();
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -660,6 +682,25 @@ void MnUserData::marking()
 {
 	mark = MARKED;
 	MnMarking( metatable );
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+MnMiniData::MnMiniData( MnState* s, OvInt sz )
+: MnObject(s)
+, ptr( ut_alloc( sz ) )
+{
+
+}
+
+MnMiniData::~MnMiniData()
+{
+	if ( ptr ) ut_free( ptr );
+}
+
+void MnMiniData::marking()
+{
+	mark = MARKED;
 }
 
 /////////////////////// type-string convert ////////////////////////////////
@@ -1020,7 +1061,7 @@ void ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v )
 {
 	if ( MnIsTable(c) )		 ut_settable( s, c, n, v);
 	else if ( MnIsArray(c) ) ut_setarray( s, c, n, v);
-	else if ( MnIsUserData(c) )  ut_meta_newindex( s, c, n, v );
+	else if ( MnIsUserData(c) || MnIsMiniData(c) )  ut_meta_newindex( s, c, n, v );
 }
 void mn_setfield( MnState* s, MnIndex idx )
 {
@@ -1035,7 +1076,7 @@ MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 {
 	if ( MnIsTable(c) )		return ut_gettable( s, c, n);
 	else if ( MnIsArray(c) )return ut_getarray( s, c, n);
-	else if ( MnIsUserData(c) ) return ut_meta_index( s, c, n );
+	else if ( MnIsUserData(c) && MnIsMiniData(c) ) return ut_meta_index( s, c, n );
 	return MnValue();
 }
 
@@ -1071,18 +1112,10 @@ void mn_getglobal( MnState* s )
 
 void ut_setmeta( MnState* s, MnValue& c, MnValue& m )
 {
-	if ( MnIsTable(c) )
-	{
-		MnToTable(c)->metatable = m;
-	}
-	else if ( MnIsArray(c) )
-	{
-		MnToArray(c)->metatable = m;
-	}
-	else if ( MnIsUserData(c) )
-	{
-		MnToUserData(c)->metatable = m;
-	}
+	if ( MnIsTable(c) )			MnToTable(c)->metatable = m;
+	else if ( MnIsArray(c) )	MnToArray(c)->metatable = m;
+	else if ( MnIsUserData(c) ) MnToUserData(c)->metatable = m;
+	else if ( MnIsMiniData(c) ) MnToMiniData(c)->metatable = m;
 }
 
 void mn_setmeta( MnState* s, MnIndex idx )
@@ -1095,18 +1128,10 @@ void mn_setmeta( MnState* s, MnIndex idx )
 
 MnValue ut_getmeta( MnState* s, const MnValue& c )
 {
-	if ( MnIsTable(c) )
-	{
-		return MnToTable(c)->metatable;
-	}
-	else if ( MnIsArray(c) )
-	{
-		return MnToArray(c)->metatable;
-	}
-	else if ( MnIsUserData(c) )
-	{
-		return MnToUserData(c)->metatable;
-	}
+	if ( MnIsTable(c) )			return MnToTable(c)->metatable;
+	else if ( MnIsArray(c) )	return MnToArray(c)->metatable;
+	else if ( MnIsUserData(c) ) return MnToUserData(c)->metatable;
+	else if ( MnIsMiniData(c) ) return MnToMiniData(c)->metatable;
 	return MnValue();
 }
 
@@ -1143,6 +1168,11 @@ MnString* ut_newstring( MnState* s, const OvString& str )
 MnUserData* ut_newuserdata( MnState* s, void* p )
 {
 	return new(ut_alloc(sizeof(MnUserData))) MnUserData(s,p);
+}
+
+MnMiniData* ut_newminidata( MnState* s, OvInt sz )
+{
+	return new(ut_alloc(sizeof(MnMiniData))) MnMiniData(s,sz);
 }
 
 MnTable* ut_newtable( MnState* s )
@@ -1266,14 +1296,9 @@ void mn_newarray( MnState* s )
 	ut_pushvalue( s, MnValue( MOT_ARRAY, ut_newarray(s) ) );
 }
 
-void mnd_newgarbege( MnState* s )
+void mn_newminidata( MnState* s, OvInt sz )
 {
-	MnString* str = ut_newstring(s,"f1");
-	MnTable* t1 = ut_newtable(s);
-	MnTable* t2 = ut_newtable(s);
-
-	t1->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t2))));
-	t2->table.insert(make_pair(str->get_hash(),make_pair(MnValue(MOT_STRING,str),MnValue(MOT_TABLE,t1))));
+	ut_pushvalue( s, MnValue( MOT_MINIDATA, ut_newminidata(s,sz) ) );
 }
 
 void mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals )
@@ -1356,6 +1381,11 @@ OvBool mn_isuserdata( MnState* s, MnIndex idx )
 	return MnIsUserData( ut_getstack( s, idx ) );
 }
 
+OvBool mn_isminidata( MnState* s, MnIndex idx )
+{
+	return MnIsMiniData( ut_getstack( s, idx ) );
+}
+
 /////////////////////*  all kinds of "to"    *///////////////////////////
 
 OvBool ut_toboolean( MnValue& val ) 
@@ -1434,6 +1464,20 @@ void* ut_touserdata( MnValue& val )
 void* mn_touserdata( MnState* s, MnIndex idx )
 {
 	return ut_touserdata( ut_getstack( s, idx ) );
+}
+
+void* ut_tominidata( MnValue& val )
+{
+	if ( MnIsMiniData(val) )
+	{
+		return MnToMiniData(val)->ptr;
+	}
+	return NULL;
+}
+
+void* mn_tominidata( MnState* s, MnIndex idx )
+{
+	return ut_tominidata( ut_getstack( s, idx ) );
 }
 
 OvInt mn_type( MnState* s, MnIndex idx )
