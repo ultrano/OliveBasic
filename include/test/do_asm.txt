@@ -1,5 +1,5 @@
 
-push "mini"
+push "call"
 getglobal
 push 11
-add
+call 1 0

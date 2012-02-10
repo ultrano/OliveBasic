@@ -9,7 +9,7 @@
 
 #define VERSION_MAJOR	(0)
 #define VERSION_MINOR	(0)
-#define VERSION_PATCH	(2)
+#define VERSION_PATCH	(3)
 
 class MnCallInfo;
 class MnObject;
@@ -50,6 +50,7 @@ const MnTypeStr g_type_str[] =
 #define METHOD_GT ("__gt")
 #define METHOD_NEWINDEX ("__newindex")
 #define METHOD_INDEX ("__index")
+#define METHOD_CALL ("__call")
 #define METHOD_ADD ("__add")
 #define METHOD_SUB ("__sub")
 #define METHOD_MUL ("__mul")
@@ -1040,13 +1041,12 @@ void mn_getstack( MnState* s, MnIndex idx )
 	ut_pushvalue( s, ut_getstack(s,idx) );
 }
 
-void mn_insertstack( MnState* s, MnIndex idx )
+void ut_insertstack(MnState* s, MnIndex idx, MnValue& val )
 {
 	MnValue* itor = ut_getstack_ptr( s, idx );;
 	if ( itor && itor < s->top )
 	{
 		MnValue temp = *itor;
-		MnValue val = ut_getstack( s, -1 );
 		*itor = val;
 		while ( ++itor < s->top )
 		{
@@ -1055,6 +1055,39 @@ void mn_insertstack( MnState* s, MnIndex idx )
 			temp = next;
 		}
 	}
+}
+
+void mn_insertstack( MnState* s, MnIndex idx )
+{
+	ut_insertstack( s, idx, ut_getstack( s, -1 ) );
+}
+
+void mn_removestack( MnState* s, MnIndex idx )
+{
+	MnValue* itor = ut_getstack_ptr( s, idx );;
+	if ( itor && itor > s->base && itor < s->top )
+	{
+		while ( ++itor < s->top ) *(itor-1) = *itor;
+		--s->top;
+	}
+}
+
+void mn_swapstack( MnState* s, MnIndex idx1, MnIndex idx2 )
+{
+	MnValue* val1 = ut_getstack_ptr( s, idx1 );
+	MnValue* val2 = ut_getstack_ptr( s, idx2 );
+	if ( val1 && val2 )
+	{
+		MnValue& temp = *val1;
+		*val1 = *val2;
+		*val2 = temp;
+	}
+}
+
+void mn_replacestack( MnState* s, MnIndex dst, MnIndex src )
+{
+	MnValue* val = ut_getstack_ptr( s, src );
+	if ( val ) ut_setstack( s, dst, *val );
 }
 
 void ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v )
@@ -1930,10 +1963,37 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 	return 0;
 }
 
+MnValue ut_meta_call( MnState* s, MnValue& c ) 
+{
+	MnValue meta = ut_getmeta( s, c );
+	if ( !MnIsNil(meta) )
+	{
+		ut_pushvalue( s, meta );	//< push meta
+		mn_pushstring( s, METHOD_CALL );
+		mn_getfield( s, -2 );		//< get _call method
+		if ( mn_isfunction( s, -1 ) )
+		{
+			MnValue call = ut_getstack( s, -1 );
+			mn_pop(s,2);
+			return call;
+		}
+		return ut_meta_call(s,meta);
+	}
+	return MnValue();
+}
+
 void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 {
 	nargs = max(nargs,0);
-	MnValue* func = ut_getstack_ptr(s, -(1 + nargs) );
+	MnIndex funcidx = -(1 + nargs);
+	MnValue* func = ut_getstack_ptr(s, funcidx );
+
+	if ( func && !MnIsClosure(*func) )
+	{
+		ut_setstack( s, funcidx, ut_meta_call( s, *func ) );
+		func = ut_getstack_ptr(s, funcidx );
+	}
+
 	MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
 	ci->prev	= s->ci;
 	ci->savepc	= s->pc;
