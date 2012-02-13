@@ -935,10 +935,10 @@ MnValue ut_meta_index( MnState* s, MnValue& c, MnValue& n )
 		mn_call( s, 2, 1 );
 
 		MnValue ret = ut_getstack( s, -1 );
-		mn_pop( s, 1 );
+		mn_pop( s, 2 );
 		return ret;
 	}
-	mn_pop(s,1);
+	mn_pop(s,2);
 	return MnValue();
 }
 
@@ -1113,7 +1113,7 @@ MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 {
 	if ( MnIsTable(c) )		return ut_gettable( s, c, n);
 	else if ( MnIsArray(c) )return ut_getarray( s, c, n);
-	else if ( MnIsUserData(c) && MnIsMiniData(c) ) return ut_meta_index( s, c, n );
+	else if ( MnIsUserData(c) || MnIsMiniData(c) ) return ut_meta_index( s, c, n );
 	return MnValue();
 }
 

@@ -83,12 +83,28 @@ OvInt us_vector2_newindex( MnState* s )
 	return 0;
 }
 
+OvInt us_vector2_index( MnState* s )
+{
+	mn_getmeta(s,1);
+	mn_getstack(s,2);
+	mn_getfield(s,-2);
+	OvVector2* v = (OvVector2*) mn_tominidata(s,1);
+	TT* m = (TT*)mn_tominidata(s,-1);
+	mn_pop(s,2);
+	mn_pushnumber(s,v->**m);
+	return 1;
+}
+
 void us_push_vector2meta( MnState* s )
 {
 	mn_newtable(s);
 
 	mn_pushstring(s,"__newindex");
 	mn_pushfunction(s,us_vector2_newindex);
+	mn_setfield(s,-3);
+
+	mn_pushstring(s,"__index");
+	mn_pushfunction(s,us_vector2_index);
 	mn_setfield(s,-3);
 
 	mn_pushstring(s,"x");

@@ -13,6 +13,16 @@ setfield -3
 
 push "hello"
 
+push "vec"
+getglobal
+push "x"
+getfield -2
+
+push "print"
+getglobal
+insert -2
+call 1 0
+
 push "dump_stack"
 getglobal
 call 0 0
