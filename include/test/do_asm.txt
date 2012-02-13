@@ -1,26 +1,7 @@
 
-push "vec"
-push "vector2"
+push "ensure_stack"
 getglobal
-call 0 1
-setglobal
-
-push "vec"
-getglobal
-push "x"
-push 11
-setfield -3
-
-push "hello"
-
-push "vec"
-getglobal
-push "x"
-getfield -2
-
-push "print"
-getglobal
-insert -2
+push 100
 call 1 0
 
 push "dump_stack"

@@ -725,6 +725,10 @@
 				Name="MnScript"
 				>
 				<File
+					RelativePath=".\include\MnInternal.h"
+					>
+				</File>
+				<File
 					RelativePath=".\source\MnScript.cpp"
 					>
 				</File>
