@@ -1057,12 +1057,12 @@ void ut_insertstack(MnState* s, MnIndex idx, MnValue& val )
 	}
 }
 
-void mn_insertstack( MnState* s, MnIndex idx )
+void mn_insert( MnState* s, MnIndex idx )
 {
 	ut_insertstack( s, idx, ut_getstack( s, -1 ) );
 }
 
-void mn_removestack( MnState* s, MnIndex idx )
+void mn_remove( MnState* s, MnIndex idx )
 {
 	MnValue* itor = ut_getstack_ptr( s, idx );;
 	if ( itor && itor > s->base && itor < s->top )
@@ -1072,7 +1072,7 @@ void mn_removestack( MnState* s, MnIndex idx )
 	}
 }
 
-void mn_swapstack( MnState* s, MnIndex idx1, MnIndex idx2 )
+void mn_swap( MnState* s, MnIndex idx1, MnIndex idx2 )
 {
 	MnValue* val1 = ut_getstack_ptr( s, idx1 );
 	MnValue* val2 = ut_getstack_ptr( s, idx2 );
@@ -1888,7 +1888,7 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 
 		case MOP_SET_STACK:	mn_setstack( s, i.eax ); break;
 		case MOP_GET_STACK:	mn_getstack( s, i.eax ); break;
-		case MOP_INSERT_STACK:	mn_insertstack( s, i.eax ); break;
+		case MOP_INSERT_STACK:	mn_insert( s, i.eax ); break;
 
 		case MOP_SET_FIELD:	mn_setfield( s, i.eax); break;
 		case MOP_GET_FIELD:	mn_getfield( s, i.eax); break;

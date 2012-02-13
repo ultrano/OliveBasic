@@ -1,5 +1,12 @@
 
-push "call"
+push "vec"
+push "vector2"
 getglobal
+call 0 1
+setglobal
+
+push "vec"
+getglobal
+push "x"
 push 11
-call 1 0
+setfield -3

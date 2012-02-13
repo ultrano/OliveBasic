@@ -27,10 +27,11 @@ void			mn_lib_default( MnState* s );
 
 void			mn_setstack( MnState* s, MnIndex idx );
 void			mn_getstack( MnState* s, MnIndex idx );
-void			mn_insertstack( MnState* s, MnIndex idx );
-void			mn_removestack( MnState* s, MnIndex idx );
-void			mn_swapstack( MnState* s, MnIndex idx1, MnIndex idx2 );
-void			mn_replacestack( MnState* s, MnIndex dst, MnIndex src );
+
+void			mn_insert( MnState* s, MnIndex idx );
+void			mn_remove( MnState* s, MnIndex idx );
+void			mn_swap( MnState* s, MnIndex idx1, MnIndex idx2 );
+void			mn_replace( MnState* s, MnIndex dst, MnIndex src );
 
 void			mn_setfield( MnState* s, MnIndex idx );
 void			mn_getfield( MnState* s, MnIndex idx );
