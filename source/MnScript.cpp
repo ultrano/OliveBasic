@@ -3,9 +3,9 @@
 #include "OvSolidString.h"
 #include "OvFile.h"
 
-#define	MOT_UNKNOWN		(0)
 #define	MOT_UPVAL		(10)
 #define	MOT_FUNCPROTO	(11)
+#define MOT_TYPEMAX		(12)
 
 #define VERSION_MAJOR	(0)
 #define VERSION_MINOR	(0)
@@ -30,19 +30,19 @@ enum MnCLType { CCL= 1, MCL = 2 };
 struct MnTypeStr { OvInt type; const char* str; };
 const MnTypeStr g_type_str[] = 
 {
-	{ MOT_UNKNOWN, "unknown" },
-	{ MOT_NIL, "nil" },
-	{ MOT_BOOLEAN, "boolean" },
-	{ MOT_NUMBER, "number" },
-	{ MOT_STRING, "string" },
+	{ MOT_UNKNOWN, "[unknown]" },
+	{ MOT_NIL, "[nil]" },
+	{ MOT_BOOLEAN, "[boolean]" },
+	{ MOT_NUMBER, "[number]" },
+	{ MOT_STRING, "[string]" },
 
-	{ MOT_TABLE, "table" },
-	{ MOT_ARRAY, "array" },
-	{ MOT_CLOSURE, "closure" },
-	{ MOT_USERDATA, "userdata" },
-	{ MOT_MINIDATA, "minidata" },
-	{ MOT_UPVAL, "upval" },
-	{ MOT_FUNCPROTO, "funcproto" },
+	{ MOT_TABLE, "[table]" },
+	{ MOT_ARRAY, "[array]" },
+	{ MOT_CLOSURE, "[closure]" },
+	{ MOT_USERDATA, "[userdata]" },
+	{ MOT_MINIDATA, "[minidata]" },
+	{ MOT_UPVAL, "[upval]" },
+	{ MOT_FUNCPROTO, "[funcproto]" },
 };
 
 #define METHOD_EQ ("__eq")
@@ -221,6 +221,9 @@ void			ut_setupval( MnState* s, MnIndex upvalidx,MnValue& v );
 MnValue			ut_getupval( MnState* s, MnIndex upvalidx );
 
 void			ut_pushvalue( MnState* s, const MnValue& v );
+
+const OvChar*	ut_typename( const MnValue& v );
+OvInt			ut_type( const MnValue& v );
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -886,6 +889,7 @@ OvBool ut_meta_newindex( MnState* s, MnValue& c, MnValue& n, MnValue& v )
 		ut_pushvalue( s, n );
 		ut_pushvalue( s, v );
 		mn_call( s, 3, 0 );
+		mn_pop( s, 1 );
 		return true;
 	}
 	else
@@ -1515,9 +1519,28 @@ void* mn_tominidata( MnState* s, MnIndex idx )
 	return ut_tominidata( ut_getstack( s, idx ) );
 }
 
+OvInt ut_type( const MnValue& v )
+{
+	if ( v.type >= MOT_TYPEMAX || v.type < MOT_UNKNOWN )
+	{
+		return MOT_UNKNOWN;
+	}
+	return v.type;
+}
+
 OvInt mn_type( MnState* s, MnIndex idx )
 {
-	return ut_getstack( s, idx ).type;
+	return ut_type(ut_getstack( s, idx ));
+}
+
+const OvChar* ut_typename( const MnValue& v )
+{
+	return g_type_str[ ut_type(v) ].str;
+}
+
+OvString mn_typename( MnState* s, MnIndex idx )
+{
+	return ut_typename( ut_getstack( s, idx ) );
 }
 
 OvInt mn_collect_garbage( MnState* s )
@@ -1641,17 +1664,13 @@ OvInt ex_dump_stack( MnState* s )
 	{
 		printf( "%3d : ", itor - s->begin + 1 );
 		MnValue& v =*itor--;
-		if ( MnIsNumber(v) )		printf( "[number] : %d", ut_tonumber(v) );
-		else if ( MnIsString(v) )	printf( "[string] : %s", ut_tostring(v).c_str() );
-		else if ( MnIsTable(v) )	printf( "[table]" );
-		else if ( MnIsArray(v) )	printf( "[array]" );
-		else if ( MnIsClosure(v) )	printf( "[closure]" );
-		else if ( MnIsFunction(v) )	printf( "[function]" );
-		else if ( MnIsUserData(v) )		printf( "[userdata]" );
-		else if ( MnIsUpval(v) )	printf( "[upval]" );
-		else if ( MnIsNil(v) )		printf( "[nil]" );
-		else if ( MnIsBoolean(v) )	printf( "[boolean] : %s", ut_toboolean(v)? "true":"false" );
-		else						printf("[unknown]");
+
+		const OvChar* name = ut_typename( v );
+
+		if ( MnIsNumber(v) )		printf( "%s : %d", name, ut_tonumber(v) );
+		else if ( MnIsString(v) )	printf( "%s : %s", name, ut_tostring(v).c_str() );
+		else if ( MnIsBoolean(v) )	printf( "%s : %s", name, ut_toboolean(v)? "true":"false" );
+		else						printf( name );
 		
 		printf("\n");
 	}

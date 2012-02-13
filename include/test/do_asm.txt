@@ -10,3 +10,9 @@ getglobal
 push "x"
 push 11
 setfield -3
+
+push "hello"
+
+push "dump_stack"
+getglobal
+call 0 0

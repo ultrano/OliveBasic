@@ -9,6 +9,7 @@ typedef OvReal	MnNumber;
 typedef OvInt	MnIndex;
 typedef OvInt (*MnCFunction)(MnState*);
 
+#define	MOT_UNKNOWN		(0)
 #define	MOT_NIL			(1)
 #define	MOT_BOOLEAN		(2)
 #define	MOT_NUMBER		(3)
@@ -77,6 +78,7 @@ void*			mn_touserdata( MnState* s, MnIndex idx );
 void*			mn_tominidata( MnState* s, MnIndex idx );
 
 OvInt			mn_type( MnState* s, MnIndex idx );
+OvString		mn_typename( MnState* s, MnIndex idx );
 
 void			mn_call( MnState* s, OvInt nargs, OvInt nrets );
 
