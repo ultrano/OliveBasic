@@ -1084,7 +1084,7 @@ void mn_swap( MnState* s, MnIndex idx1, MnIndex idx2 )
 	}
 }
 
-void mn_replacestack( MnState* s, MnIndex dst, MnIndex src )
+void mn_replace( MnState* s, MnIndex dst, MnIndex src )
 {
 	MnValue* val = ut_getstack_ptr( s, src );
 	if ( val ) ut_setstack( s, dst, *val );
@@ -1733,7 +1733,11 @@ enum MnOperate
 
 	MOP_SET_STACK,
 	MOP_GET_STACK,
-	MOP_INSERT_STACK,
+
+	MOP_REMOVE,
+	MOP_INSERT,
+	MOP_SWAP,
+	MOP_REPLACE,
 
 	MOP_SET_FIELD,
 	MOP_GET_FIELD,
@@ -1888,7 +1892,11 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 
 		case MOP_SET_STACK:	mn_setstack( s, i.eax ); break;
 		case MOP_GET_STACK:	mn_getstack( s, i.eax ); break;
-		case MOP_INSERT_STACK:	mn_insert( s, i.eax ); break;
+
+		case MOP_REMOVE:	mn_remove( s, i.eax ); break;
+		case MOP_INSERT:	mn_insert( s, i.eax ); break;
+		case MOP_SWAP:		mn_swap( s, i.ax, i.bx ); break;
+		case MOP_REPLACE:	mn_replace( s, i.ax, i.bx ); break;
 
 		case MOP_SET_FIELD:	mn_setfield( s, i.eax); break;
 		case MOP_GET_FIELD:	mn_getfield( s, i.eax); break;
@@ -2163,7 +2171,11 @@ MnOperate cp_str2op( OvString str )
 
 	else if ( str == "setstack" ) return MOP_SET_STACK;
 	else if ( str == "getstack" ) return MOP_GET_STACK;
-	else if ( str == "insertstack" ) return MOP_INSERT_STACK;
+
+	else if ( str == "remove" ) return MOP_REMOVE;
+	else if ( str == "insert" ) return MOP_INSERT;
+	else if ( str == "swap" ) return MOP_SWAP;
+	else if ( str == "replace" ) return MOP_REPLACE;
 
 	else if ( str == "setfield" ) return MOP_SET_FIELD;
 	else if ( str == "getfield" ) return MOP_GET_FIELD;
@@ -2320,7 +2332,8 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		{
 		case MOP_SET_STACK:
 		case MOP_GET_STACK:
-		case MOP_INSERT_STACK:
+		case MOP_REMOVE:
+		case MOP_INSERT:
 		case MOP_SET_FIELD:
 		case MOP_GET_FIELD:
 		case MOP_SET_META:
@@ -2337,6 +2350,8 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		case MOP_NEWCLOSURE:
 			i.eax  = cp_func_const( cs, func );
 			break;
+		case MOP_SWAP:
+		case MOP_REPLACE:
 		case MOP_CALL:
 			i.ax = cp_operand(cs);
 			i.bx = cp_operand(cs);
