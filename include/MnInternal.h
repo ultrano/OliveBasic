@@ -1335,7 +1335,12 @@ OvInt ex_do_asm( MnState* s )
 struct MnOpCodeABC : public OvMemObject
 {
 	OvByte op;
-	OvChar a; OvChar b; OvChar c;
+	OvChar a;
+	union
+	{
+		struct { OvChar b; OvChar c; };
+		OvShort bx;
+	};
 };
 
 enum MnOperate
@@ -1530,47 +1535,46 @@ OvInt cp_exec_func( MnState* s, MnMFunction* func )
 			{
 				MnClosure* cls = ut_newMclosure(s);
 				MnClosure::MClosure* mcls = cls->u.m;
-				mcls->func = func->consts[i.a-1];
-				cls->upvals.resize( i.b );
+				mcls->func = func->consts[i.bx-1];
 				ut_pushvalue(s,MnValue(MOT_CLOSURE,cls));
 			}
 			break;
 
-		case MOP_SET_STACK:	mn_setstack( s, i.a ); break;
-		case MOP_GET_STACK:	mn_getstack( s, i.a ); break;
+		case MOP_SET_STACK:	mn_setstack( s, i.bx ); break;
+		case MOP_GET_STACK:	mn_getstack( s, i.bx ); break;
 
-		case MOP_REMOVE:	mn_remove( s, i.a ); break;
-		case MOP_INSERT:	mn_insert( s, i.a ); break;
+		case MOP_REMOVE:	mn_remove( s, i.bx ); break;
+		case MOP_INSERT:	mn_insert( s, i.bx ); break;
 		case MOP_SWAP:		mn_swap( s, i.a, i.b ); break;
 		case MOP_REPLACE:	mn_replace( s, i.a, i.b ); break;
 
-		case MOP_SET_FIELD:	mn_setfield( s, i.a); break;
-		case MOP_GET_FIELD:	mn_getfield( s, i.a); break;
+		case MOP_SET_FIELD:	mn_setfield( s, i.bx); break;
+		case MOP_GET_FIELD:	mn_getfield( s, i.bx); break;
 
 		case MOP_SET_GLOBAL:	mn_setglobal( s ); break;
 		case MOP_GET_GLOBAL:	mn_getglobal( s ); break;
 
-		case MOP_SET_META:	mn_setmeta( s, i.a ); break;
-		case MOP_GET_META:	mn_getmeta( s, i.a ); break;
+		case MOP_SET_META:	mn_setmeta( s, i.bx ); break;
+		case MOP_GET_META:	mn_getmeta( s, i.bx ); break;
 
-		case MOP_SET_UPVAL:	mn_setupval( s, i.a ); break;
-		case MOP_GET_UPVAL:	mn_getupval( s, i.a ); break;
+		case MOP_SET_UPVAL:	mn_setupval( s, i.bx ); break;
+		case MOP_GET_UPVAL:	mn_getupval( s, i.bx ); break;
 
-		case MOP_PUSH:		ut_pushvalue( s, func->consts[i.a-1] ); break;
-		case MOP_POP:		mn_pop( s, i.a ); break;
+		case MOP_PUSH:		ut_pushvalue( s, func->consts[i.bx-1] ); break;
+		case MOP_POP:		mn_pop( s, i.bx ); break;
 
 		case MOP_CALL:		mn_call( s, i.a, i.b ); break;
 
 		case MOP_LOG:
 			{
-				MnValue log = func->consts[i.a-1];
+				MnValue log = func->consts[i.bx-1];
 				printf( MnToString(log)->get_str().c_str() );
 				printf("\n");
 			}
 			break;
 
-		case MOP_JMP: s->pc += (i.a - 1); break;
-		case MOP_RET: return i.a;
+		case MOP_JMP: s->pc += (i.bx - 1); break;
+		case MOP_RET: return i.bx;
 
 		case MOP_NOT:
 			{
@@ -1888,12 +1892,12 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		case MOP_POP:
 		case MOP_JMP:
 		case MOP_RET:
-			code->a = cp_operand(cs);
+			code->bx = cp_operand(cs);
 			break;
 		case MOP_PUSH:
 		case MOP_LOG:
 		case MOP_NEWCLOSURE:
-			code->a  = cp_func_const( cs, func );
+			code->bx= cp_func_const( cs, func );
 			break;
 		case MOP_SWAP:
 		case MOP_REPLACE:
