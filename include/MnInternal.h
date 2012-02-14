@@ -1503,26 +1503,6 @@ struct MnCompileState : public OvMemObject
 OvInt cp_exec_func( MnState* s, MnMFunction* func )
 {
 
-#define _Ax	(MnAx(i))
-#define _A	(MnA(i))
-#define _B	(MnB(i))
-#define _C	(MnC(i))
-
-#define fB	(MnReposit(_B))
-#define fC	(MnReposit(_C))
-
-#define iAx (_Ax)
-#define iA	(MnIdx(_A))
-#define iB	(MnIdx(_B))
-#define iC	(MnIdx(_C))
-
-#define cB  (func->consts[iB - 1])
-#define cC  (func->consts[iC - 1])
-
-#define rA (sA)
-#define rB ((fB==FlagConst)? cB:sB)
-#define rC ((fC==FlagConst)? cC:sC)
-
 	s->pc = func->codes.size()? &(func->codes[0]) : NULL;
 	while ( s->pc )
 	{
