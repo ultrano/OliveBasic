@@ -434,7 +434,7 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 		else
 		{
 			MnClosure::MClosure* mcl = cls->u.m;
-			r = ut_exec_func( s, MnToFunction( mcl->func ) );
+			r = cp_exec_func( s, MnToFunction( mcl->func ) );
 		}
 	}
 

@@ -1471,7 +1471,36 @@ MnValue ut_method_logical( MnState* s,MnOperate op, MnValue& a, MnValue& b )
 
 //////////////////////////////////////////////////////////////////////////
 
-OvInt ut_exec_func( MnState* s, MnMFunction* func )
+MnValue ut_meta_call( MnState* s, MnValue& c ) 
+{
+	MnValue meta = ut_getmeta( s, c );
+	if ( !MnIsNil(meta) )
+	{
+		ut_pushvalue( s, meta );	//< push meta
+		mn_pushstring( s, METHOD_CALL );
+		mn_getfield( s, -2 );		//< get _call method
+		if ( mn_isfunction( s, -1 ) )
+		{
+			MnValue call = ut_getstack( s, -1 );
+			mn_pop(s,2);
+			return call;
+		}
+		return ut_meta_call(s,meta);
+	}
+	return MnValue();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+struct MnCompileState : public OvMemObject
+{
+	MnState* state;
+	OvInputStream* is;
+	OvChar c;
+	MnValue	errfunc;
+};
+
+OvInt cp_exec_func( MnState* s, MnMFunction* func )
 {
 
 #define _Ax	(MnAx(i))
@@ -1497,7 +1526,7 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 	s->pc = func->codes.size()? &(func->codes[0]) : NULL;
 	while ( s->pc )
 	{
-		MnInstruction i = *s->pc; ++s->pc;
+		MnInstruction& i = *s->pc; ++s->pc;
 		switch ( i.op )
 		{
 		case MOP_NEWTABLE:	mn_newtable( s ); break;
@@ -1592,32 +1621,6 @@ OvInt ut_exec_func( MnState* s, MnMFunction* func )
 	}
 	return 0;
 }
-
-MnValue ut_meta_call( MnState* s, MnValue& c ) 
-{
-	MnValue meta = ut_getmeta( s, c );
-	if ( !MnIsNil(meta) )
-	{
-		ut_pushvalue( s, meta );	//< push meta
-		mn_pushstring( s, METHOD_CALL );
-		mn_getfield( s, -2 );		//< get _call method
-		if ( mn_isfunction( s, -1 ) )
-		{
-			MnValue call = ut_getstack( s, -1 );
-			mn_pop(s,2);
-			return call;
-		}
-		return ut_meta_call(s,meta);
-	}
-	return MnValue();
-}
-struct MnCompileState : public OvMemObject
-{
-	MnState* state;
-	OvInputStream* is;
-	OvChar c;
-	MnValue	errfunc;
-};
 
 void cp_build_func( MnCompileState* cs, MnMFunction* func );
 
