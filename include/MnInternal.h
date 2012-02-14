@@ -739,44 +739,6 @@ OvInt ut_str2type( const MnValue& val )
 	return ut_str2type( MnIsString(val)? MnToString(val)->get_str().c_str() : "unknown" );
 }
 
-////////////////////*    version info    *///////////////////
-
-void mn_version( OvByte& major, OvByte& minor, OvByte& patch )
-{
-	major = VERSION_MAJOR;
-	minor = VERSION_MINOR;
-	patch = VERSION_PATCH;
-}
-
-////////////////////*    open and close    *///////////////////
-
-MnState* mn_openstate()
-{
-	MnState* s = new(ut_alloc(sizeof(MnState))) MnState;
-	s->begin = s->end = NULL;
-	s->base = (MnValue*)-1;
-	s->top  = (MnValue*)+0;
-	s->ci	= NULL;
-	s->pc	= NULL;
-	ut_ensure_stack(s,1);
-	return s;
-}
-
-void mn_closestate( MnState* s )
-{
-	if ( s )
-	{
-		while ( s->ci ) { MnCallInfo* ci = s->ci; s->ci = ci->prev; ut_free(ci); }
-		s->begin = s->end = s->base = s->top = NULL;
-		s->stack.clear();
-		s->global.clear();
-		s->openeduv.clear();
-		s->upvals.clear();
-		s->strtable.clear();
-		mn_collect_garbage(s);
-		ut_free(s);
-	}
-}
 
 /////////////////////////* correct / close upval *//////////////////////////////
 
@@ -1035,17 +997,6 @@ OvBool ut_isglobal( MnState* s, OvHash32 hash )
 	return ( s->global.find( hash ) != s->global.end() );
 }
 
-void mn_setstack( MnState* s, MnIndex idx )
-{
-	ut_setstack( s, idx, ut_getstack(s,-1));
-	mn_pop(s,1);
-}
-
-void mn_getstack( MnState* s, MnIndex idx )
-{
-	ut_pushvalue( s, ut_getstack(s,idx) );
-}
-
 void ut_insertstack(MnState* s, MnIndex idx, MnValue& val )
 {
 	MnValue* itor = ut_getstack_ptr( s, idx );;
@@ -1062,52 +1013,11 @@ void ut_insertstack(MnState* s, MnIndex idx, MnValue& val )
 	}
 }
 
-void mn_insert( MnState* s, MnIndex idx )
-{
-	ut_insertstack( s, idx, ut_getstack( s, -1 ) );
-}
-
-void mn_remove( MnState* s, MnIndex idx )
-{
-	MnValue* itor = ut_getstack_ptr( s, idx );;
-	if ( itor && itor > s->base && itor < s->top )
-	{
-		while ( ++itor < s->top ) *(itor-1) = *itor;
-		--s->top;
-	}
-}
-
-void mn_swap( MnState* s, MnIndex idx1, MnIndex idx2 )
-{
-	MnValue* val1 = ut_getstack_ptr( s, idx1 );
-	MnValue* val2 = ut_getstack_ptr( s, idx2 );
-	if ( val1 && val2 )
-	{
-		MnValue& temp = *val1;
-		*val1 = *val2;
-		*val2 = temp;
-	}
-}
-
-void mn_replace( MnState* s, MnIndex dst, MnIndex src )
-{
-	MnValue* val = ut_getstack_ptr( s, src );
-	if ( val ) ut_setstack( s, dst, *val );
-}
-
 void ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v )
 {
 	if ( MnIsTable(c) )		 ut_settable( s, c, n, v);
 	else if ( MnIsArray(c) ) ut_setarray( s, c, n, v);
 	else if ( MnIsUserData(c) || MnIsMiniData(c) )  ut_meta_newindex( s, c, n, v );
-}
-void mn_setfield( MnState* s, MnIndex idx )
-{
-	if ( idx && mn_gettop(s) >= 2 )
-	{
-		if ( idx )	ut_setfield( s, ut_getstack(s,idx), ut_getstack(s,-2), ut_getstack(s,-1) );
-		mn_pop(s,2);
-	}
 }
 
 MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
@@ -1118,50 +1028,12 @@ MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 	return MnValue();
 }
 
-void mn_getfield( MnState* s, MnIndex idx )
-{
-	if ( idx && mn_gettop(s) >= 1 )
-	{
-		MnValue val;
-		if ( idx )	val = ut_getfield( s, ut_getstack(s,idx), ut_getstack(s,-1) );
-		mn_pop(s,1);
-		ut_pushvalue( s, val );
-	}
-}
-
-void mn_setglobal( MnState* s )
-{
-	if ( mn_gettop(s) >= 2 )
-	{
-		ut_setglobal( s, ut_getstack(s,-2), ut_getstack(s,-1));
-		mn_pop(s,2);
-	}
-}
-
-void mn_getglobal( MnState* s )
-{
-	if (  mn_gettop(s) >= 1 )
-	{
-		MnValue val = ut_getglobal( s, ut_getstack(s,-1) );
-		mn_pop(s,1);
-		ut_pushvalue( s, val );
-	}
-}
-
 void ut_setmeta( MnState* s, MnValue& c, MnValue& m )
 {
 	if ( MnIsTable(c) )			MnToTable(c)->metatable = m;
 	else if ( MnIsArray(c) )	MnToArray(c)->metatable = m;
 	else if ( MnIsUserData(c) ) MnToUserData(c)->metatable = m;
 	else if ( MnIsMiniData(c) ) MnToMiniData(c)->metatable = m;
-}
-
-void mn_setmeta( MnState* s, MnIndex idx )
-{
-	MnValue v = ut_getstack(s,idx);
-	MnValue m = ut_getstack(s,-1);
-	ut_setmeta(s,v,m);
-	mn_pop(s,1);
 }
 
 MnValue ut_getmeta( MnState* s, const MnValue& c )
@@ -1171,21 +1043,6 @@ MnValue ut_getmeta( MnState* s, const MnValue& c )
 	else if ( MnIsUserData(c) ) return MnToUserData(c)->metatable;
 	else if ( MnIsMiniData(c) ) return MnToMiniData(c)->metatable;
 	return MnValue();
-}
-
-void mn_getmeta( MnState* s, MnIndex idx )
-{
-	ut_pushvalue( s, ut_getmeta(s,ut_getstack(s,idx)) );
-}
-
-void mn_setupval( MnState* s, MnIndex upvalidx )
-{
-	ut_setupval(s, upvalidx, ut_getstack(s,-1));
-}
-
-void mn_getupval( MnState* s, MnIndex upvalidx )
-{
-	ut_pushvalue(s, ut_getupval(s, upvalidx ) );
 }
 
 MnString* ut_newstring( MnState* s, const OvString& str )
@@ -1471,49 +1328,6 @@ OvInt ex_do_asm( MnState* s )
 {
 	mn_do_asm( s, mn_tostring(s,1), 0 );
 	return 0;
-}
-
-void mn_lib_default( MnState* s )
-{
-	mn_pushstring( s, "length" );
-	mn_pushfunction( s, ex_global_length );
-	mn_setglobal( s );
-
-	mn_pushstring( s, "resize" );
-	mn_pushfunction( s, ex_global_resize );
-	mn_setglobal( s );
-
-	mn_pushstring( s, "collect_garbage" );
-	mn_pushfunction( s, ex_collect_garbage );
-	mn_setglobal( s );
-
-	mn_pushstring( s, "print" );
-	mn_pushfunction( s, ex_print);
-	mn_setglobal( s );
-
-	mn_pushstring( s, "tostring" );
-	mn_pushfunction( s, ex_tostring);
-	mn_setglobal( s );
-
-	mn_pushstring( s, "tonumber" );
-	mn_pushfunction( s, ex_tonumber);
-	mn_setglobal( s );
-
-	mn_pushstring( s, "dump_stack" );
-	mn_pushfunction( s, ex_dump_stack);
-	mn_setglobal( s );
-
-	mn_pushstring( s, "do_asm" );
-	mn_pushfunction( s, ex_do_asm);
-	mn_setglobal( s );
-
-	mn_pushstring( s, "ensure_stack" );
-	mn_pushfunction( s, ex_ensure_stack);
-	mn_setglobal( s );
-
-	mn_pushstring( s, "stack_size" );
-	mn_pushfunction( s, ex_stack_size);
-	mn_setglobal( s );
 }
 
 
