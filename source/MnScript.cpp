@@ -14,7 +14,6 @@ void mn_version( OvByte& major, OvByte& minor, OvByte& patch )
 
 MnState* mn_openstate()
 {
-	int a = sizeof(MnInstruction);
 	MnState* s = new(ut_alloc(sizeof(MnState))) MnState;
 	s->begin = s->end = NULL;
 	s->base = (MnValue*)-1;

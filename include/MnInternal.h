@@ -23,7 +23,7 @@ class MnClosure;
 class MnUpval;
 class MnUserData;
 class MnMiniData;
-struct MnInstruction;
+typedef OvUInt MnInstruction;
 
 typedef OvUShort MnOperand;
 
@@ -1332,15 +1332,10 @@ OvInt ex_do_asm( MnState* s )
 
 
 //////////////////////////////////////////////////////////////////////////
-struct MnInstruction : public OvMemObject
+struct MnOpCodeABC : public OvMemObject
 {
 	OvByte op;
-	union
-	{
-		OvInt eax;
-		struct { OvShort ax; OvShort bx; };
-		struct { OvChar a; OvChar b; OvChar c; OvChar d; };
-	};
+	OvChar a; OvChar b; OvChar c;
 };
 
 enum MnOperate
@@ -1526,7 +1521,7 @@ OvInt cp_exec_func( MnState* s, MnMFunction* func )
 	s->pc = func->codes.size()? &(func->codes[0]) : NULL;
 	while ( s->pc )
 	{
-		MnInstruction& i = *s->pc; ++s->pc;
+		MnOpCodeABC& i = (MnOpCodeABC&)*s->pc; ++s->pc;
 		switch ( i.op )
 		{
 		case MOP_NEWTABLE:	mn_newtable( s ); break;
@@ -1535,47 +1530,47 @@ OvInt cp_exec_func( MnState* s, MnMFunction* func )
 			{
 				MnClosure* cls = ut_newMclosure(s);
 				MnClosure::MClosure* mcls = cls->u.m;
-				mcls->func = func->consts[i.ax-1];
-				cls->upvals.resize( i.bx );
+				mcls->func = func->consts[i.a-1];
+				cls->upvals.resize( i.b );
 				ut_pushvalue(s,MnValue(MOT_CLOSURE,cls));
 			}
 			break;
 
-		case MOP_SET_STACK:	mn_setstack( s, i.eax ); break;
-		case MOP_GET_STACK:	mn_getstack( s, i.eax ); break;
+		case MOP_SET_STACK:	mn_setstack( s, i.a ); break;
+		case MOP_GET_STACK:	mn_getstack( s, i.a ); break;
 
-		case MOP_REMOVE:	mn_remove( s, i.eax ); break;
-		case MOP_INSERT:	mn_insert( s, i.eax ); break;
-		case MOP_SWAP:		mn_swap( s, i.ax, i.bx ); break;
-		case MOP_REPLACE:	mn_replace( s, i.ax, i.bx ); break;
+		case MOP_REMOVE:	mn_remove( s, i.a ); break;
+		case MOP_INSERT:	mn_insert( s, i.a ); break;
+		case MOP_SWAP:		mn_swap( s, i.a, i.b ); break;
+		case MOP_REPLACE:	mn_replace( s, i.a, i.b ); break;
 
-		case MOP_SET_FIELD:	mn_setfield( s, i.eax); break;
-		case MOP_GET_FIELD:	mn_getfield( s, i.eax); break;
+		case MOP_SET_FIELD:	mn_setfield( s, i.a); break;
+		case MOP_GET_FIELD:	mn_getfield( s, i.a); break;
 
 		case MOP_SET_GLOBAL:	mn_setglobal( s ); break;
 		case MOP_GET_GLOBAL:	mn_getglobal( s ); break;
 
-		case MOP_SET_META:	mn_setmeta( s, i.eax ); break;
-		case MOP_GET_META:	mn_getmeta( s, i.eax ); break;
+		case MOP_SET_META:	mn_setmeta( s, i.a ); break;
+		case MOP_GET_META:	mn_getmeta( s, i.a ); break;
 
-		case MOP_SET_UPVAL:	mn_setupval( s, i.eax ); break;
-		case MOP_GET_UPVAL:	mn_getupval( s, i.eax ); break;
+		case MOP_SET_UPVAL:	mn_setupval( s, i.a ); break;
+		case MOP_GET_UPVAL:	mn_getupval( s, i.a ); break;
 
-		case MOP_PUSH:		ut_pushvalue( s, func->consts[i.eax-1] ); break;
-		case MOP_POP:		mn_pop( s, i.eax ); break;
+		case MOP_PUSH:		ut_pushvalue( s, func->consts[i.a-1] ); break;
+		case MOP_POP:		mn_pop( s, i.a ); break;
 
-		case MOP_CALL:		mn_call( s, i.ax, i.bx ); break;
+		case MOP_CALL:		mn_call( s, i.a, i.b ); break;
 
 		case MOP_LOG:
 			{
-				MnValue log = func->consts[i.eax-1];
+				MnValue log = func->consts[i.a-1];
 				printf( MnToString(log)->get_str().c_str() );
 				printf("\n");
 			}
 			break;
 
-		case MOP_JMP: s->pc += (i.eax - 1); break;
-		case MOP_RET: return i.eax;
+		case MOP_JMP: s->pc += (i.a - 1); break;
+		case MOP_RET: return i.a;
 
 		case MOP_NOT:
 			{
@@ -1875,9 +1870,10 @@ MnOperand cp_func_const( MnCompileState* cs, MnMFunction* func )
 void cp_build_func( MnCompileState* cs, MnMFunction* func )
 {
 	MnInstruction i;
-	while ( cp_operate( cs, (MnOperate&)i.op ) )
+	MnOpCodeABC* code = (MnOpCodeABC*)&i;
+	while ( cp_operate( cs, (MnOperate&)code->op ) )
 	{
-		switch ( i.op )
+		switch ( code->op )
 		{
 		case MOP_SET_STACK:
 		case MOP_GET_STACK:
@@ -1892,24 +1888,24 @@ void cp_build_func( MnCompileState* cs, MnMFunction* func )
 		case MOP_POP:
 		case MOP_JMP:
 		case MOP_RET:
-			i.eax = cp_operand(cs);
+			code->a = cp_operand(cs);
 			break;
 		case MOP_PUSH:
 		case MOP_LOG:
 		case MOP_NEWCLOSURE:
-			i.eax  = cp_func_const( cs, func );
+			code->a  = cp_func_const( cs, func );
 			break;
 		case MOP_SWAP:
 		case MOP_REPLACE:
 		case MOP_CALL:
-			i.ax = cp_operand(cs);
-			i.bx = cp_operand(cs);
+			code->a = cp_operand(cs);
+			code->b = cp_operand(cs);
 			break;
 		case MOP_NONEOP:
-			func->codes.push_back( i );
+			func->codes.push_back( (MnInstruction)i );
 			return;
 		}
-		func->codes.push_back( i );
+		func->codes.push_back( (MnInstruction)i );
 	}
-	func->codes.push_back( i );
+	func->codes.push_back( (MnInstruction)i );
 }
