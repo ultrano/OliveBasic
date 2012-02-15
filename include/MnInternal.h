@@ -226,6 +226,8 @@ void			ut_pushvalue( MnState* s, const MnValue& v );
 const OvChar*	ut_typename( const MnValue& v );
 OvInt			ut_type( const MnValue& v );
 
+MnValue			ut_getconst( MnMFunction* f, MnIndex idx );
+
 //////////////////////////////////////////////////////////////////////////
 
 class MnRefCounter : public OvMemObject
@@ -838,6 +840,19 @@ MnValue ut_getstack( MnState* s, MnIndex idx )
 {
 	MnValue* v = ut_getstack_ptr(s,idx);
 	return v? *v : MnValue();
+}
+
+MnValue ut_getconst( MnMFunction* f, MnIndex idx )
+{
+	if ( idx > 0 && idx <= f->consts.size() )
+	{
+		return f->consts[ idx ];
+	}
+	else if ( idx < 0 && -idx <= f->consts.size() )
+	{
+		return f->consts[ f->consts.size() + idx ];
+	}
+	return MnValue();
 }
 
 OvBool ut_meta_newindex( MnState* s, MnValue& c, MnValue& n, MnValue& v ) 
