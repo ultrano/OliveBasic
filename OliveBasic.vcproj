@@ -736,6 +736,14 @@
 					RelativePath=".\include\MnScript.h"
 					>
 				</File>
+				<File
+					RelativePath=".\include\MnScriptCompiler.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\MnSimpleCompiler.h"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="TestCases"

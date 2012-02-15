@@ -1,5 +1,7 @@
 #include "MnScript.h"
 #include "MnInternal.h"
+#include "MnSimpleCompiler.h"
+#include "MnScriptCompiler.h"
 
 ////////////////////*    version info    *///////////////////
 
