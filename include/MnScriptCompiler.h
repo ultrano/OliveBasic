@@ -28,6 +28,7 @@ struct compile_state
 	compile_state()
 		: s(NULL)
 		, is(NULL)
+		, head(NULL)
 		, tail(NULL)
 		, itor(NULL)
 	{
@@ -39,13 +40,14 @@ struct compile_state
 
 	set_str			strset;
 
+	s_token*		head;
 	s_token*		tail;
 	s_token*		itor;
 
-	void		prev() { itor = (itor)? itor->prev : NULL; };
-	void		next() { itor = (itor)? itor->next : NULL; };
-
 };
+
+void		cs_tnext( compile_state* cs ) { cs->itor = (cs->itor)? cs->itor->next : NULL; };
+void		cs_tprev( compile_state* cs ) { cs->itor = (cs->itor)? cs->itor->next : NULL; };
 
 OvString*	cs_new_str( compile_state* cs, OvString& str );
 s_token*	cs_new_tok( compile_state* cs, OvChar type );
@@ -76,14 +78,15 @@ s_token* cs_new_tok( compile_state* cs, OvInt type )
 	s_token* tok = new(ut_alloc( sizeof(s_token) )) s_token;
 	tok->type = type;
 
-	if ( !cs->itor )
+	if ( !cs->head )
 	{
+		cs->head = tok;
 		cs->itor = tok;
 	}
 	if ( cs->tail ) cs->tail->next = tok;
 
 	tok->prev = cs->tail;
-	cs->tail	= tok;
+	cs->tail  = tok;
 
 	return tok;
 }
