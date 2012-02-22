@@ -20,9 +20,8 @@ struct s_token
 	};
 };
 
-struct script_compiler
+struct compiler_state
 {
-
 	void		prev() { itor = (itor)? itor->prev : NULL; };
 	void		next() { itor = (itor)? itor->next : NULL; };
 	s_token* head;
