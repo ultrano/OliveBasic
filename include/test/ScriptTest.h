@@ -140,4 +140,6 @@ void test_do_asm_do_asm_func()
 	OvVector2* vec = (OvVector2*)mn_tominidata(s,-1);
 
 	mn_closestate(s);
+
+	scan_test( "../OliveBasic/include/test/do_asm.txt" );
 }

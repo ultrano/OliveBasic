@@ -86,3 +86,7 @@ OvInt			mn_collect_garbage( MnState* s );
 
 
 void			mn_do_asm( MnState* s, const OvString& file, MnIndex idx );
+
+//////////////////////////////////////////////////////////////////////////
+
+void			scan_test( const OvString& file );

@@ -13,7 +13,7 @@ struct s_token
 	s_token*	next;
 	s_token*	prev;
 
-	OvChar		type;
+	OvInt		type;
 	union
 	{
 		OvReal	num;
@@ -24,6 +24,14 @@ struct s_token
 struct compile_state
 {
 	typedef OvSet<OvString> set_str;
+
+	compile_state()
+		: s(NULL)
+		, is(NULL)
+		, head(NULL)
+		, itor(NULL)
+	{
+	}
 
 	MnState*		s;
 	OvChar			c;
@@ -39,6 +47,19 @@ struct compile_state
 
 };
 
+OvString*	cs_new_str( compile_state* cs, OvString& str );
+s_token*	cs_new_tok( compile_state* cs, OvChar type );
+void		cs_scan( compile_state* cs );
+
+void		scan_test( const OvString& file )
+{
+	compile_state cs;
+	OvFileInputStream fis( file );
+	cs.is = &fis;
+	cs.is->Read(cs.c);
+	cs_scan(&cs);
+}
+
 OvString* cs_new_str( compile_state* cs, OvString& str ) 
 {
 	compile_state::set_str::iterator itor = cs->strset.find( str );
@@ -50,7 +71,7 @@ OvString* cs_new_str( compile_state* cs, OvString& str )
 	return &(*itor);
 }
 
-s_token* cs_new_tok( compile_state* cs, OvChar type ) 
+s_token* cs_new_tok( compile_state* cs, OvInt type ) 
 {
 	s_token* tok = new(ut_alloc( sizeof(s_token) )) s_token;
 	tok->type = type;
@@ -95,7 +116,7 @@ void cs_scan( compile_state* cs )
 				if ( !cp_read() ) break;
 			}
 
-			cs_new_tok( cs, tt_identifier )->num = num;
+			cs_new_tok( cs, tt_number )->num = num;
 		}
 		else if ( c == '"' )
 		{
@@ -124,7 +145,7 @@ void cs_scan( compile_state* cs )
 			OvChar ret = c;
 			cp_read();
 
-			cs_new_tok( cs, ret );
+			cs_new_tok( cs, (OvInt)ret );
 		}
 	}
 #undef cp_read
