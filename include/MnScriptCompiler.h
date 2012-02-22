@@ -1,5 +1,4 @@
 #pragma once
-#include "MnInternal.h"
 
 enum toktype
 {
@@ -51,46 +50,16 @@ OvString* cs_new_str( compile_state* cs, OvString& str )
 	return &(*itor);
 }
 
-void cs_push_tok( compile_state* cs, s_token* tok ) 
+s_token* cs_new_tok( compile_state* cs, OvChar type ) 
 {
+	s_token* tok = new(ut_alloc( sizeof(s_token) )) s_token;
+	tok->type = type;
+
 	if ( cs->head ) cs->head->prev = tok;
 	tok->next	= cs->head;
 	cs->head	= tok;
-}
 
-void cs_tok_str( compile_state* cs, OvString& str )
-{
-	s_token* tok = new(ut_alloc( sizeof(s_token) )) s_token;
-	tok->type	= tt_string;
-	tok->str	= cs_new_str(cs, str);
-
-	cs_push_tok(cs, tok);
-}
-
-void cs_tok_id( compile_state* cs, OvString& str )
-{
-	s_token* tok = new(ut_alloc( sizeof(s_token) )) s_token;
-	tok->type	= tt_identifier;
-	tok->str	= cs_new_str(cs, str);
-
-	cs_push_tok(cs, tok);
-}
-
-void cs_tok_num( compile_state* cs, OvReal& num )
-{
-	s_token* tok = new(ut_alloc( sizeof(s_token) )) s_token;
-	tok->type	= tt_number;
-	tok->num	= num;
-
-	cs_push_tok(cs, tok);
-}
-
-void cs_tok( compile_state* cs, OvChar c )
-{
-	s_token* tok = new(ut_alloc( sizeof(s_token) )) s_token;
-	tok->type	= c;
-
-	cs_push_tok(cs, tok);
+	return tok;
 }
 
 void cs_scan( compile_state* cs )
@@ -102,7 +71,7 @@ void cs_scan( compile_state* cs )
 	{
 		if ( c == EOF  )
 		{
-			cs_tok( cs, tt_eos );
+			cs_new_tok( cs, tt_eos );
 			return ;
 		}
 		else if ( isdigit(c) )
@@ -126,7 +95,7 @@ void cs_scan( compile_state* cs )
 				if ( !cp_read() ) break;
 			}
 
-			cs_tok_num( cs, num );
+			cs_new_tok( cs, tt_identifier )->num = num;
 		}
 		else if ( c == '"' )
 		{
@@ -138,7 +107,7 @@ void cs_scan( compile_state* cs )
 			} while ( cp_read() && c != '"' );
 			cp_read();
 
-			cs_tok_str( cs, str );
+			cs_new_tok( cs, tt_string )->str = cs_new_str(cs, str);
 		}
 		else if ( isalpha(c) || c == '_' )
 		{
@@ -148,14 +117,14 @@ void cs_scan( compile_state* cs )
 				str.push_back(c);
 			} while ( cp_read() && (isalnum(c) || c == '_') );
 
-			cs_tok_id( cs, str );
+			cs_new_tok( cs, tt_identifier )->str = cs_new_str(cs, str);
 		}
 		else
 		{
 			OvChar ret = c;
 			cp_read();
 
-			cs_tok( cs, ret );
+			cs_new_tok( cs, ret );
 		}
 	}
 #undef cp_read
