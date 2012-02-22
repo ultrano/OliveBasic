@@ -42,6 +42,7 @@ struct compile_state
 
 	s_token*		head;
 	s_token*		tail;
+
 	s_token*		itor;
 
 };
