@@ -45,6 +45,8 @@ struct compile_state
 
 	s_token*		itor;
 
+	MnMFunction*	func;
+
 };
 
 void		cs_tnext( compile_state* cs ) { cs->itor = (cs->itor)? cs->itor->next : NULL; };
@@ -62,6 +64,27 @@ void		scan_test( const OvString& file )
 	cs.is->Read(cs.c);
 	cs_scan(&cs);
 }
+
+struct stat_block
+{
+	compile_state* cs;
+	OvInt	nvar;
+};
+struct stat_exp
+{
+	enum eexp_flag
+	{
+		econst,
+		evariable,
+		eexp,
+	};
+	compile_state* cs;
+	OvInt	ntemp;
+
+	
+
+};
+
 
 OvString* cs_new_str( compile_state* cs, OvString& str ) 
 {
