@@ -20,7 +20,7 @@ struct s_token
 	};
 };
 
-struct compiler_state
+struct compile_state
 {
 	void		prev() { itor = (itor)? itor->prev : NULL; };
 	void		next() { itor = (itor)? itor->next : NULL; };
