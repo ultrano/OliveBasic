@@ -1,5 +1,44 @@
 #pragma once
 
+#define cs_bit1( n, p ) ((~((~((MnInstruction)0))<<(n)))<<(p))
+#define cs_bit0( n, p ) (~cs_bit1( n, p ))
+
+#define cs_getbit(i,n,p) (cs_bit1( (n), (p) ) & (i) )
+#define cs_setbit(i,n,p,b) (i = (cs_bit1( (n), (p) ) & (b)) | (cs_bit0( (n), (p) ) & (i)))
+
+#define opsize	(6)
+#define asize 	(8)
+#define bsize 	(9)
+#define csize 	(9)
+
+#define oppos	(0)
+#define apos	(oppos + opsize)
+#define bpos  	(apos  + asize)
+#define cpos  	(bpos  + bsize)
+
+#define cs_getop(i)		(cs_getbit( i, opsize, oppos ))
+#define cs_setop(i,op)	(cs_setbit( i, opsize, oppos, op ))
+
+#define cs_geta(i)		(cs_getbit( i, asize, apos ))
+#define cs_seta(i,a)	(cs_setbit( i, asize, apos, a ))
+
+#define cs_getb(i)		(cs_getbit( i, bsize, bpos ))
+#define cs_setb(i,b)	(cs_setbit( i, bsize, bpos, b ))
+
+#define cs_getc(i)		(cs_getbit( i, csize, cpos ))
+#define cs_setc(i,c)	(cs_setbit( i, csize, cpos, c ))
+
+#define cs_isconst(v)	(!!cs_bit1(1,apos))
+
+#define cs_code(op,a,b,c) ( (cs_bit1(opsize,oppos)&(op)) | (cs_bit1(asize,apos)&(a)) | (cs_bit1(bsize,bpos)&(b)) | (cs_bit1(csize,cpos)&(c)) )
+
+/*
+op : 6
+a : 8
+b:  9
+c : 9
+*/
+
 enum toktype
 {
 	tt_string		= 256,
