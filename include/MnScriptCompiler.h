@@ -28,7 +28,6 @@ struct compile_state
 	compile_state()
 		: s(NULL)
 		, is(NULL)
-		, head(NULL)
 		, tail(NULL)
 		, itor(NULL)
 	{
@@ -40,7 +39,6 @@ struct compile_state
 
 	set_str			strset;
 
-	s_token*		head;
 	s_token*		tail;
 	s_token*		itor;
 
@@ -78,9 +76,8 @@ s_token* cs_new_tok( compile_state* cs, OvInt type )
 	s_token* tok = new(ut_alloc( sizeof(s_token) )) s_token;
 	tok->type = type;
 
-	if ( !cs->head )
+	if ( !cs->itor )
 	{
-		cs->head = tok;
 		cs->itor = tok;
 	}
 	if ( cs->tail ) cs->tail->next = tok;
