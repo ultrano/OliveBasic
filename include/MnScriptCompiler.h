@@ -3,8 +3,8 @@
 #define cs_bit1( n, p ) ((~((~((MnInstruction)0))<<(n)))<<(p))
 #define cs_bit0( n, p ) (~cs_bit1( n, p ))
 
-#define cs_getbit(i,n,p) (cs_bit1( (n), (p) ) & (i) )
-#define cs_setbit(i,n,p,b) (i = (cs_bit1( (n), (p) ) & (b)) | (cs_bit0( (n), (p) ) & (i)))
+#define cs_getbit(i,n,p) ((cs_bit1( (n), (p) ) & (i) )>>(p))
+#define cs_setbit(i,n,p,b) (i = (cs_bit1( (n), (p) ) & ((b)<<(p))) | (cs_bit0( (n), (p) ) & (i)))
 
 #define opsize	(6)
 #define asize 	(8)
@@ -30,7 +30,7 @@
 
 #define cs_isconst(v)	(!!cs_bit1(1,apos))
 
-#define cs_code(op,a,b,c) ( (cs_bit1(opsize,oppos)&(op)) | (cs_bit1(asize,apos)&(a)) | (cs_bit1(bsize,bpos)&(b)) | (cs_bit1(csize,cpos)&(c)) )
+#define cs_code(op,a,b,c) ( (cs_bit1(opsize,oppos)&((op)<<oppos)) | (cs_bit1(asize,apos)&((a)<<apos)) | (cs_bit1(bsize,bpos)&((b)<<bpos)) | (cs_bit1(csize,cpos)&((c)<<cpos)) )
 
 /*
 op : 6
