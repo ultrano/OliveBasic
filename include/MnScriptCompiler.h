@@ -93,7 +93,7 @@ struct compile_state
 void		cs_tnext( compile_state* cs ) 	{ cs->itor = (cs->itor)? cs->itor->next : NULL; };
 void		cs_tprev( compile_state* cs ) 	{ cs->itor = (cs->itor)? cs->itor->next : NULL; };
 s_token*	cs_tok( compile_state* cs )		{ return cs->itor; };
-void		cs_newconst( compile_state* cs, const MnValue& val, expdesc &exp ) 
+
 
 OvString*	cs_new_str( compile_state* cs, OvString& str );
 s_token*	cs_new_tok( compile_state* cs, OvChar type );
@@ -116,18 +116,17 @@ struct stat_block
 	stat_block*		outer;
 };
 
+struct expdesc;
+void	cs_newconst( compile_state* cs, const MnValue& val, expdesc &exp );
+void	cs_findvar( stat_block* block, const OvString& name, expdesc& exp );
 OvShort cs_nvars( stat_block* block )
 {
-	return return block->vars.size() + (block->outer)? cs_nvars(block->outer):0;
-}
-
-OvShort cs_findvar( stat_block* block, const OvString& name )
-{
-
+	return block? (block->vars.size() + ((block->outer)? cs_nvars(block->outer):0)):0;
 }
 
 enum exptype
 {
+	enone,
 	econst,		//< [reg1:const index]
 	evariable,	//< [reg1:stack index]
 	efield,		//< [reg1:stack index] [reg2:key index in const or stack]
@@ -139,6 +138,7 @@ struct expdesc
 	OvShort reg1;
 	OvShort reg2;
 };
+
 struct stat_exp
 {
 	compile_state*	cs;
@@ -155,7 +155,7 @@ struct stat_exp
 		s_token* tok = cs_tok(cs);
 		if ( tok->type == tt_number )
 		{
-			cs_newconst( cs, MnValue(MOT_NUMBER,tok->num), exp);
+			cs_newconst( cs, MnValue(tok->num), exp);
 		}
 		else if ( tok->type == tt_string )
 		{
@@ -163,7 +163,7 @@ struct stat_exp
 		}
 		else if ( tok->type == tt_identifier )
 		{
-			
+			cs_findvar( block, *tok->str, exp );
 		}
 	}
 
@@ -174,19 +174,15 @@ void cs_newconst( compile_state* cs, const MnValue& val, expdesc &exp )
 	exp.type = econst;
 	if ( MnIsNumber(val) || MnIsString(val) )
 	{
-		if ( MnIsNumber(val) ) for ( MnIndex i = 0; i < cs->func->consts.size(); ++i )
+		for ( MnIndex i = 0; i < cs->func->consts.size(); ++i )
 		{
 			const MnValue& v = cs->func->consts[i];
-			if ( MnIsNumber(v) && (MnToNumber(v) == MnToNumber(val)) )
+			if ( MnIsNumber(val) && MnIsNumber(v) && (MnToNumber(v) == MnToNumber(val)) )
 			{
 				exp.reg1 = i + 1;
 				return ;
 			}
-		}
-		else if ( MnIsString(val) )
-		{
-			const MnValue& v = cs->func->consts[i];
-			if ( MnIsString(v) && (MnToString(v)->get_str() == MnToString(val)->get_str()) )
+			else if ( MnIsString(val) && MnIsString(v) && (MnToString(v)->get_str() == MnToString(val)->get_str()) )
 			{
 				exp.reg1 = i + 1;
 				return ;
@@ -195,6 +191,24 @@ void cs_newconst( compile_state* cs, const MnValue& val, expdesc &exp )
 	}
 	cs->func->consts.push_back( val );
 	exp.reg1 = cs->func->consts.size();
+}
+
+void cs_findvar( stat_block* block, const OvString& name, expdesc& exp )
+{
+	if ( block )
+	{
+		for ( MnIndex i = 0 ; i < block->vars.size() ; ++i )
+		{
+			if ( block->vars[i] == name )
+			{
+				exp.type = evariable;
+				exp.reg1 = (i+1) + cs_nvars(block->outer);
+			}
+		}
+
+		cs_findvar( block->outer, name, exp );
+	}
+	exp.type = enone;
 }
 
 OvString* cs_new_str( compile_state* cs, OvString& str ) 
