@@ -90,8 +90,10 @@ struct compile_state
 
 };
 
-void		cs_tnext( compile_state* cs ) { cs->itor = (cs->itor)? cs->itor->next : NULL; };
-void		cs_tprev( compile_state* cs ) { cs->itor = (cs->itor)? cs->itor->next : NULL; };
+void		cs_tnext( compile_state* cs ) 	{ cs->itor = (cs->itor)? cs->itor->next : NULL; };
+void		cs_tprev( compile_state* cs ) 	{ cs->itor = (cs->itor)? cs->itor->next : NULL; };
+s_token*	cs_tok( compile_state* cs )		{ return cs->itor; };
+void		cs_newconst( compile_state* cs, const MnValue& val, expdesc &exp ) 
 
 OvString*	cs_new_str( compile_state* cs, OvString& str );
 s_token*	cs_new_tok( compile_state* cs, OvChar type );
@@ -108,24 +110,92 @@ void		scan_test( const OvString& file )
 
 struct stat_block
 {
-	compile_state* cs;
-	OvInt	nvar;
+	typedef OvVector<OvString> vec_str;
+	compile_state*	cs;
+	vec_str			vars;
+	stat_block*		outer;
+};
+
+OvShort cs_nvars( stat_block* block )
+{
+	return return block->vars.size() + (block->outer)? cs_nvars(block->outer):0;
+}
+
+OvShort cs_findvar( stat_block* block, const OvString& name )
+{
+
+}
+
+enum exptype
+{
+	econst,		//< [reg1:const index]
+	evariable,	//< [reg1:stack index]
+	efield,		//< [reg1:stack index] [reg2:key index in const or stack]
+	etemp,		//< [reg1:stack index]
+};
+struct expdesc
+{
+	exptype type;
+	OvShort reg1;
+	OvShort reg2;
 };
 struct stat_exp
 {
-	enum eexp_flag
-	{
-		econst,
-		evariable,
-		eexp,
-	};
-	compile_state* cs;
-	OvInt	ntemp;
+	compile_state*	cs;
+	stat_block*		block;
+	OvInt			ntemp;
 
-	
+	stat_exp( compile_state* s, stat_block* b ) : cs(s), block(b), ntemp(cs_nvars(b)) {}
+
+	OvShort		push_temp() { return ++ntemp; };
+	void		pop_temp() { if ( ntemp > cs_nvars(block) ) --ntemp; };
+
+	void	primary( expdesc& exp )
+	{
+		s_token* tok = cs_tok(cs);
+		if ( tok->type == tt_number )
+		{
+			cs_newconst( cs, MnValue(MOT_NUMBER,tok->num), exp);
+		}
+		else if ( tok->type == tt_string )
+		{
+			cs_newconst( cs, MnValue(MOT_STRING,ut_newstring(cs->s,*tok->str)), exp);
+		}
+		else if ( tok->type == tt_identifier )
+		{
+			
+		}
+	}
 
 };
 
+void cs_newconst( compile_state* cs, const MnValue& val, expdesc &exp ) 
+{
+	exp.type = econst;
+	if ( MnIsNumber(val) || MnIsString(val) )
+	{
+		if ( MnIsNumber(val) ) for ( MnIndex i = 0; i < cs->func->consts.size(); ++i )
+		{
+			const MnValue& v = cs->func->consts[i];
+			if ( MnIsNumber(v) && (MnToNumber(v) == MnToNumber(val)) )
+			{
+				exp.reg1 = i + 1;
+				return ;
+			}
+		}
+		else if ( MnIsString(val) )
+		{
+			const MnValue& v = cs->func->consts[i];
+			if ( MnIsString(v) && (MnToString(v)->get_str() == MnToString(val)->get_str()) )
+			{
+				exp.reg1 = i + 1;
+				return ;
+			}
+		}
+	}
+	cs->func->consts.push_back( val );
+	exp.reg1 = cs->func->consts.size();
+}
 
 OvString* cs_new_str( compile_state* cs, OvString& str ) 
 {
