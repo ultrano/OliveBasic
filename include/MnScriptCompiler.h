@@ -28,7 +28,9 @@
 #define cs_getc(i)		(cs_getbit( i, csize, cpos ))
 #define cs_setc(i,c)	(cs_setbit( i, csize, cpos, c ))
 
-#define cs_isconst(v)	(!!cs_bit1(1,apos))
+#define cs_isconst(v)	(!!(cs_bit1(1,apos)&(v)))
+#define cs_index(v)		(cs_bit1(asize,0)&(v))
+#define cs_const(idx)	(cs_bit1(1,apos) | cs_index(idx))
 
 #define cs_code(op,a,b,c) ( (cs_bit1(opsize,oppos)&((op)<<oppos)) | (cs_bit1(asize,apos)&((a)<<apos)) | (cs_bit1(bsize,bpos)&((b)<<bpos)) | (cs_bit1(csize,cpos)&((c)<<cpos)) )
 
