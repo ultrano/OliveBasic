@@ -477,3 +477,9 @@ void mn_do_asm( MnState* s, const OvString& file, MnIndex idx )
 	ut_pushvalue(s,MnValue(MOT_CLOSURE,cls));
 	mn_call(s,0,0);
 }
+
+void mn_do_file( MnState* s, const OvString& file )
+{
+	compile_state cs(s);
+	cs_scan_file( &cs, file );
+}

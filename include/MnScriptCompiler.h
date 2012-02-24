@@ -66,12 +66,12 @@ struct compile_state
 {
 	typedef OvSet<OvString> set_str;
 
-	compile_state()
-		: s(NULL)
+	compile_state( MnState* state )
+		: s(state)
 		, is(NULL)
 		, head(NULL)
 		, tail(NULL)
-		, itor(NULL)
+		, tok(NULL)
 	{
 	}
 
@@ -84,28 +84,28 @@ struct compile_state
 	s_token*		head;
 	s_token*		tail;
 
-	s_token*		itor;
+	s_token*		tok;
 
 	MnMFunction*	func;
 
 };
 
-void		cs_tnext( compile_state* cs ) 	{ cs->itor = (cs->itor)? cs->itor->next : NULL; };
-void		cs_tprev( compile_state* cs ) 	{ cs->itor = (cs->itor)? cs->itor->next : NULL; };
-s_token*	cs_tok( compile_state* cs )		{ return cs->itor; };
-
+void		cs_tnext( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL; };
+void		cs_tprev( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL; };
+OvBool		cs_tcheck( compile_state* cs, OvInt type ) { ( cs->tok )? (cs->tok->type == type) : false; };
+OvReal&		cs_tnum( compile_state* cs ) { static OvReal temp=0; ( cs->tok )? cs->tok->num:temp;};
+OvString&	cs_tstr( compile_state* cs ) { static OvString temp=0; ( cs->tok )? *cs->tok->str:temp;};
 
 OvString*	cs_new_str( compile_state* cs, OvString& str );
 s_token*	cs_new_tok( compile_state* cs, OvChar type );
 void		cs_scan( compile_state* cs );
 
-void		scan_test( const OvString& file )
+void		cs_scan_file( compile_state* cs, const OvString& file )
 {
-	compile_state cs;
 	OvFileInputStream fis( file );
-	cs.is = &fis;
-	cs.is->Read(cs.c);
-	cs_scan(&cs);
+	cs->is = &fis;
+	cs->is->Read(cs->c);
+	cs_scan(cs);
 }
 
 struct stat_block
@@ -150,21 +150,29 @@ struct stat_exp
 	OvShort		push_temp() { return ++ntemp; };
 	void		pop_temp() { if ( ntemp > cs_nvars(block) ) --ntemp; };
 
+	void	exp1( expdesc& exp )
+	{
+		primary( exp );
+		if ( cs_tcheck( cs, '+' ) || cs_tcheck( cs, '-' ) )
+		{
+
+		}
+	}
 	void	primary( expdesc& exp )
 	{
-		s_token* tok = cs_tok(cs);
-		if ( tok->type == tt_number )
+		if ( cs_tcheck( cs, tt_number ) )
 		{
-			cs_newconst( cs, MnValue(tok->num), exp);
+			cs_newconst( cs, MnValue(cs_tnum(cs)), exp);
 		}
-		else if ( tok->type == tt_string )
+		else if ( cs_tcheck( cs, tt_string ) )
 		{
-			cs_newconst( cs, MnValue(MOT_STRING,ut_newstring(cs->s,*tok->str)), exp);
+			cs_newconst( cs, MnValue(MOT_STRING,ut_newstring(cs->s,cs_tstr(cs))), exp);
 		}
-		else if ( tok->type == tt_identifier )
+		else if ( cs_tcheck( cs, tt_identifier ) )
 		{
-			cs_findvar( block, *tok->str, exp );
+			cs_findvar( block, cs_tstr(cs), exp );
 		}
+		cs_tnext(cs);
 	}
 
 };
@@ -230,7 +238,7 @@ s_token* cs_new_tok( compile_state* cs, OvInt type )
 	if ( !cs->head )
 	{
 		cs->head = tok;
-		cs->itor = tok;
+		cs->tok = tok;
 	}
 	if ( cs->tail ) cs->tail->next = tok;
 
