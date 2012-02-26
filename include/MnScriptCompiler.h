@@ -41,6 +41,14 @@ b:  9
 c : 9
 */
 
+enum opcode
+{
+	op_add,
+	op_sub,
+	op_mul,
+	op_div,
+};
+
 enum toktype
 {
 	tt_string		= 256,
@@ -92,9 +100,16 @@ struct compile_state
 
 void		cs_tnext( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL; };
 void		cs_tprev( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL; };
-OvBool		cs_tcheck( compile_state* cs, OvInt type ) { ( cs->tok )? (cs->tok->type == type) : false; };
-OvReal&		cs_tnum( compile_state* cs ) { static OvReal temp=0; ( cs->tok )? cs->tok->num:temp;};
-OvString&	cs_tstr( compile_state* cs ) { static OvString temp=0; ( cs->tok )? *cs->tok->str:temp;};
+
+OvBool		cs_ttype( compile_state* cs, OvInt type ) { return ( cs->tok )? (cs->tok->type == type) : false; };
+OvBool		cs_tstep( compile_state* cs, OvInt type )
+{
+	if ( cs_ttype(cs,type) ) { cs_tnext(cs); return true; }
+	return false;
+}
+
+OvReal&		cs_tnum( compile_state* cs ) { static OvReal temp=0; return ( cs->tok )? cs->tok->num:temp;};
+OvString&	cs_tstr( compile_state* cs ) { static OvString temp=0; return ( cs->tok )? *cs->tok->str:temp;};
 
 OvString*	cs_new_str( compile_state* cs, OvString& str );
 s_token*	cs_new_tok( compile_state* cs, OvChar type );
@@ -148,31 +163,47 @@ struct stat_exp
 	stat_exp( compile_state* s, stat_block* b ) : cs(s), block(b), ntemp(cs_nvars(b)) {}
 
 	OvShort		push_temp() { return ++ntemp; };
-	void		pop_temp() { if ( ntemp > cs_nvars(block) ) --ntemp; };
+	OvShort		pop_temp() { return ntemp--; };
 
-	void	exp1( expdesc& exp )
+	void	exp()
 	{
-		primary( exp );
-		if ( cs_tcheck( cs, '+' ) || cs_tcheck( cs, '-' ) )
+		exp1( exp );
+	}
+	void	exp1()
+	{
+		expdesc exp;
+		term( exp );
+		if ( cs_tstep( cs, '+' ) || cs_tstep( cs, '-' ) )
 		{
-
+			cs_code( op_add,  );
 		}
+	}
+	void	term( expdesc& exp )
+	{
+		primary(exp);
 	}
 	void	primary( expdesc& exp )
 	{
-		if ( cs_tcheck( cs, tt_number ) )
+		if ( cs_ttype( cs, tt_number ) )
 		{
 			cs_newconst( cs, MnValue(cs_tnum(cs)), exp);
+			cs_tnext(cs);
 		}
-		else if ( cs_tcheck( cs, tt_string ) )
+		else if ( cs_ttype( cs, tt_string ) )
 		{
 			cs_newconst( cs, MnValue(MOT_STRING,ut_newstring(cs->s,cs_tstr(cs))), exp);
+			cs_tnext(cs);
 		}
-		else if ( cs_tcheck( cs, tt_identifier ) )
+		else if ( cs_ttype( cs, tt_identifier ) )
 		{
 			cs_findvar( block, cs_tstr(cs), exp );
+			cs_tnext(cs);
 		}
-		cs_tnext(cs);
+		else if ( cs_tstep( cs, '(' ) )
+		{
+			exp( exp );
+			cs_tstep( cs, ')' );
+		}
 	}
 
 };
