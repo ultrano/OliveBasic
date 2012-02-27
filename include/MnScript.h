@@ -91,4 +91,4 @@ void			mn_do_file( MnState* s, const OvString& file );
 
 //////////////////////////////////////////////////////////////////////////
 
-void			scan_test( const OvString& file );
+void			scan_test( MnState* s, const OvString& file );

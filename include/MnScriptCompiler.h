@@ -30,7 +30,7 @@
 
 #define cs_isconst(v)	(!!(cs_bit1(1,apos)&(v)))
 #define cs_index(v)		(cs_bit1(asize,0)&(v))
-#define cs_const(idx)	(cs_bit1(1,apos) | cs_index(idx))
+#define cs_const(idx)	(cs_bit1(1,apos) | (cs_bit1(asize,0) & cs_index(idx)))
 
 #define cs_code(op,a,b,c) ( (cs_bit1(opsize,oppos)&((op)<<oppos)) | (cs_bit1(asize,apos)&((a)<<apos)) | (cs_bit1(bsize,bpos)&((b)<<bpos)) | (cs_bit1(csize,cpos)&((c)<<cpos)) )
 
@@ -43,10 +43,14 @@ c : 9
 
 enum opcode
 {
+	op_none = 0,
 	op_add,
 	op_sub,
 	op_mul,
 	op_div,
+
+	op_gettable,
+	op_settable,
 };
 
 enum toktype
@@ -114,6 +118,7 @@ OvString&	cs_tstr( compile_state* cs ) { static OvString temp=0; return ( cs->to
 OvString*	cs_new_str( compile_state* cs, OvString& str );
 s_token*	cs_new_tok( compile_state* cs, OvChar type );
 void		cs_scan( compile_state* cs );
+void		cs_compile( MnState* s, const OvString& file );
 
 void		cs_scan_file( compile_state* cs, const OvString& file )
 {
@@ -123,12 +128,30 @@ void		cs_scan_file( compile_state* cs, const OvString& file )
 	cs_scan(cs);
 }
 
+MnInstruction&		cs_addcode( compile_state* cs, MnInstruction i )
+{
+	cs->func->codes.push_back( i );
+	return i;
+}
+
+struct stat_func
+{
+	compile_state* cs;
+	MnMFunction* last;
+	stat_func( compile_state* cstate );
+	~stat_func();
+
+};
+
 struct stat_block
 {
 	typedef OvVector<OvString> vec_str;
 	compile_state*	cs;
 	vec_str			vars;
 	stat_block*		outer;
+
+	stat_block( compile_state* cstate, stat_block* o );
+
 };
 
 struct expdesc;
@@ -142,10 +165,10 @@ OvShort cs_nvars( stat_block* block )
 enum exptype
 {
 	enone,
+	etemp,		//< [reg1:stack index]
 	econst,		//< [reg1:const index]
 	evariable,	//< [reg1:stack index]
 	efield,		//< [reg1:stack index] [reg2:key index in const or stack]
-	etemp,		//< [reg1:stack index]
 };
 struct expdesc
 {
@@ -159,23 +182,59 @@ struct stat_exp
 	compile_state*	cs;
 	stat_block*		block;
 	OvInt			ntemp;
+	OvInt			nvars;
+	expdesc			exp1;
+	expdesc			exp2;
 
-	stat_exp( compile_state* s, stat_block* b ) : cs(s), block(b), ntemp(cs_nvars(b)) {}
-
-	OvShort		push_temp() { return ++ntemp; };
-	OvShort		pop_temp() { return ntemp--; };
-
-	void	exp()
+	stat_exp( compile_state* s, stat_block* b ) : cs(s), block(b), ntemp(0), nvars(cs_nvars(b)) 
 	{
-		exp1( exp );
+		statexp( exp1 );
 	}
-	void	exp1()
+
+	OvShort		alloc_temp() { return nvars + (++ntemp); };
+	void		release_temp() { if ( exp1.type == etemp ) ntemp>0?--ntemp:0;if ( exp2.type == etemp ) ntemp>0?--ntemp:0; };
+
+	void	statexp( expdesc& exp )
 	{
-		expdesc exp;
-		term( exp );
-		if ( cs_tstep( cs, '+' ) || cs_tstep( cs, '-' ) )
+		stat_exp2( exp );
+	}
+	void	stat_exp2( expdesc& exp )
+	{
+		stat_exp1( exp );
+		while ( cs_ttype( cs, '+' ) || cs_ttype( cs, '-' ) )
 		{
-			cs_code( op_add,  );
+			opcode op = cs_tstep( cs, '+' )? op_add : cs_tstep( cs, '-' )? op_sub : op_none;
+			stat_exp1( exp2 );
+			release_temp();
+			exp.type = etemp;
+			exp.reg1 = cs_getb(cs_addcode( cs, cs_code( op, alloc_temp(), exp.reg1, exp2.reg1 ) ));
+		}
+	}
+	void	stat_exp1( expdesc& exp )
+	{
+		term2reg( exp );
+		while ( cs_ttype( cs, '*' ) || cs_ttype( cs, '/' ) )
+		{
+			opcode op = cs_tstep( cs, '*' )? op_mul : cs_tstep( cs, '/' )? op_div : op_none;
+			term2reg( exp2 );
+			release_temp();
+			exp.type = etemp;
+			exp.reg1 = cs_getb(cs_addcode( cs, cs_code( op, alloc_temp(), exp.reg1, exp2.reg1 ) ));
+		}
+	}
+	OvShort	term2reg( expdesc& exp )
+	{
+		term( exp );
+		switch ( exp.type )
+		{
+		case etemp :
+		case econst :
+		case evariable :
+			return exp.reg1;
+		case efield :
+			exp.type = etemp;
+			exp.reg1 = cs_getb( cs_addcode( cs, cs_code( op_gettable, alloc_temp(), exp.reg1, exp.reg2 ) ) );
+			return exp.reg1;
 		}
 	}
 	void	term( expdesc& exp )
@@ -187,6 +246,8 @@ struct stat_exp
 		if ( cs_ttype( cs, tt_number ) )
 		{
 			cs_newconst( cs, MnValue(cs_tnum(cs)), exp);
+			;
+			exp.reg2 = cs_index(exp.reg1);
 			cs_tnext(cs);
 		}
 		else if ( cs_ttype( cs, tt_string ) )
@@ -201,7 +262,7 @@ struct stat_exp
 		}
 		else if ( cs_tstep( cs, '(' ) )
 		{
-			exp( exp );
+			statexp( exp );
 			cs_tstep( cs, ')' );
 		}
 	}
@@ -218,18 +279,18 @@ void cs_newconst( compile_state* cs, const MnValue& val, expdesc &exp )
 			const MnValue& v = cs->func->consts[i];
 			if ( MnIsNumber(val) && MnIsNumber(v) && (MnToNumber(v) == MnToNumber(val)) )
 			{
-				exp.reg1 = i + 1;
+				exp.reg1 = cs_const(i + 1);
 				return ;
 			}
 			else if ( MnIsString(val) && MnIsString(v) && (MnToString(v)->get_str() == MnToString(val)->get_str()) )
 			{
-				exp.reg1 = i + 1;
+				exp.reg1 = cs_const(i + 1);
 				return ;
 			}
 		}
 	}
 	cs->func->consts.push_back( val );
-	exp.reg1 = cs->func->consts.size();
+	exp.reg1 = cs_const( cs->func->consts.size() );
 }
 
 void cs_findvar( stat_block* block, const OvString& name, expdesc& exp )
@@ -348,4 +409,47 @@ void cs_scan( compile_state* cs )
 		}
 	}
 #undef cp_read
+}
+
+
+stat_block::stat_block( compile_state* cstate, stat_block* o ) : cs(cstate), outer(o)
+{
+	while ( true )
+	{
+		if ( cs_tstep(cs,'{') )
+		{
+			stat_block( cs, this );
+			cs_tstep(cs,'}');
+		}
+		else if ( cs_ttype(cs,'}') )
+		{
+			break;
+		}
+		else
+		{
+			stat_exp( cs, this );
+		}
+	}
+};
+
+stat_func::stat_func( compile_state* cstate ) : cs(cstate)
+{
+	last = cs->func;
+	cs->func = ut_newfunction(cs->s);
+}
+stat_func::~stat_func()
+{
+	cs->func = last;
+}
+
+void		cs_compile( MnState* s, const OvString& file )
+{
+	compile_state cs(s);
+	cs_scan_file( &cs, file );
+	cs.func = ut_newfunction(s);
+	stat_block(&cs,NULL);
+}
+void scan_test( MnState* s, const OvString& file )
+{
+	cs_compile( s, file);
 }
