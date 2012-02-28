@@ -53,8 +53,8 @@ enum opcode
 	op_mul,
 	op_div,
 
-	op_gettable,
-	op_settable,
+	op_getfield,
+	op_setfield,
 };
 
 enum toktype
@@ -219,7 +219,7 @@ class sm_exp
 	void	exp_order3();
 	void	exp_order2();
 	void	exp_order1();
-	void	term2reg();
+	void	field2reg();
 	void	term();
 	void	primary();
 
@@ -229,6 +229,11 @@ public:
 		statexp();
 	}
 };
+
+OvShort		stat_exp()
+{
+
+}
 
 OvShort		sm_exp::alloc_temp() { return nvars + (++ntemp); };
 void		sm_exp::push( exptype t, OvShort r ) { targets.push_back( expdesc( t, r ) ); }
@@ -257,16 +262,10 @@ void	sm_exp::statexp()
 
 void	sm_exp::exp_order3()
 {
-	exp_order1();
-	while ( cs_ttype( cs, '+' ) || cs_ttype( cs, '-' ) )
+	term();
+	while ( cs_toptional(cs,'=') )
 	{
-		opcode op = cs_toptional( cs, '+' )? op_add : cs_toptional( cs, '-' )? op_sub : op_none;
-		exp_order1();
-		expdesc exp1 = get(-2);
-		expdesc exp2 = get(-1);
-		pop(2);
-		push();
-		cs_addcode( cs, cs_code( op, get(-1).reg, exp1.reg, exp2.reg ) );
+		exp_order2();
 	}
 }
 
@@ -287,11 +286,11 @@ void	sm_exp::exp_order2()
 
 void	sm_exp::exp_order1()
 {
-	term2reg();
+	field2reg();
 	while ( cs_ttype( cs, '*' ) || cs_ttype( cs, '/' ) )
 	{
 		opcode op = cs_toptional( cs, '*' )? op_mul : cs_toptional( cs, '/' )? op_div : op_none;
-		term2reg();
+		field2reg();
 		expdesc exp1 = get(-2);
 		expdesc exp2 = get(-1);
 		pop(2);
@@ -300,17 +299,17 @@ void	sm_exp::exp_order1()
 	}
 }
 
-void	sm_exp::term2reg()
+void	sm_exp::field2reg()
 {
 	term();
 	switch ( get(-1).type )
 	{
 	case efield :
-		expdesc con = get(-1);
-		expdesc key = get(-2);
+		expdesc con = get(-2);
+		expdesc key = get(-1);
 		pop(2);
 		push();
-		cs_addcode( cs, cs_code( op_gettable, get(-1).reg, con.reg, key.reg ) );
+		cs_addcode( cs, cs_code( op_getfield, get(-1).reg, con.reg, key.reg ) );
 	}
 }
 
