@@ -1,5 +1,9 @@
 #pragma once
 
+class 	sm_func;
+class 	sm_block;
+class 	sm_exp;
+
 #define cs_bit1( n, p ) ((~((~((MnInstruction)0))<<(n)))<<(p))
 #define cs_bit0( n, p ) (~cs_bit1( n, p ))
 
@@ -126,81 +130,59 @@ struct compile_state
 
 };
 
-void		cs_tnext( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL; };
-void		cs_tprev( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL; };
-
-OvBool		cs_ttype( compile_state* cs, OvInt type ) { return ( cs->tok )? (cs->tok->type == type) : false; };
-OvBool		cs_toptional( compile_state* cs, OvInt type )
-{
-	if ( cs_ttype(cs,type) ) { cs_tnext(cs); return true; }
-	return false;
-}
-
-OvBool		cs_texpected( compile_state* cs, OvInt type )
-{
-	if ( cs_ttype(cs,type) ) { cs_tnext(cs); return true; }
-	return false;
-}
-
-OvReal&		cs_tnum( compile_state* cs ) { static OvReal temp=0; return ( cs->tok )? cs->tok->num:temp;};
-OvString&	cs_tstr( compile_state* cs ) { static OvString temp=0; return ( cs->tok )? *cs->tok->str:temp;};
-
-OvBool		cs_keyworld( compile_state* cs, keyworld kw )
-{
-	if ( cs_ttype(cs,tt_identifier) ) return ( cs_tstr(cs) == g_kwtable[kw] );
-	return false;
-}
-
+void		cs_tnext( compile_state* cs );
+void		cs_tprev( compile_state* cs );
+OvBool		cs_ttype( compile_state* cs, OvInt type );
+OvBool		cs_toptional( compile_state* cs, OvInt type );
+OvBool		cs_texpected( compile_state* cs, OvInt type );
+OvReal&		cs_tnum( compile_state* cs );
+OvString&	cs_tstr( compile_state* cs );
+OvBool		cs_keyworld( compile_state* cs, keyworld kw );
 OvString*	cs_new_str( compile_state* cs, OvString& str );
 s_token*	cs_new_tok( compile_state* cs, OvChar type );
 void		cs_scan( compile_state* cs );
 void		cs_compile( MnState* s, const OvString& file );
+void		cs_scan_file( compile_state* cs, const OvString& file );
+void		cs_addcode( compile_state* cs, MnInstruction i );
+OvShort		cs_newconst( compile_state* cs, const MnValue& val );
 
-void		cs_scan_file( compile_state* cs, const OvString& file )
-{
-	OvFileInputStream fis( file );
-	cs->is = &fis;
-	cs->is->Read(cs->c);
-	cs_scan(cs);
-}
-
-void		cs_addcode( compile_state* cs, MnInstruction i )
-{
-	cs->func->codes.push_back( i );
-}
-
-struct stat_func
+class sm_func
 {
 	compile_state* cs;
 	MnMFunction* last;
-	stat_func( compile_state* cstate );
-	~stat_func();
 
+public:
+	sm_func( compile_state* cstate );
+	~sm_func();
 };
 
-struct stat_block
+class sm_block
 {
 	typedef OvVector<OvString> vec_str;
 	compile_state*	cs;
 	vec_str			vars;
-	stat_block*		outer;
+	sm_block*		outer;
 
-	stat_block( compile_state* cstate, stat_block* o );
-
+public:
+	OvInt	nvars() { return vars.size() + outer? outer->nvars():0; };
 	void	addvar( const OvString& name )
 	{
 		for each ( const OvString& n in vars ) if ( n == name ) return ;
 		vars.push_back(name);
 	};
+	OvShort	findvar( const OvString& name )
+	{
+		for ( MnIndex i = 0 ; i < vars.size() ; ++i )
+		{
+			if ( vars[i] == name ) return i + outer->nvars();
+		}
+		return (outer)? outer->findvar(name) : -1;
+	}
 
+	sm_block( compile_state* cstate, sm_block* o );
 };
 
 struct expdesc;
-OvShort	cs_newconst( compile_state* cs, const MnValue& val );
-OvShort cs_nvars( stat_block* block )
-{
-	return block? (block->vars.size() + ((block->outer)? cs_nvars(block->outer):0)):0;
-}
 
 enum exptype
 {
@@ -217,112 +199,232 @@ struct expdesc
 	OvShort reg;
 };
 
-struct stat_exp
+class sm_exp
 {
 	compile_state*	cs;
-	stat_block*		block;
+	sm_block*		block;
 	OvInt			ntemp;
 	OvInt			nvars;
 	OvVector<expdesc> targets;
 
-	stat_exp( compile_state* s, stat_block* b ) : cs(s), block(b), ntemp(0), nvars(cs_nvars(b)) 
+	const expdesc&	get( MnIndex idx );
+	OvShort			alloc_temp();
+
+	void			push( exptype t, OvShort r );
+	void			push();
+	void			pop( OvInt n );
+	void			pop();
+
+	void	statexp();
+	void	exp_order3();
+	void	exp_order2();
+	void	exp_order1();
+	void	term2reg();
+	void	term();
+	void	primary();
+
+public:
+	sm_exp( compile_state* s, sm_block* b ) : cs(s), block(b), ntemp(0), nvars(b->nvars()) 
 	{
 		statexp();
 	}
-
-	OvShort		alloc_temp() { return nvars + (++ntemp); };
-	void		push( exptype t, OvShort r ) { targets.push_back( expdesc( t, r ) ); }
-	void		push() { push( etemp, alloc_temp() ); }
-	void		pop() { if ( get(-1).type == etemp ) --ntemp; targets.pop_back(); }
-	void		pop( OvInt n ) { if ( n > 0) while( n-- ) pop(); };
-
-	const expdesc&	get( MnIndex idx )
-	{
-		if ( idx < 0 && targets.size() >= abs(idx) )
-		{
-			return targets.at( targets.size() + idx );
-		}
-		else if ( idx > 0 && targets.size() >= idx )
-		{
-			return targets.at( -1 + idx );
-		}
-		static expdesc noneexp(enone,0);
-		return noneexp;
-	}
-
-	void	statexp()
-	{
-		stat_exp2();
-	}
-	void	stat_exp2()
-	{
-		stat_exp1();
-		while ( cs_ttype( cs, '+' ) || cs_ttype( cs, '-' ) )
-		{
-			opcode op = cs_toptional( cs, '+' )? op_add : cs_toptional( cs, '-' )? op_sub : op_none;
-			stat_exp1();
-			expdesc exp1 = get(-2);
-			expdesc exp2 = get(-1);
-			pop(2);
-			push();
-			cs_addcode( cs, cs_code( op, get(-1).reg, exp1.reg, exp2.reg ) );
-		}
-	}
-	void	stat_exp1()
-	{
-		term2reg();
-		while ( cs_ttype( cs, '*' ) || cs_ttype( cs, '/' ) )
-		{
-			opcode op = cs_toptional( cs, '*' )? op_mul : cs_toptional( cs, '/' )? op_div : op_none;
-			term2reg();
-			expdesc exp1 = get(-2);
-			expdesc exp2 = get(-1);
-			pop(2);
-			push();
-			cs_addcode( cs, cs_code( op, get(-1).reg, exp1.reg, exp2.reg ) );
-		}
-	}
-	void	term2reg()
-	{
-		term();
-		switch ( get(-1).type )
-		{
-		case efield :
-			expdesc con = get(-1);
-			expdesc key = get(-2);
-			pop(2);
-			push();
-			cs_addcode( cs, cs_code( op_gettable, get(-1).reg, con.reg, key.reg ) );
-		}
-	}
-	void	term()
-	{
-		primary();
-	}
-	void	primary()
-	{
-		if ( cs_ttype( cs, tt_number ) )
-		{
-			push( econst, cs_newconst( cs, MnValue(cs_tnum(cs)) ) );
-			cs_tnext(cs);
-		}
-		else if ( cs_ttype( cs, tt_string ) )
-		{
-			push( econst, cs_newconst( cs, MnValue(MOT_STRING,ut_newstring(cs->s,cs_tstr(cs))) ) );
-			cs_tnext(cs);
-		}
-		else if ( cs_ttype( cs, tt_identifier ) )
-		{
-			cs_tnext(cs);
-		}
-		else if ( cs_toptional( cs, '(' ) )
-		{
-			statexp();
-			cs_toptional( cs, ')' );
-		}
-	}
-
 };
+
+OvShort		sm_exp::alloc_temp() { return nvars + (++ntemp); };
+void		sm_exp::push( exptype t, OvShort r ) { targets.push_back( expdesc( t, r ) ); }
+void		sm_exp::push() { push( etemp, alloc_temp() ); }
+void		sm_exp::pop() { if ( get(-1).type == etemp ) --ntemp; targets.pop_back(); }
+void		sm_exp::pop( OvInt n ) { if ( n > 0) while( n-- ) pop(); };
+
+const expdesc&	sm_exp::get( MnIndex idx )
+{
+	if ( idx < 0 && targets.size() >= abs(idx) )
+	{
+		return targets.at( targets.size() + idx );
+	}
+	else if ( idx > 0 && targets.size() >= idx )
+	{
+		return targets.at( -1 + idx );
+	}
+	static expdesc noneexp(enone,0);
+	return noneexp;
+}
+
+void	sm_exp::statexp()
+{
+	exp_order2();
+}
+
+void	sm_exp::exp_order3()
+{
+	exp_order1();
+	while ( cs_ttype( cs, '+' ) || cs_ttype( cs, '-' ) )
+	{
+		opcode op = cs_toptional( cs, '+' )? op_add : cs_toptional( cs, '-' )? op_sub : op_none;
+		exp_order1();
+		expdesc exp1 = get(-2);
+		expdesc exp2 = get(-1);
+		pop(2);
+		push();
+		cs_addcode( cs, cs_code( op, get(-1).reg, exp1.reg, exp2.reg ) );
+	}
+}
+
+void	sm_exp::exp_order2()
+{
+	exp_order1();
+	while ( cs_ttype( cs, '+' ) || cs_ttype( cs, '-' ) )
+	{
+		opcode op = cs_toptional( cs, '+' )? op_add : cs_toptional( cs, '-' )? op_sub : op_none;
+		exp_order1();
+		expdesc exp1 = get(-2);
+		expdesc exp2 = get(-1);
+		pop(2);
+		push();
+		cs_addcode( cs, cs_code( op, get(-1).reg, exp1.reg, exp2.reg ) );
+	}
+}
+
+void	sm_exp::exp_order1()
+{
+	term2reg();
+	while ( cs_ttype( cs, '*' ) || cs_ttype( cs, '/' ) )
+	{
+		opcode op = cs_toptional( cs, '*' )? op_mul : cs_toptional( cs, '/' )? op_div : op_none;
+		term2reg();
+		expdesc exp1 = get(-2);
+		expdesc exp2 = get(-1);
+		pop(2);
+		push();
+		cs_addcode( cs, cs_code( op, get(-1).reg, exp1.reg, exp2.reg ) );
+	}
+}
+
+void	sm_exp::term2reg()
+{
+	term();
+	switch ( get(-1).type )
+	{
+	case efield :
+		expdesc con = get(-1);
+		expdesc key = get(-2);
+		pop(2);
+		push();
+		cs_addcode( cs, cs_code( op_gettable, get(-1).reg, con.reg, key.reg ) );
+	}
+}
+
+void	sm_exp::term()
+{
+	primary();
+}
+
+void	sm_exp::primary()
+{
+	if ( cs_ttype( cs, tt_number ) )
+	{
+		push( econst, cs_newconst( cs, MnValue(cs_tnum(cs)) ) );
+		cs_tnext(cs);
+	}
+	else if ( cs_ttype( cs, tt_string ) )
+	{
+		push( econst, cs_newconst( cs, MnValue(MOT_STRING,ut_newstring(cs->s,cs_tstr(cs))) ) );
+		cs_tnext(cs);
+	}
+	else if ( cs_ttype( cs, tt_identifier ) )
+	{
+		OvShort idx = block->findvar( cs_tstr(cs) );
+		push( (( idx < 0 )? enone : evariable), idx );
+		cs_tnext(cs);
+	}
+	else if ( cs_toptional( cs, '(' ) )
+	{
+		statexp();
+		cs_toptional( cs, ')' );
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+sm_block::sm_block( compile_state* cstate, sm_block* o ) : cs(cstate), outer(o)
+{
+	while ( true )
+	{
+		if ( cs_toptional(cs,'{') )
+		{
+			sm_block( cs, this );
+			cs_texpected(cs,'}');
+		}
+		else if ( cs_keyworld(cs,kw_local) )
+		{
+			cs_tnext(cs);
+			if ( cs_ttype(cs,tt_identifier) )
+			{
+				addvar( cs_tstr(cs) );
+			}
+		}
+		else
+		{
+			sm_exp( cs, this );
+		}
+
+		cs_toptional(cs,';');
+		if ( cs_ttype(cs,'}') || cs_ttype(cs,tt_eos) ) break;
+	}
+};
+
+sm_func::sm_func( compile_state* cstate ) : cs(cstate)
+{
+	last = cs->func;
+	cs->func = ut_newfunction(cs->s);
+}
+sm_func::~sm_func()
+{
+	cs->func = last;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+OvReal&		cs_tnum( compile_state* cs ) { static OvReal temp=0; return ( cs->tok )? cs->tok->num:temp;};
+OvString&	cs_tstr( compile_state* cs ) { static OvString temp=0; return ( cs->tok )? *cs->tok->str:temp;};
+
+void		cs_tnext( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL; };
+void		cs_tprev( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL; };
+
+OvBool		cs_ttype( compile_state* cs, OvInt type ) { return ( cs->tok )? (cs->tok->type == type) : false; };
+OvBool		cs_toptional( compile_state* cs, OvInt type )
+{
+	if ( cs_ttype(cs,type) ) { cs_tnext(cs); return true; }
+	return false;
+}
+
+OvBool		cs_texpected( compile_state* cs, OvInt type )
+{
+	if ( cs_ttype(cs,type) ) { cs_tnext(cs); return true; }
+	return false;
+}
+
+OvBool		cs_keyworld( compile_state* cs, keyworld kw )
+{
+	if ( cs_ttype(cs,tt_identifier) ) return ( cs_tstr(cs) == g_kwtable[kw] );
+	return false;
+}
+
+void		cs_scan_file( compile_state* cs, const OvString& file )
+{
+	OvFileInputStream fis( file );
+	cs->is = &fis;
+	cs->is->Read(cs->c);
+	cs_scan(cs);
+}
+
+void		cs_addcode( compile_state* cs, MnInstruction i )
+{
+	cs->func->codes.push_back( i );
+}
 
 OvShort cs_newconst( compile_state* cs, const MnValue& val ) 
 {
@@ -445,50 +547,12 @@ void cs_scan( compile_state* cs )
 #undef cp_read
 }
 
-
-stat_block::stat_block( compile_state* cstate, stat_block* o ) : cs(cstate), outer(o)
-{
-	while ( true )
-	{
-		if ( cs_toptional(cs,'{') )
-		{
-			stat_block( cs, this );
-			cs_texpected(cs,'}');
-		}
-		else if ( cs_keyworld(cs,kw_local) )
-		{
-			cs_tnext(cs);
-			if ( cs_ttype(cs,tt_identifier) )
-			{
-				addvar( cs_tstr(cs) );
-			}
-		}
-		else
-		{
-			stat_exp( cs, this );
-		}
-
-		cs_toptional(cs,';');
-		if ( cs_ttype(cs,'}') || cs_ttype(cs,tt_eos) ) break;
-	}
-};
-
-stat_func::stat_func( compile_state* cstate ) : cs(cstate)
-{
-	last = cs->func;
-	cs->func = ut_newfunction(cs->s);
-}
-stat_func::~stat_func()
-{
-	cs->func = last;
-}
-
 void		cs_compile( MnState* s, const OvString& file )
 {
 	compile_state cs(s);
 	cs_scan_file( &cs, file );
 	cs.func = ut_newfunction(s);
-	stat_block(&cs,NULL);
+	sm_block(&cs,NULL);
 }
 void scan_test( MnState* s, const OvString& file )
 {
