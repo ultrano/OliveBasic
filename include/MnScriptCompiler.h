@@ -30,7 +30,7 @@
 
 #define cs_isconst(v)	(!!(cs_bit1(1,apos)&(v)))
 #define cs_index(v)		(cs_bit1(asize,0)&(v))
-#define cs_const(idx)	(cs_bit1(1,apos) | (cs_bit1(asize,0) & cs_index(idx)))
+#define cs_const(idx)	(cs_bit1(1,asize) | (cs_bit1(asize,0) & cs_index((idx))))
 
 #define cs_code(op,a,b,c) ( (cs_bit1(opsize,oppos)&((op)<<oppos)) | (cs_bit1(asize,apos)&((a)<<apos)) | (cs_bit1(bsize,bpos)&((b)<<bpos)) | (cs_bit1(csize,cpos)&((c)<<cpos)) )
 
@@ -74,6 +74,30 @@ struct s_token
 	};
 };
 
+enum keyworld
+{
+	kw_unknown	= 0,
+	kw_true,
+	kw_false,
+	kw_function,
+	kw_local,
+	kw_for,
+	kw_while,
+	kw_if,
+};
+
+const OvChar* g_kwtable[] = 
+{
+	"unknown",
+	"true",
+	"false",
+	"function",
+	"local",
+	"for",
+	"while",
+	"if",
+};
+
 struct compile_state
 {
 	typedef OvSet<OvString> set_str;
@@ -106,7 +130,13 @@ void		cs_tnext( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL
 void		cs_tprev( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL; };
 
 OvBool		cs_ttype( compile_state* cs, OvInt type ) { return ( cs->tok )? (cs->tok->type == type) : false; };
-OvBool		cs_tstep( compile_state* cs, OvInt type )
+OvBool		cs_toptional( compile_state* cs, OvInt type )
+{
+	if ( cs_ttype(cs,type) ) { cs_tnext(cs); return true; }
+	return false;
+}
+
+OvBool		cs_texpected( compile_state* cs, OvInt type )
 {
 	if ( cs_ttype(cs,type) ) { cs_tnext(cs); return true; }
 	return false;
@@ -114,6 +144,12 @@ OvBool		cs_tstep( compile_state* cs, OvInt type )
 
 OvReal&		cs_tnum( compile_state* cs ) { static OvReal temp=0; return ( cs->tok )? cs->tok->num:temp;};
 OvString&	cs_tstr( compile_state* cs ) { static OvString temp=0; return ( cs->tok )? *cs->tok->str:temp;};
+
+OvBool		cs_keyworld( compile_state* cs, keyworld kw )
+{
+	if ( cs_ttype(cs,tt_identifier) ) return ( cs_tstr(cs) == g_kwtable[kw] );
+	return false;
+}
 
 OvString*	cs_new_str( compile_state* cs, OvString& str );
 s_token*	cs_new_tok( compile_state* cs, OvChar type );
@@ -128,10 +164,9 @@ void		cs_scan_file( compile_state* cs, const OvString& file )
 	cs_scan(cs);
 }
 
-MnInstruction&		cs_addcode( compile_state* cs, MnInstruction i )
+void		cs_addcode( compile_state* cs, MnInstruction i )
 {
 	cs->func->codes.push_back( i );
-	return i;
 }
 
 struct stat_func
@@ -152,11 +187,16 @@ struct stat_block
 
 	stat_block( compile_state* cstate, stat_block* o );
 
+	void	addvar( const OvString& name )
+	{
+		for each ( const OvString& n in vars ) if ( n == name ) return ;
+		vars.push_back(name);
+	};
+
 };
 
 struct expdesc;
-void	cs_newconst( compile_state* cs, const MnValue& val, expdesc &exp );
-void	cs_findvar( stat_block* block, const OvString& name, expdesc& exp );
+OvShort	cs_newconst( compile_state* cs, const MnValue& val );
 OvShort cs_nvars( stat_block* block )
 {
 	return block? (block->vars.size() + ((block->outer)? cs_nvars(block->outer):0)):0;
@@ -172,9 +212,9 @@ enum exptype
 };
 struct expdesc
 {
+	expdesc( exptype t, OvShort r ) : type(t), reg(r) {};
 	exptype type;
-	OvShort reg1;
-	OvShort reg2;
+	OvShort reg;
 };
 
 struct stat_exp
@@ -183,95 +223,109 @@ struct stat_exp
 	stat_block*		block;
 	OvInt			ntemp;
 	OvInt			nvars;
-	expdesc			exp1;
-	expdesc			exp2;
+	OvVector<expdesc> targets;
 
 	stat_exp( compile_state* s, stat_block* b ) : cs(s), block(b), ntemp(0), nvars(cs_nvars(b)) 
 	{
-		statexp( exp1 );
+		statexp();
 	}
 
 	OvShort		alloc_temp() { return nvars + (++ntemp); };
-	void		release_temp() { if ( exp1.type == etemp ) ntemp>0?--ntemp:0;if ( exp2.type == etemp ) ntemp>0?--ntemp:0; };
+	void		push( exptype t, OvShort r ) { targets.push_back( expdesc( t, r ) ); }
+	void		push() { push( etemp, alloc_temp() ); }
+	void		pop() { if ( get(-1).type == etemp ) --ntemp; targets.pop_back(); }
+	void		pop( OvInt n ) { if ( n > 0) while( n-- ) pop(); };
 
-	void	statexp( expdesc& exp )
+	const expdesc&	get( MnIndex idx )
 	{
-		stat_exp2( exp );
+		if ( idx < 0 && targets.size() >= abs(idx) )
+		{
+			return targets.at( targets.size() + idx );
+		}
+		else if ( idx > 0 && targets.size() >= idx )
+		{
+			return targets.at( -1 + idx );
+		}
+		static expdesc noneexp(enone,0);
+		return noneexp;
 	}
-	void	stat_exp2( expdesc& exp )
+
+	void	statexp()
 	{
-		stat_exp1( exp );
+		stat_exp2();
+	}
+	void	stat_exp2()
+	{
+		stat_exp1();
 		while ( cs_ttype( cs, '+' ) || cs_ttype( cs, '-' ) )
 		{
-			opcode op = cs_tstep( cs, '+' )? op_add : cs_tstep( cs, '-' )? op_sub : op_none;
-			stat_exp1( exp2 );
-			release_temp();
-			exp.type = etemp;
-			exp.reg1 = cs_getb(cs_addcode( cs, cs_code( op, alloc_temp(), exp.reg1, exp2.reg1 ) ));
+			opcode op = cs_toptional( cs, '+' )? op_add : cs_toptional( cs, '-' )? op_sub : op_none;
+			stat_exp1();
+			expdesc exp1 = get(-2);
+			expdesc exp2 = get(-1);
+			pop(2);
+			push();
+			cs_addcode( cs, cs_code( op, get(-1).reg, exp1.reg, exp2.reg ) );
 		}
 	}
-	void	stat_exp1( expdesc& exp )
+	void	stat_exp1()
 	{
-		term2reg( exp );
+		term2reg();
 		while ( cs_ttype( cs, '*' ) || cs_ttype( cs, '/' ) )
 		{
-			opcode op = cs_tstep( cs, '*' )? op_mul : cs_tstep( cs, '/' )? op_div : op_none;
-			term2reg( exp2 );
-			release_temp();
-			exp.type = etemp;
-			exp.reg1 = cs_getb(cs_addcode( cs, cs_code( op, alloc_temp(), exp.reg1, exp2.reg1 ) ));
+			opcode op = cs_toptional( cs, '*' )? op_mul : cs_toptional( cs, '/' )? op_div : op_none;
+			term2reg();
+			expdesc exp1 = get(-2);
+			expdesc exp2 = get(-1);
+			pop(2);
+			push();
+			cs_addcode( cs, cs_code( op, get(-1).reg, exp1.reg, exp2.reg ) );
 		}
 	}
-	OvShort	term2reg( expdesc& exp )
+	void	term2reg()
 	{
-		term( exp );
-		switch ( exp.type )
+		term();
+		switch ( get(-1).type )
 		{
-		case etemp :
-		case econst :
-		case evariable :
-			return exp.reg1;
 		case efield :
-			exp.type = etemp;
-			exp.reg1 = cs_getb( cs_addcode( cs, cs_code( op_gettable, alloc_temp(), exp.reg1, exp.reg2 ) ) );
-			return exp.reg1;
+			expdesc con = get(-1);
+			expdesc key = get(-2);
+			pop(2);
+			push();
+			cs_addcode( cs, cs_code( op_gettable, get(-1).reg, con.reg, key.reg ) );
 		}
 	}
-	void	term( expdesc& exp )
+	void	term()
 	{
-		primary(exp);
+		primary();
 	}
-	void	primary( expdesc& exp )
+	void	primary()
 	{
 		if ( cs_ttype( cs, tt_number ) )
 		{
-			cs_newconst( cs, MnValue(cs_tnum(cs)), exp);
-			;
-			exp.reg2 = cs_index(exp.reg1);
+			push( econst, cs_newconst( cs, MnValue(cs_tnum(cs)) ) );
 			cs_tnext(cs);
 		}
 		else if ( cs_ttype( cs, tt_string ) )
 		{
-			cs_newconst( cs, MnValue(MOT_STRING,ut_newstring(cs->s,cs_tstr(cs))), exp);
+			push( econst, cs_newconst( cs, MnValue(MOT_STRING,ut_newstring(cs->s,cs_tstr(cs))) ) );
 			cs_tnext(cs);
 		}
 		else if ( cs_ttype( cs, tt_identifier ) )
 		{
-			cs_findvar( block, cs_tstr(cs), exp );
 			cs_tnext(cs);
 		}
-		else if ( cs_tstep( cs, '(' ) )
+		else if ( cs_toptional( cs, '(' ) )
 		{
-			statexp( exp );
-			cs_tstep( cs, ')' );
+			statexp();
+			cs_toptional( cs, ')' );
 		}
 	}
 
 };
 
-void cs_newconst( compile_state* cs, const MnValue& val, expdesc &exp ) 
+OvShort cs_newconst( compile_state* cs, const MnValue& val ) 
 {
-	exp.type = econst;
 	if ( MnIsNumber(val) || MnIsString(val) )
 	{
 		for ( MnIndex i = 0; i < cs->func->consts.size(); ++i )
@@ -279,36 +333,16 @@ void cs_newconst( compile_state* cs, const MnValue& val, expdesc &exp )
 			const MnValue& v = cs->func->consts[i];
 			if ( MnIsNumber(val) && MnIsNumber(v) && (MnToNumber(v) == MnToNumber(val)) )
 			{
-				exp.reg1 = cs_const(i + 1);
-				return ;
+				return cs_const(i + 1);
 			}
 			else if ( MnIsString(val) && MnIsString(v) && (MnToString(v)->get_str() == MnToString(val)->get_str()) )
 			{
-				exp.reg1 = cs_const(i + 1);
-				return ;
+				return cs_const(i + 1);
 			}
 		}
 	}
 	cs->func->consts.push_back( val );
-	exp.reg1 = cs_const( cs->func->consts.size() );
-}
-
-void cs_findvar( stat_block* block, const OvString& name, expdesc& exp )
-{
-	if ( block )
-	{
-		for ( MnIndex i = 0 ; i < block->vars.size() ; ++i )
-		{
-			if ( block->vars[i] == name )
-			{
-				exp.type = evariable;
-				exp.reg1 = (i+1) + cs_nvars(block->outer);
-			}
-		}
-
-		cs_findvar( block->outer, name, exp );
-	}
-	exp.type = enone;
+	return cs_const( cs->func->consts.size() );
 }
 
 OvString* cs_new_str( compile_state* cs, OvString& str ) 
@@ -416,19 +450,26 @@ stat_block::stat_block( compile_state* cstate, stat_block* o ) : cs(cstate), out
 {
 	while ( true )
 	{
-		if ( cs_tstep(cs,'{') )
+		if ( cs_toptional(cs,'{') )
 		{
 			stat_block( cs, this );
-			cs_tstep(cs,'}');
+			cs_texpected(cs,'}');
 		}
-		else if ( cs_ttype(cs,'}') )
+		else if ( cs_keyworld(cs,kw_local) )
 		{
-			break;
+			cs_tnext(cs);
+			if ( cs_ttype(cs,tt_identifier) )
+			{
+				addvar( cs_tstr(cs) );
+			}
 		}
 		else
 		{
 			stat_exp( cs, this );
 		}
+
+		cs_toptional(cs,';');
+		if ( cs_ttype(cs,'}') || cs_ttype(cs,tt_eos) ) break;
 	}
 };
 
