@@ -152,6 +152,7 @@ void		cs_compile( MnState* s, const OvString& file );
 void		cs_scan_file( compile_state* cs, const OvString& file );
 
 void		stat_local( compile_state* cs );
+void		stat_global( compile_state* cs );
 void		stat_common_block( compile_state* cs );
 void		stat_nest_block( compile_state* cs );
 void		stat_func_block( compile_state* cs );
@@ -257,7 +258,7 @@ public:
 	OvInt			nvars;
 	OvVector<expdesc> targets;
 
-	const expdesc&	get( MnIndex idx );
+	expdesc&		get( MnIndex idx );
 	OvShort			alloc_temp();
 
 	void			push( exptype t, OvShort r );
@@ -269,7 +270,6 @@ public:
 	void			exp_order3();
 	void			exp_order2();
 	void			exp_order1();
-	void			field2reg();
 	void			term();
 	void			primary();
 };
@@ -280,7 +280,7 @@ void		sm_exp::push() { push( etemp, alloc_temp() ); }
 void		sm_exp::pop() { if ( get(-1).reg == (nvars + ntemp-1) ) --ntemp; targets.pop_back(); }
 void		sm_exp::pop( OvInt n ) { if ( n > 0) while( n-- ) pop(); };
 
-const expdesc&	sm_exp::get( MnIndex idx )
+expdesc&	sm_exp::get( MnIndex idx )
 {
 	if ( idx < 0 && targets.size() >= abs(idx) )
 	{
@@ -375,11 +375,11 @@ void	sm_exp::exp_order2()
 
 void	sm_exp::exp_order1()
 {
-	field2reg();
+	term();
 	while ( cs_ttype( cs, '*' ) || cs_ttype( cs, '/' ) )
 	{
 		opcode op = cs_toptional( cs, '*' )? op_mul : cs_toptional( cs, '/' )? op_div : op_none;
-		field2reg();
+		term();
 		expdesc exp1 = get(-2);
 		expdesc exp2 = get(-1);
 		pop(2);
@@ -388,25 +388,31 @@ void	sm_exp::exp_order1()
 	}
 }
 
-void	sm_exp::field2reg()
-{
-	term();
-	switch ( get(-1).type )
-	{
-	case efield :
-		expdesc con = get(-2);
-		expdesc key = get(-1);
-		pop(2);
-		push();
-		cs->funcstat->addcode( cs_code( op_getfield, get(-1).reg, con.reg, key.reg ) );
-	}
-}
-
 void	sm_exp::term()
 {
 	primary();
 
-	while ( cs_toptional(cs,'=') )
+	while ( cs_toptional(cs,'[') || cs_toptional(cs,'.') )
+	{
+		if ( get(-1).type == efield )
+		{
+			expdesc con = get(-2);
+			expdesc key = get(-1);
+			pop(2);
+			push();
+			cs->funcstat->addcode( cs_code( op_getfield, get(-1).reg, con.reg, key.reg ) );
+		}
+
+		if ( cs_toptional(cs,'[') )
+		{
+			statexp();
+			get(-1).type = efield;
+			cs_texpected(cs,']');
+			continue;
+		}
+	}
+
+	if ( cs_toptional(cs,'=') )
 	{
 		statexp();
 		MnInstruction code = 0;
@@ -423,6 +429,7 @@ void	sm_exp::term()
 		pop(1);
 		cs->funcstat->addcode( code );
 	}
+
 }
 
 void	sm_exp::primary()
@@ -644,6 +651,7 @@ OvBool stat( compile_state* cs )
 {
 	if ( cs_ttype(cs,'{') )				 	{ stat_nest_block( cs ); return true; }
 	else if ( cs_keyworld(cs,kw_local) ) 	{ stat_local(cs); return true; }
+	else if ( cs_keyworld(cs,kw_global) ) 	{ stat_global(cs); return true; }
 	else if ( cs_toptional(cs,';') )		{ return true; }
 	else if ( cs_toptional(cs,tt_eos) ) 		{ return false; }
 	else
@@ -699,6 +707,20 @@ void		stat_func_block( compile_state* cs )
 void stat_local( compile_state* cs ) 
 {
 	if ( cs_keyworld(cs,kw_local) )
+	{
+		cs_tnext(cs);
+		if ( cs_ttype(cs,tt_identifier) )
+		{
+			cs->funcstat->block->addvar( cs_tstr(cs) );
+			expdesc exp;
+			stat_exp( cs, exp );
+		}
+	}
+}
+
+void stat_global( compile_state* cs ) 
+{
+	if ( cs_keyworld(cs,kw_global) )
 	{
 		cs_tnext(cs);
 		if ( cs_ttype(cs,tt_identifier) )
