@@ -389,7 +389,8 @@ public:
 	vec_value		consts;
 	vec_instruction	codes;
 
-	OvInt			nargs;
+	OvUInt			nargs;
+	OvUInt			maxstack;
 
 	virtual void marking();
 };
@@ -628,6 +629,8 @@ void MnArray::marking()
 
 MnMFunction::MnMFunction( MnState* s )
 : MnObject(s)
+, nargs(0)
+, maxstack(0)
 {
 
 }
@@ -846,7 +849,7 @@ MnValue ut_getconst( MnMFunction* f, MnIndex idx )
 {
 	if ( idx > 0 && idx <= f->consts.size() )
 	{
-		return f->consts[ idx ];
+		return f->consts[ idx - 1 ];
 	}
 	else if ( idx < 0 && -idx <= f->consts.size() )
 	{
@@ -1140,8 +1143,9 @@ void ut_delete_garbage( MnObject* o )
 }
 
 
-void ut_ensure_stack( MnState* s, OvInt sz )
+void ut_ensure_stack( MnState* s, OvInt idx )
 {
+	OvSize sz = idx + (s->stack.size()? ( s->base - s->begin ) : 0);
 	if ( sz > s->stack.size() )
 	{
 		MnValue* oldstack = s->begin;
@@ -1247,15 +1251,6 @@ const OvChar* ut_typename( const MnValue& v )
 	return g_type_str[ ut_type(v) ].str;
 }
 
-OvInt ex_ensure_stack( MnState* s )
-{
-	if ( mn_isnumber( s, 1 ) )
-	{
-		ut_ensure_stack( s, mn_tonumber(s,1) );
-	}
-	return 0;
-}
-
 OvInt ex_stack_size( MnState* s )
 {
 	mn_pushnumber( s, ut_stack_size(s) );
@@ -1338,13 +1333,6 @@ OvInt ex_dump_stack( MnState* s )
 	printf("--stack begin--\n");
 	return 0;
 }
-
-OvInt ex_do_asm( MnState* s )
-{
-	mn_do_asm( s, mn_tostring(s,1), 0 );
-	return 0;
-}
-
 
 //////////////////////////////////////////////////////////////////////////
 struct MnOpCodeABC : public OvMemObject

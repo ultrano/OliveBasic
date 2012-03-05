@@ -33,7 +33,7 @@ struct  expdesc;
 #define cs_getc(i)		(cs_getbit( i, csize, cpos ))
 #define cs_setc(i,c)	(cs_setbit( i, csize, cpos, c ))
 
-#define cs_isconst(v)	(!!(cs_bit1(1,apos)&(v)))
+#define cs_isconst(v)	(!!(cs_bit1(1,asize)&(v)))
 #define cs_index(v)		(cs_bit1(asize,0)&(v))
 #define cs_const(idx)	(cs_bit1(1,asize) | (cs_bit1(asize,0) & cs_index((idx))))
 
@@ -148,8 +148,8 @@ OvBool		cs_keyworld( compile_state* cs, keyworld kw );
 OvString*	cs_new_str( compile_state* cs, OvString& str );
 s_token*	cs_new_tok( compile_state* cs, OvChar type );
 void		cs_scan( compile_state* cs );
-void		cs_compile( MnState* s, const OvString& file );
 void		cs_scan_file( compile_state* cs, const OvString& file );
+MnValue		load_entrance( MnState* s, const OvString& file );
 
 void		stat_local( compile_state* cs );
 void		stat_global( compile_state* cs );
@@ -616,27 +616,21 @@ void cs_scan( compile_state* cs )
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-void scan_test( MnState* s, const OvString& file )
-{
-	cs_compile( s, file);
-}
-
-
-void		cs_compile( MnState* s, const OvString& file )
+MnValue	load_entrance( MnState* s, const OvString& file )
 {
 	compile_state cs(s);
 	cs_scan_file( &cs, file );
 
 	stat_entrance(&cs);
 
+	return MnValue( MOT_FUNCPROTO, cs.funcstat->func );
 }
 
 void stat_entrance( compile_state* cs )
 {
-	MnValue func(MOT_FUNCPROTO,ut_newfunction(cs->s));
 	sm_func fmain;
 	sm_block block;
-	fmain.func  = MnToFunction(func);
+	fmain.func  = ut_newfunction(cs->s);
 	fmain.block = &block;
 	cs->funcstat = &fmain;
 	statements(cs);
@@ -730,4 +724,52 @@ void stat_global( compile_state* cs )
 			stat_exp( cs, exp );
 		}
 	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
+{
+#define iOP (cs_getop(i))
+
+#define iCheck(idx) (ut_ensure_stack( s, idx ), idx)
+
+#define sA ( *(s->base + iCheck(cs_index(cs_geta(i))+1)) )
+#define sB ( *(s->base + iCheck(cs_index(cs_getb(i))+1)) )
+#define sC ( *(s->base + iCheck(cs_index(cs_getc(i))+1)) )
+
+#define cB ( func->consts[ cs_index(cs_getb(i))+1 ] )
+#define cC ( func->consts[ cs_index(cs_getc(i))+1 ] )
+
+#define vA sA
+#define vB (cs_isconst( cs_getb(i) )? cB : sB)
+#define vC (cs_isconst( cs_getc(i) )? cC : sC)
+
+	mn_settop( s, func->maxstack );
+	MnInstruction* pc = func->codes.size()? &func->codes[0] : NULL;
+	while ( true )
+	{
+		MnInstruction& i = *pc++;
+		switch ( iOP )
+		{
+		case op_add :
+			vA = MnToNumber(vB) + MnToNumber(vC);
+			break;
+		}
+	}
+
+#undef iOP
+
+#undef iCheck
+
+#undef sA
+#undef sB
+#undef sC
+	   
+#undef cB
+#undef cC
+	   
+#undef vA
+#undef vB
+#undef vC
 }

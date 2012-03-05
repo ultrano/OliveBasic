@@ -72,14 +72,6 @@ void mn_lib_default( MnState* s )
 	mn_pushfunction( s, ex_dump_stack);
 	mn_setglobal( s );
 
-	mn_pushstring( s, "do_asm" );
-	mn_pushfunction( s, ex_do_asm);
-	mn_setglobal( s );
-
-	mn_pushstring( s, "ensure_stack" );
-	mn_pushfunction( s, ex_ensure_stack);
-	mn_setglobal( s );
-
 	mn_pushstring( s, "stack_size" );
 	mn_pushfunction( s, ex_stack_size);
 	mn_setglobal( s );
@@ -202,9 +194,9 @@ void mn_settop( MnState* s, MnIndex idx )
 	}
 	else if ( idx >= 0 )
 	{
-		OvSize sz = idx + (s->base - s->begin + 1);
-		if ( ut_stack_size(s) < sz ) ut_ensure_stack( s, sz );
-		newtop = s->base + ( idx + 1 );
+		OvSize topidx = idx + 1;
+		ut_ensure_stack( s, topidx );
+		newtop = s->base + topidx;
 	}
 
 	if ( s->top > newtop ) while ( s->top != newtop ) *(--s->top) = MnValue();
@@ -435,12 +427,12 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 		else
 		{
 			MnClosure::MClosure* mcl = cls->u.m;
-			r = cp_exec_func( s, MnToFunction( mcl->func ) );
+			r = excuter_ver_0_0_3( s, MnToFunction( mcl->func ) );
 		}
 	}
 
 	ut_close_upval( s, s->base );
-	ut_ensure_stack( s, (s->base - s->begin) + max( nrets, r ) );
+	ut_ensure_stack( s, max( nrets, r ) );
 
 	func = s->base;
 	MnValue* newtop = func + nrets;
@@ -461,25 +453,11 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 	ut_free(ci);
 }
 
-void mn_do_asm( MnState* s, const OvString& file, MnIndex idx )
-{
-	OvFileInputStream fis( file );
-	MnCompileState cs;
-	cs.state = s;
-	cs.is = &fis;
-	cs.is->Read(cs.c);
-	cs.errfunc = ut_getstack(s,idx);
-
-	MnMFunction* func = ut_newfunction(s);
-	cp_build_func(&cs,func);
-	MnClosure* cls = ut_newMclosure( s );
-	cls->u.m->func = MnValue(MOT_FUNCPROTO,func);
-	ut_pushvalue(s,MnValue(MOT_CLOSURE,cls));
-	mn_call(s,0,0);
-}
-
 void mn_do_file( MnState* s, const OvString& file )
 {
-	compile_state cs(s);
-	cs_scan_file( &cs, file );
+	MnValue main( MOT_CLOSURE, ut_newMclosure(s) );
+	MnClosure* cls = MnToClosure(main);
+	cls->u.m->func = load_entrance( s, file );
+	ut_pushvalue(s,main);
+	mn_call(s,0,0);
 }
