@@ -54,6 +54,9 @@ enum opcode
 	op_mul,
 	op_div,
 
+	op_getstack,
+	op_setstack,
+
 	op_getfield,
 	op_setfield,
 
@@ -91,9 +94,22 @@ enum keyworld
 	kw_false,
 	kw_function,
 	kw_local,
+	kw_global,
 	kw_for,
 	kw_while,
 	kw_if,
+	kw_return,
+	kw_do,
+	kw_else,
+	kw_break,
+	kw_push,
+	kw_pull,
+	kw_or,
+	kw_and,
+	kw_eq,
+	kw_neq,
+	kw_leq,
+	kw_geq,
 };
 
 const OvChar* g_kwtable[] = 
@@ -103,9 +119,22 @@ const OvChar* g_kwtable[] =
 	"false",
 	"function",
 	"local",
+	"global",
 	"for",
 	"while",
 	"if",
+	"return",
+	"do",
+	"else",
+	"break",
+	"<<",
+	">>",
+	"||",
+	"&&",
+	"==",
+	"!=",
+	"<=",
+	">=",
 };
 
 void		cs_tnext( compile_state* cs );
@@ -322,15 +351,28 @@ OvShort	sm_block::findvar( const OvString& name )
 
 void	sm_exp::statexp()
 {
-	exp_order2();
+	exp_order3();
 }
 
 void	sm_exp::exp_order3()
 {
 	term();
-	while ( cs_toptional(cs,'=') )
+	if ( get(-1).type != enone ) while ( cs_toptional(cs,'=') )
 	{
 		exp_order2();
+		MnInstruction code = 0;
+		switch ( get(-1).type )
+		{
+		case evariable :
+			code = cs_code( op_setstack, get(-2).reg, get(-1).reg, 0 );
+			break;
+		case efield :
+			code = cs_code( op_setstack, get(-3).reg, get(-2).reg, get(-1).reg );
+			break;
+		}
+
+		cs->funcstat->addcode( code );
+		pop(1);
 	}
 }
 
