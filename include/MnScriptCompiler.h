@@ -274,10 +274,10 @@ public:
 	void			primary();
 };
 
-OvShort		sm_exp::alloc_temp() { return nvars + (++ntemp); };
+OvShort		sm_exp::alloc_temp() { return nvars + (ntemp++); };
 void		sm_exp::push( exptype t, OvShort r ) { targets.push_back( expdesc( t, r ) ); }
 void		sm_exp::push() { push( etemp, alloc_temp() ); }
-void		sm_exp::pop() { if ( get(-1).type == etemp ) --ntemp; targets.pop_back(); }
+void		sm_exp::pop() { if ( get(-1).reg == (nvars + ntemp-1) ) --ntemp; targets.pop_back(); }
 void		sm_exp::pop( OvInt n ) { if ( n > 0) while( n-- ) pop(); };
 
 const expdesc&	sm_exp::get( MnIndex idx )
@@ -351,29 +351,11 @@ OvShort	sm_block::findvar( const OvString& name )
 
 void	sm_exp::statexp()
 {
-	exp_order3();
+	exp_order2();
 }
 
 void	sm_exp::exp_order3()
 {
-	term();
-	if ( get(-1).type != enone ) while ( cs_toptional(cs,'=') )
-	{
-		exp_order2();
-		MnInstruction code = 0;
-		switch ( get(-1).type )
-		{
-		case evariable :
-			code = cs_code( op_setstack, get(-2).reg, get(-1).reg, 0 );
-			break;
-		case efield :
-			code = cs_code( op_setstack, get(-3).reg, get(-2).reg, get(-1).reg );
-			break;
-		}
-
-		cs->funcstat->addcode( code );
-		pop(1);
-	}
 }
 
 void	sm_exp::exp_order2()
@@ -423,6 +405,24 @@ void	sm_exp::field2reg()
 void	sm_exp::term()
 {
 	primary();
+
+	while ( cs_toptional(cs,'=') )
+	{
+		statexp();
+		MnInstruction code = 0;
+		switch ( get(-2).type )
+		{
+		case evariable :
+			code = cs_code( op_setstack, get(-2).reg, get(-1).reg, 0 );
+			break;
+		case efield :
+			code = cs_code( op_setfield, get(-3).reg, get(-2).reg, get(-1).reg );
+			break;
+		}
+
+		pop(1);
+		cs->funcstat->addcode( code );
+	}
 }
 
 void	sm_exp::primary()
