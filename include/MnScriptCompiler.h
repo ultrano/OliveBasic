@@ -263,15 +263,15 @@ public:
 	OvShort			alloc_temp();
 
 	void			push( OvShort r );
-	void			push();
+	OvShort			push();
 	OvShort			pop();
 
 	void			statexp();
-	void			exp_order3( const expdesc& exp );
-	void			exp_order2( const expdesc& exp );
-	void			exp_order1( const expdesc& exp );
+	void			exp_order3();
+	void			exp_order2();
+	void			exp_order1();
 
-	expdesc			term();
+	void			term();
 	void			postexp();
 	void			primary();
 };
@@ -323,98 +323,30 @@ OvShort	sm_block::findvar( const OvString& name )
 
 void	sm_exp::statexp()
 {
-	exp_order2();
 }
 
-void	sm_exp::exp_order3( const expdesc& exp )
+void	sm_exp::exp_order3()
 {
 }
 
-void	sm_exp::exp_order2( const expdesc& exp )
+void	sm_exp::exp_order2()
 {
-	exp_order1();
-	while ( cs_ttype( cs, '+' ) || cs_ttype( cs, '-' ) )
-	{
-		opcode op = cs_toptional( cs, '+' )? op_add : cs_toptional( cs, '-' )? op_sub : op_none;
-		exp_order1();
-		OvShort reg2 = pop();
-		OvShort reg1 = pop();
-		cs->funcstat->addcode( cs_code( op, push(), reg1, reg2 ) );
-	}
 }
 
-void	sm_exp::exp_order1( const expdesc& exp )
+void	sm_exp::exp_order1()
 {
-	term();
-	while ( cs_ttype( cs, '*' ) || cs_ttype( cs, '/' ) )
-	{
-		opcode op = cs_toptional( cs, '*' )? op_mul : cs_toptional( cs, '/' )? op_div : op_none;
-		term();
-		OvShort reg2 = pop();
-		OvShort reg1 = pop();
-		cs->funcstat->addcode( cs_code( op, push(), reg1, reg2 ) );
-	}
 }
 
-expdesc	sm_exp::term()
+void	sm_exp::term()
 {
-	postexp();
 }
 
-void sm_exp::postexp()
+void	sm_exp::postexp()
 {
-	primary();
 }
 
 void	sm_exp::primary()
 {
-	if ( cs_ttype( cs, tt_number ) )
-	{
-		push( econst, cs_findconst( cs, cs_tnum(cs) ) );
-		cs_tnext(cs);
-	}
-	else if ( cs_ttype( cs, tt_string ) )
-	{
-		push( econst, cs_findconst( cs, cs_tstr(cs) ) );
-		cs_tnext(cs);
-	}
-	else if ( cs_ttype( cs, tt_identifier ) )
-	{
-		sm_block* block = cs->funcstat->block;
-		MnIndex idx = block->findvar( cs_tstr(cs) );
-		if ( idx < 0 )
-		{
-			push( eglobal, cs_findconst( cs, cs_tstr(cs) ) );
-		}
-		else
-		{
-			push( evariable, idx );
-		}
-
-		cs_tnext(cs);
-	}
-	else if ( cs_keyworld(cs,kw_function) )
-	{
-		cs_tnext(cs);
-		sm_func* last = cs->funcstat;
-		sm_func fstat;
-		fstat.func = ut_newfunction(cs->s);
-
-		cs->funcstat = &fstat;
-		stat_func_block( cs );
-		fstat.func->maxstack = fstat.maxstack;
-		cs->funcstat = last;
-
-		push();
-
-		OvShort func = cs_findconst( cs, MnValue( MOT_FUNCPROTO, fstat.func ) );
-		cs->funcstat->addcode( cs_code(op_newclosure,get(-1).reg,func,0) );
-	}
-	else if ( cs_toptional( cs, '(' ) )
-	{
-		statexp();
-		cs_toptional( cs, ')' );
-	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -628,7 +560,7 @@ OvBool stat( compile_state* cs )
 	else
 	{
 		expdesc exp;
-		stat_exp( cs, exp );
+		//stat_exp( cs, exp );
 		return (exp.type != enone);
 	}
 	return false;
@@ -641,7 +573,6 @@ void		stat_exp( compile_state* cs, expdesc& desc )
 	exp.nvars = cs->funcstat->block->nvars();
 	exp.ntemp = 0;
 	exp.statexp();
-	desc = exp.get(-1);
 };
 
 void stat_common_block( compile_state* cs ) 
