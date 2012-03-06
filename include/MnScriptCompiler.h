@@ -284,8 +284,17 @@ OvShort		sm_exp::alloc_temp()
 	cs->funcstat->maxstack = max( cs->funcstat->maxstack, idx+1 );
 	return idx;
 };
-void		sm_exp::push( exptype type, OvShort idx ) { targets.push_back( expdesc(type,idx) ); }
-OvShort		sm_exp::push() { push( alloc_temp() ); return targets.back(); }
+
+void		sm_exp::push( exptype type, OvShort idx )
+{
+	targets.push_back( expdesc(type,idx) );
+}
+
+OvShort		sm_exp::push()
+{
+	push( etemp, alloc_temp() ); return targets.back().idx;
+}
+
 OvShort		sm_exp::pop()
 {
 	expdesc exp = targets.at( targets.size() - 1 );
@@ -311,10 +320,11 @@ OvShort		sm_exp::pop()
 
 	return exp.idx;
 }
+
 OvShort		sm_exp::regist()
 {
 	regflag = !regflag;
-	return (nvars + regflag;);
+	return (nvars + regflag);
 }
 
 //////////////////////////////////////////////////////////////////////////
