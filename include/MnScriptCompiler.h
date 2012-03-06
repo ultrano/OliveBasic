@@ -236,20 +236,20 @@ public:
 enum exptype
 {
 	enone,
-	etemp,		//< [reg1:stack index]
-	econst,		//< [reg1:const index]
-	evariable,	//< [reg1:stack index]
+	etemp,		
+	econst,		
+	evariable,	
 	eglobal,
 	eclosure,
-	efield,		//< [reg1:stack index] [reg2:key index in const or stack]
+	efield,		
 };
 
 struct expdesc
 {
 	expdesc(){};
-	expdesc( exptype t, OvShort r ) : type(t), reg(r) {};
+	expdesc( exptype t, OvShort r ) : type(t), idx(r) {};
 	exptype type;
-	OvShort reg;
+	OvShort idx;
 };
 
 class sm_exp
@@ -258,13 +258,15 @@ public:
 	compile_state*	cs;
 	OvInt			ntemp;
 	OvInt			nvars;
-	OvVector<OvShort> targets;
+	OvBool			regflag;
+	OvVector<expdesc> targets;
 
 	OvShort			alloc_temp();
 
-	void			push( OvShort r );
+	void			push( exptype type, OvShort idx );
 	OvShort			push();
 	OvShort			pop();
+	OvShort			regist();
 
 	void			statexp();
 	void			exp_order3();
@@ -282,14 +284,37 @@ OvShort		sm_exp::alloc_temp()
 	cs->funcstat->maxstack = max( cs->funcstat->maxstack, idx+1 );
 	return idx;
 };
-void		sm_exp::push( OvShort reg ) { targets.push_back( reg ); }
+void		sm_exp::push( exptype type, OvShort idx ) { targets.push_back( expdesc(type,idx) ); }
 OvShort		sm_exp::push() { push( alloc_temp() ); return targets.back(); }
 OvShort		sm_exp::pop()
 {
-	OvShort reg = targets.at( targets.size() - 1 );
-	if ( reg == (nvars + ntemp-1) ) --ntemp;
+	expdesc exp = targets.at( targets.size() - 1 );
+	if ( exp.idx == (nvars + ntemp-1) ) --ntemp;
 	targets.pop_back();
-	return reg;
+
+	if ( exp.type == efield )
+	{
+		expdesc con = targets.at( targets.size() - 1 );
+		if ( con.idx == (nvars + ntemp-1) ) --ntemp;
+		targets.pop_back();
+
+		OvShort reg = regist();
+		cs->funcstat->addcode( cs_code( op_getfield, reg, con.idx, exp.idx ) );
+		return reg;
+	}
+	else if ( exp.type == eglobal )
+	{
+		OvShort reg = regist();
+		cs->funcstat->addcode( cs_code( op_getglobal, reg, exp.idx, 0 ) );
+		return reg;
+	}
+
+	return exp.idx;
+}
+OvShort		sm_exp::regist()
+{
+	regflag = !regflag;
+	return (nvars + regflag;);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -323,6 +348,10 @@ OvShort	sm_block::findvar( const OvString& name )
 
 void	sm_exp::statexp()
 {
+	push(); //< register 0
+	push(); //< register 1
+	term();
+	exp_order3();
 }
 
 void	sm_exp::exp_order3()
