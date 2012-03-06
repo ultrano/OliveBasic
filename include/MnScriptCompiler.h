@@ -3,7 +3,6 @@ struct compile_state;
 class 	sm_func;
 class 	sm_block;
 class 	sm_exp;
-struct  expdesc;
 
 #define cs_bit1( n, p ) ((~((~((MnInstruction)0))<<(n)))<<(p))
 #define cs_bit0( n, p ) (~cs_bit1( n, p ))
@@ -53,6 +52,9 @@ enum opcode
 	op_sub,
 	op_mul,
 	op_div,
+
+	op_getglobal,
+	op_setglobal,
 
 	op_getstack,
 	op_setstack,
@@ -137,6 +139,10 @@ const OvChar* g_kwtable[] =
 	">=",
 };
 
+OvShort		cs_findconst( compile_state* cs, const MnValue& val );
+OvShort		cs_findconst( compile_state* cs, const MnNumber& val );
+OvShort		cs_findconst( compile_state* cs, const OvString& val );
+
 void		cs_tnext( compile_state* cs );
 void		cs_tprev( compile_state* cs );
 OvBool		cs_ttype( compile_state* cs, OvInt type );
@@ -156,7 +162,7 @@ void		stat_global( compile_state* cs );
 void		stat_common_block( compile_state* cs );
 void		stat_nest_block( compile_state* cs );
 void		stat_func_block( compile_state* cs );
-void		stat_exp( compile_state* cs, expdesc& desc );
+OvShort		stat_exp( compile_state* cs );
 OvBool		stat( compile_state* cs );
 void		statements( compile_state* cs );
 void		stat_entrance( compile_state* cs );
@@ -203,14 +209,12 @@ class sm_func
 public:
 	MnMFunction*	func;
 	sm_block*		block;
+	OvUInt			maxstack;
 
-	sm_func() : func(NULL), block(NULL) {};
+	sm_func() : func(NULL), block(NULL), maxstack(0) {};
 
 	void	addcode( const MnInstruction& i );
 	OvInt	codesize();
-
-	OvShort	findconst( const MnValue& val );
-	OvShort findvar( const OvString& name );
 
 };
 
@@ -229,15 +233,13 @@ public:
 
 };
 
-
-struct expdesc;
-
 enum exptype
 {
 	enone,
 	etemp,		//< [reg1:stack index]
 	econst,		//< [reg1:const index]
 	evariable,	//< [reg1:stack index]
+	eglobal,
 	eclosure,
 	efield,		//< [reg1:stack index] [reg2:key index in const or stack]
 };
@@ -256,74 +258,44 @@ public:
 	compile_state*	cs;
 	OvInt			ntemp;
 	OvInt			nvars;
-	OvVector<expdesc> targets;
+	OvVector<OvShort> targets;
 
-	expdesc&		get( MnIndex idx );
 	OvShort			alloc_temp();
 
-	void			push( exptype t, OvShort r );
+	void			push( OvShort r );
 	void			push();
-	void			pop( OvInt n );
-	void			pop();
+	OvShort			pop();
 
 	void			statexp();
-	void			exp_order3();
-	void			exp_order2();
-	void			exp_order1();
-	void			term();
+	void			exp_order3( const expdesc& exp );
+	void			exp_order2( const expdesc& exp );
+	void			exp_order1( const expdesc& exp );
+
+	expdesc			term();
+	void			postexp();
 	void			primary();
 };
 
-OvShort		sm_exp::alloc_temp() { return nvars + (ntemp++); };
-void		sm_exp::push( exptype t, OvShort r ) { targets.push_back( expdesc( t, r ) ); }
-void		sm_exp::push() { push( etemp, alloc_temp() ); }
-void		sm_exp::pop() { if ( get(-1).reg == (nvars + ntemp-1) ) --ntemp; targets.pop_back(); }
-void		sm_exp::pop( OvInt n ) { if ( n > 0) while( n-- ) pop(); };
-
-expdesc&	sm_exp::get( MnIndex idx )
+OvShort		sm_exp::alloc_temp() 
 {
-	if ( idx < 0 && targets.size() >= abs(idx) )
-	{
-		return targets.at( targets.size() + idx );
-	}
-	else if ( idx > 0 && targets.size() >= idx )
-	{
-		return targets.at( -1 + idx );
-	}
-	static expdesc noneexp(enone,0);
-	return noneexp;
+	OvShort idx = nvars + (ntemp++);
+	cs->funcstat->maxstack = max( cs->funcstat->maxstack, idx+1 );
+	return idx;
+};
+void		sm_exp::push( OvShort reg ) { targets.push_back( reg ); }
+OvShort		sm_exp::push() { push( alloc_temp() ); return targets.back(); }
+OvShort		sm_exp::pop()
+{
+	OvShort reg = targets.at( targets.size() - 1 );
+	if ( reg == (nvars + ntemp-1) ) --ntemp;
+	targets.pop_back();
+	return reg;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void	sm_func::addcode( const MnInstruction& i ) { func->codes.push_back( i );	}
 OvInt	sm_func::codesize() { return func->codes.size(); } ;
-
-OvShort	sm_func::findconst( const MnValue& val )
-{
-	if ( MnIsNumber(val) || MnIsString(val) )
-	{
-		for ( MnIndex i = 0; i < func->consts.size(); ++i )
-		{
-			const MnValue& v = func->consts[i];
-			if ( MnIsNumber(val) && MnIsNumber(v) && (MnToNumber(v) == MnToNumber(val)) )
-			{
-				return cs_const( i );
-			}
-			else if ( MnIsString(val) && MnIsString(v) && (MnToString(v)->get_str() == MnToString(val)->get_str()) )
-			{
-				return cs_const( i );
-			}
-		}
-	}
-	func->consts.push_back( val );
-	return cs_const( func->consts.size() - 1 );
-}
-
-OvShort sm_func::findvar( const OvString& name )
-{
-	return block->findvar( name );
-}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -354,100 +326,71 @@ void	sm_exp::statexp()
 	exp_order2();
 }
 
-void	sm_exp::exp_order3()
+void	sm_exp::exp_order3( const expdesc& exp )
 {
 }
 
-void	sm_exp::exp_order2()
+void	sm_exp::exp_order2( const expdesc& exp )
 {
 	exp_order1();
 	while ( cs_ttype( cs, '+' ) || cs_ttype( cs, '-' ) )
 	{
 		opcode op = cs_toptional( cs, '+' )? op_add : cs_toptional( cs, '-' )? op_sub : op_none;
 		exp_order1();
-		expdesc exp1 = get(-2);
-		expdesc exp2 = get(-1);
-		pop(2);
-		push();
-		cs->funcstat->addcode( cs_code( op, get(-1).reg, exp1.reg, exp2.reg ) );
+		OvShort reg2 = pop();
+		OvShort reg1 = pop();
+		cs->funcstat->addcode( cs_code( op, push(), reg1, reg2 ) );
 	}
 }
 
-void	sm_exp::exp_order1()
+void	sm_exp::exp_order1( const expdesc& exp )
 {
 	term();
 	while ( cs_ttype( cs, '*' ) || cs_ttype( cs, '/' ) )
 	{
 		opcode op = cs_toptional( cs, '*' )? op_mul : cs_toptional( cs, '/' )? op_div : op_none;
 		term();
-		expdesc exp1 = get(-2);
-		expdesc exp2 = get(-1);
-		pop(2);
-		push();
-		cs->funcstat->addcode( cs_code( op, get(-1).reg, exp1.reg, exp2.reg ) );
+		OvShort reg2 = pop();
+		OvShort reg1 = pop();
+		cs->funcstat->addcode( cs_code( op, push(), reg1, reg2 ) );
 	}
 }
 
-void	sm_exp::term()
+expdesc	sm_exp::term()
+{
+	postexp();
+}
+
+void sm_exp::postexp()
 {
 	primary();
-
-	while ( cs_toptional(cs,'[') || cs_toptional(cs,'.') )
-	{
-		if ( get(-1).type == efield )
-		{
-			expdesc con = get(-2);
-			expdesc key = get(-1);
-			pop(2);
-			push();
-			cs->funcstat->addcode( cs_code( op_getfield, get(-1).reg, con.reg, key.reg ) );
-		}
-
-		if ( cs_toptional(cs,'[') )
-		{
-			statexp();
-			get(-1).type = efield;
-			cs_texpected(cs,']');
-			continue;
-		}
-	}
-
-	if ( cs_toptional(cs,'=') )
-	{
-		statexp();
-		MnInstruction code = 0;
-		switch ( get(-2).type )
-		{
-		case evariable :
-			code = cs_code( op_setstack, get(-2).reg, get(-1).reg, 0 );
-			break;
-		case efield :
-			code = cs_code( op_setfield, get(-3).reg, get(-2).reg, get(-1).reg );
-			break;
-		}
-
-		pop(1);
-		cs->funcstat->addcode( code );
-	}
-
 }
 
 void	sm_exp::primary()
 {
 	if ( cs_ttype( cs, tt_number ) )
 	{
-		push( econst, cs->funcstat->findconst(MnValue(cs_tnum(cs)) ) );
+		push( econst, cs_findconst( cs, cs_tnum(cs) ) );
 		cs_tnext(cs);
 	}
 	else if ( cs_ttype( cs, tt_string ) )
 	{
-		push( econst, cs->funcstat->findconst( MnValue(MOT_STRING,ut_newstring(cs->s,cs_tstr(cs))) ) );
+		push( econst, cs_findconst( cs, cs_tstr(cs) ) );
 		cs_tnext(cs);
 	}
 	else if ( cs_ttype( cs, tt_identifier ) )
 	{
-		OvShort idx = cs->funcstat->findvar( cs_tstr(cs) );
-		push( (( idx < 0 )? enone : evariable), idx );
+		sm_block* block = cs->funcstat->block;
+		MnIndex idx = block->findvar( cs_tstr(cs) );
+		if ( idx < 0 )
+		{
+			push( eglobal, cs_findconst( cs, cs_tstr(cs) ) );
+		}
+		else
+		{
+			push( evariable, idx );
+		}
+
 		cs_tnext(cs);
 	}
 	else if ( cs_keyworld(cs,kw_function) )
@@ -459,11 +402,12 @@ void	sm_exp::primary()
 
 		cs->funcstat = &fstat;
 		stat_func_block( cs );
+		fstat.func->maxstack = fstat.maxstack;
 		cs->funcstat = last;
 
 		push();
 
-		OvShort func = cs->funcstat->findconst( MnValue( MOT_FUNCPROTO, fstat.func ) );
+		OvShort func = cs_findconst( cs, MnValue( MOT_FUNCPROTO, fstat.func ) );
 		cs->funcstat->addcode( cs_code(op_newclosure,get(-1).reg,func,0) );
 	}
 	else if ( cs_toptional( cs, '(' ) )
@@ -478,6 +422,38 @@ void	sm_exp::primary()
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
+
+OvShort cs_findconst( compile_state* cs, const MnValue& val )
+{
+	MnMFunction* func = cs->funcstat->func;
+	if ( MnIsNumber(val) || MnIsString(val) )
+	{
+		for ( MnIndex i = 0; i < func->consts.size(); ++i )
+		{
+			const MnValue& v = func->consts[i];
+			if ( MnIsNumber(val) && MnIsNumber(v) && (MnToNumber(v) == MnToNumber(val)) )
+			{
+				return cs_const( i );
+			}
+			else if ( MnIsString(val) && MnIsString(v) && (MnToString(v)->get_str() == MnToString(val)->get_str()) )
+			{
+				return cs_const( i );
+			}
+		}
+	}
+	func->consts.push_back( val );
+	return cs_const( func->consts.size() - 1 );
+}
+
+OvShort		cs_findconst( compile_state* cs, const MnNumber& val )
+{
+	return cs_findconst( cs, MnValue(val) );
+}
+
+OvShort		cs_findconst( compile_state* cs, const OvString& val )
+{
+	return cs_findconst( cs, MnValue( MOT_STRING, ut_newstring(cs->s,val) ));
+}
 
 OvReal&		cs_tnum( compile_state* cs ) { static OvReal temp=0; return (( cs->tok )? cs->tok->num:temp);};
 OvString&	cs_tstr( compile_state* cs ) { static OvString temp; return (( cs->tok )? *(cs->tok->str):temp);};
@@ -634,6 +610,7 @@ void stat_entrance( compile_state* cs )
 	fmain.block = &block;
 	cs->funcstat = &fmain;
 	statements(cs);
+	fmain.func->maxstack = fmain.maxstack;
 }
 
 void statements( compile_state* cs )
@@ -730,16 +707,25 @@ void stat_global( compile_state* cs )
 
 OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 {
-#define iOP (cs_getop(i))
 
-#define iCheck(idx) (ut_ensure_stack( s, idx ), idx)
+#ifdef _DEBUG
+#define sA (*ut_getstack_ptr( s, iCheck(cs_index(cs_geta(i))+1) ))
+#define sB (*ut_getstack_ptr( s, iCheck(cs_index(cs_getb(i))+1) ))
+#define sC (*ut_getstack_ptr( s, iCheck(cs_index(cs_getc(i))+1) ))
 
+#define cB (ut_getconst( func, cs_index(cs_getb(i))+1 ))
+#define cC (ut_getconst( func, cs_index(cs_getc(i))+1 ))
+#else
 #define sA ( *(s->base + iCheck(cs_index(cs_geta(i))+1)) )
 #define sB ( *(s->base + iCheck(cs_index(cs_getb(i))+1)) )
 #define sC ( *(s->base + iCheck(cs_index(cs_getc(i))+1)) )
 
 #define cB ( func->consts[ cs_index(cs_getb(i))+1 ] )
 #define cC ( func->consts[ cs_index(cs_getc(i))+1 ] )
+#endif
+
+#define iOP (cs_getop(i))
+#define iCheck(idx) (ut_ensure_stack( s, idx ), idx)
 
 #define vA sA
 #define vB (cs_isconst( cs_getb(i) )? cB : sB)
@@ -754,6 +740,10 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 		{
 		case op_add :
 			vA = MnToNumber(vB) + MnToNumber(vC);
+			break;
+
+		case op_setstack :
+			vA = vB;
 			break;
 		}
 	}
