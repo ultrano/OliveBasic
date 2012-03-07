@@ -66,6 +66,8 @@ enum opcode
 
 	op_block_begin,
 	op_block_end,
+
+	op_return,
 };
 
 enum toktype
@@ -162,7 +164,6 @@ void		stat_global( compile_state* cs );
 void		stat_common_block( compile_state* cs );
 void		stat_nest_block( compile_state* cs );
 void		stat_func_block( compile_state* cs );
-OvShort		stat_exp( compile_state* cs );
 OvBool		stat( compile_state* cs );
 void		statements( compile_state* cs );
 void		stat_entrance( compile_state* cs );
@@ -252,17 +253,22 @@ struct expdesc
 	OvShort idx;
 };
 
+enum { register_count = 2 };
+
 class sm_exp
 {
 public:
 	compile_state*	cs;
 	OvInt			ntemp;
-	OvInt			nvars;
-	OvBool			regflag;
+	OvInt			nfixed;
+	OvByte			idle_reg;
 	OvVector<expdesc> targets;
+
+	sm_exp( compile_state* cs );
 
 	OvShort			alloc_temp();
 
+	const expdesc&	get( MnIndex idx );
 	void			push( exptype type, OvShort idx );
 	OvShort			push();
 	OvShort			pop();
@@ -278,55 +284,6 @@ public:
 	void			postexp();
 	void			primary();
 };
-
-OvShort		sm_exp::alloc_temp() 
-{
-	OvShort idx = nvars + (ntemp++);
-	cs->funcstat->maxstack = max( cs->funcstat->maxstack, idx+1 );
-	return idx;
-};
-
-void		sm_exp::push( exptype type, OvShort idx )
-{
-	targets.push_back( expdesc(type,idx) );
-}
-
-OvShort		sm_exp::push()
-{
-	push( etemp, alloc_temp() ); return targets.back().idx;
-}
-
-OvShort		sm_exp::pop()
-{
-	expdesc exp = targets.at( targets.size() - 1 );
-	if ( exp.idx == (nvars + ntemp-1) ) --ntemp;
-	targets.pop_back();
-
-	if ( exp.type == efield )
-	{
-		expdesc con = targets.at( targets.size() - 1 );
-		if ( con.idx == (nvars + ntemp-1) ) --ntemp;
-		targets.pop_back();
-
-		OvShort reg = regist();
-		cs->funcstat->addcode( cs_code( op_getfield, reg, con.idx, exp.idx ) );
-		return reg;
-	}
-	else if ( exp.type == eglobal )
-	{
-		OvShort reg = regist();
-		cs->funcstat->addcode( cs_code( op_getglobal, reg, exp.idx, 0 ) );
-		return reg;
-	}
-
-	return exp.idx;
-}
-
-OvShort		sm_exp::regist()
-{
-	regflag = !regflag;
-	return (nvars + regflag);
-}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -357,23 +314,114 @@ OvShort	sm_block::findvar( const OvString& name )
 
 //////////////////////////////////////////////////////////////////////////
 
+sm_exp::sm_exp( compile_state* _cs )
+: cs( _cs )
+, nfixed( cs->funcstat->block->nvars() )
+, ntemp(0)
+, idle_reg(0)
+{
+}
+
+OvShort		sm_exp::alloc_temp() 
+{
+	OvShort idx = nfixed + (ntemp++);
+	cs->funcstat->maxstack = max( cs->funcstat->maxstack, idx+1 );
+	return idx;
+};
+
+const expdesc&	sm_exp::get( MnIndex idx )
+{
+	if ( idx < 0 && targets.size() >= abs(idx) )
+	{
+		return targets.at( targets.size() + idx );
+	}
+	else if ( idx > 0 && targets.size() >= idx )
+	{
+		return targets.at( -1 + idx );
+	}
+	static expdesc noneexp(enone,0);
+	return noneexp;
+}
+
+void		sm_exp::push( exptype type, OvShort idx )
+{
+	targets.push_back( expdesc(type,idx) );
+}
+
+OvShort		sm_exp::push()
+{
+	push( etemp, alloc_temp() ); return targets.back().idx;
+}
+
+OvShort		sm_exp::pop()
+{
+	expdesc exp = get(-1);
+	if ( exp.idx == (nfixed + ntemp-1) ) --ntemp;
+	targets.pop_back();
+
+	if ( exp.type == efield )
+	{
+		expdesc con = get(-1);
+		if ( con.idx == (nfixed + ntemp-1) ) --ntemp;
+		targets.pop_back();
+
+		OvShort reg = regist();
+		cs->funcstat->addcode( cs_code( op_getfield, reg, con.idx, exp.idx ) );
+		return reg;
+	}
+	else if ( exp.type == eglobal )
+	{
+		OvShort reg = regist();
+		cs->funcstat->addcode( cs_code( op_getglobal, reg, exp.idx, 0 ) );
+		return reg;
+	}
+
+	return exp.idx;
+}
+
+OvShort		sm_exp::regist()
+{
+	return (nfixed + ( (idle_reg++) % register_count ));
+}
+
 void	sm_exp::statexp()
 {
-	push(); //< register 0
-	push(); //< register 1
+	OvByte count = register_count;
+	while ( count-- ) push(); //< register
+
 	exp_order();
 }
 
 void	sm_exp::exp_order()
 {
-	exp_order2();
+	exp_order3();
 }
 void	sm_exp::exp_order3()
 {
+	exp_order2();
+	while ( cs_toptional( cs, '=' ) )
+	{
+		exp_order();
+		OvShort idx = pop();
+		switch ( get(-1).type )
+		{
+		case efield :
+			cs->funcstat->addcode( cs_code( op_setfield, get(-2).idx, get(-1).idx, idx ) );
+			break;
+		case eglobal :
+			cs->funcstat->addcode( cs_code( op_setglobal, 0, get(-1).idx, idx ) );
+			break;
+		case etemp :
+		case evariable :
+			cs->funcstat->addcode( cs_code( op_setstack, get(-1).idx, idx, 0 ) );
+			break;
+		}
+	}
 }
 
 void	sm_exp::exp_order2()
 {
+	exp_order1();
 	while ( cs_ttype( cs, '+' ) || cs_ttype( cs, '-' ) )
 	{
 		opcode op = cs_toptional( cs, '+' )? op_add : cs_toptional( cs, '-' )? op_sub : op_none;
@@ -386,6 +434,7 @@ void	sm_exp::exp_order2()
 
 void	sm_exp::exp_order1()
 {
+	term();
 	while ( cs_ttype( cs, '*' ) || cs_ttype( cs, '/' ) )
 	{
 		opcode op = cs_toptional( cs, '*' )? op_mul : cs_toptional( cs, '/' )? op_div : op_none;
@@ -404,6 +453,18 @@ void	sm_exp::term()
 void	sm_exp::postexp()
 {
 	primary();
+
+	while ( cs_ttype(cs,'[') || cs_ttype(cs,'.') )
+	{
+		if ( cs_toptional(cs,'[') )
+		{
+			push( etemp, pop() );
+			statexp();
+			push( efield, pop() );
+			cs_texpected(cs,']');
+			continue;
+		}
+	}
 }
 
 void	sm_exp::primary()
@@ -445,10 +506,8 @@ void	sm_exp::primary()
 		fstat.func->maxstack = fstat.maxstack;
 		cs->funcstat = last;
 
-		push();
-
 		OvShort func = cs_findconst( cs, MnValue( MOT_FUNCPROTO, fstat.func ) );
-		cs->funcstat->addcode( cs_code(op_newclosure,get(-1).reg,func,0) );
+		cs->funcstat->addcode( cs_code( op_newclosure, push(), func, 0 ) );
 	}
 	else if ( cs_toptional( cs, '(' ) )
 	{
@@ -650,7 +709,9 @@ void stat_entrance( compile_state* cs )
 	fmain.block = &block;
 	cs->funcstat = &fmain;
 	statements(cs);
+	fmain.addcode( cs_code( op_return, 0, 0, 0 ) );
 	fmain.func->maxstack = fmain.maxstack;
+
 }
 
 void statements( compile_state* cs )
@@ -667,21 +728,12 @@ OvBool stat( compile_state* cs )
 	else if ( cs_toptional(cs,tt_eos) ) 		{ return false; }
 	else
 	{
-		expdesc exp;
-		//stat_exp( cs, exp );
-		return (exp.type != enone);
+		sm_exp exp(cs);
+		exp.statexp();
+		return (exp.get(-1).type != enone);
 	}
 	return false;
 }
-
-void		stat_exp( compile_state* cs, expdesc& desc )
-{
-	sm_exp exp;
-	exp.cs = cs;
-	exp.nvars = cs->funcstat->block->nvars();
-	exp.ntemp = 0;
-	exp.statexp();
-};
 
 void stat_common_block( compile_state* cs ) 
 {
@@ -722,8 +774,8 @@ void stat_local( compile_state* cs )
 		if ( cs_ttype(cs,tt_identifier) )
 		{
 			cs->funcstat->block->addvar( cs_tstr(cs) );
-			expdesc exp;
-			stat_exp( cs, exp );
+			sm_exp exp(cs);
+			exp.statexp();
 		}
 	}
 }
@@ -736,8 +788,8 @@ void stat_global( compile_state* cs )
 		if ( cs_ttype(cs,tt_identifier) )
 		{
 			cs->funcstat->block->addvar( cs_tstr(cs) );
-			expdesc exp;
-			stat_exp( cs, exp );
+			sm_exp exp(cs);
+			exp.statexp();
 		}
 	}
 }
@@ -747,10 +799,20 @@ void stat_global( compile_state* cs )
 OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 {
 
+#define iOP (cs_getop(i))
+
+#define oA ( cs_geta(i) )
+#define oB ( cs_getb(i) )
+#define oC ( cs_getc(i) )
+
+#define iA ( cs_index(oA) + 1 )
+#define iB ( cs_index(oB) + 1 )
+#define iC ( cs_index(oC) + 1 )
+
 #ifdef _DEBUG
-#define sA (*ut_getstack_ptr( s, iCheck(cs_index(cs_geta(i))+1) ))
-#define sB (*ut_getstack_ptr( s, iCheck(cs_index(cs_getb(i))+1) ))
-#define sC (*ut_getstack_ptr( s, iCheck(cs_index(cs_getc(i))+1) ))
+#define sA (*ut_getstack_ptr( s, iA ))
+#define sB (*ut_getstack_ptr( s, iB ))
+#define sC (*ut_getstack_ptr( s, iC ))
 
 #define cB (ut_getconst( func, cs_index(cs_getb(i))+1 ))
 #define cC (ut_getconst( func, cs_index(cs_getc(i))+1 ))
@@ -763,8 +825,6 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 #define cC ( func->consts[ cs_index(cs_getc(i))+1 ] )
 #endif
 
-#define iOP (cs_getop(i))
-#define iCheck(idx) (ut_ensure_stack( s, idx ), idx)
 
 #define vA sA
 #define vB (cs_isconst( cs_getb(i) )? cB : sB)
@@ -784,12 +844,27 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 		case op_setstack :
 			vA = vB;
 			break;
+
+		case op_setglobal :
+			ut_setglobal( s, vB, vC );
+			break;
+
+		case op_return :
+			return oA;
+			break;
 		}
 	}
 
+	return 0;
 #undef iOP
 
-#undef iCheck
+#undef oA
+#undef oB
+#undef oC
+
+#undef iA
+#undef iB
+#undef iC
 
 #undef sA
 #undef sB
