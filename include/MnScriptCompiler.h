@@ -53,14 +53,13 @@ enum opcode
 	op_mul,
 	op_div,
 
-	op_getglobal,
-	op_setglobal,
-
-	op_getstack,
-	op_setstack,
+	op_move,
 
 	op_getfield,
 	op_setfield,
+
+	op_getglobal,
+	op_setglobal,
 
 	op_newclosure,
 
@@ -253,15 +252,12 @@ struct expdesc
 	OvShort idx;
 };
 
-enum { register_count = 2 };
-
 class sm_exp
 {
 public:
 	compile_state*	cs;
 	OvInt			ntemp;
 	OvInt			nfixed;
-	OvByte			idle_reg;
 	OvVector<expdesc> targets;
 
 	sm_exp( compile_state* cs );
@@ -316,16 +312,14 @@ OvShort	sm_block::findvar( const OvString& name )
 
 sm_exp::sm_exp( compile_state* _cs )
 : cs( _cs )
-, nfixed( cs->funcstat->block->nvars() )
-, ntemp(0)
-, idle_reg(0)
+, ntemp( cs->funcstat->block->nvars() )
 {
 }
 
 OvShort		sm_exp::alloc_temp() 
 {
-	OvShort idx = nfixed + (ntemp++);
-	cs->funcstat->maxstack = max( cs->funcstat->maxstack, idx+1 );
+	OvShort idx = ntemp++;
+	cs->funcstat->maxstack = max( cs->funcstat->maxstack, ntemp);
 	return idx;
 };
 
@@ -346,6 +340,7 @@ const expdesc&	sm_exp::get( MnIndex idx )
 void		sm_exp::push( exptype type, OvShort idx )
 {
 	targets.push_back( expdesc(type,idx) );
+	while ( !cs_isconst(idx) && cs_index(idx) >= ntemp ) ++ntemp;
 }
 
 OvShort		sm_exp::push()
@@ -356,39 +351,30 @@ OvShort		sm_exp::push()
 OvShort		sm_exp::pop()
 {
 	expdesc exp = get(-1);
-	if ( exp.idx == (nfixed + ntemp-1) ) --ntemp;
+	if ( !cs_isconst(exp.idx) && cs_index(exp.idx) == (ntemp-1) ) --ntemp;
 	targets.pop_back();
 
+	OvShort reg = push();
 	if ( exp.type == efield )
 	{
 		expdesc con = get(-1);
-		if ( con.idx == (nfixed + ntemp-1) ) --ntemp;
+		if ( !cs_isconst(con.idx) && cs_index(con.idx) == (ntemp-1) ) --ntemp;
 		targets.pop_back();
 
-		OvShort reg = regist();
 		cs->funcstat->addcode( cs_code( op_getfield, reg, con.idx, exp.idx ) );
-		return reg;
 	}
 	else if ( exp.type == eglobal )
 	{
-		OvShort reg = regist();
 		cs->funcstat->addcode( cs_code( op_getglobal, reg, exp.idx, 0 ) );
-		return reg;
 	}
+	return reg;
+	pop();
 
 	return exp.idx;
 }
 
-OvShort		sm_exp::regist()
-{
-	return (nfixed + ( (idle_reg++) % register_count ));
-}
-
 void	sm_exp::statexp()
 {
-	OvByte count = register_count;
-	while ( count-- ) push(); //< register
-
 	exp_order();
 }
 
@@ -413,7 +399,7 @@ void	sm_exp::exp_order3()
 			break;
 		case etemp :
 		case evariable :
-			cs->funcstat->addcode( cs_code( op_setstack, get(-1).idx, idx, 0 ) );
+			cs->funcstat->addcode( cs_code( op_move, get(-1).idx, idx, 0 ) );
 			break;
 		}
 	}
@@ -459,7 +445,7 @@ void	sm_exp::postexp()
 		if ( cs_toptional(cs,'[') )
 		{
 			push( etemp, pop() );
-			statexp();
+			exp_order();
 			push( efield, pop() );
 			cs_texpected(cs,']');
 			continue;
@@ -841,12 +827,22 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 			vA = MnToNumber(vB) + MnToNumber(vC);
 			break;
 
-		case op_setstack :
+		case op_move :
 			vA = vB;
 			break;
 
 		case op_setglobal :
 			ut_setglobal( s, vB, vC );
+			break;
+		case op_getglobal :
+			vA = ut_getglobal( s, vB );
+			break;
+
+		case op_setfield :
+			ut_setfield( s, vA, vB, vC );
+			break;
+		case op_getfield :
+			vA = ut_getfield( s, vB, vC );
 			break;
 
 		case op_return :

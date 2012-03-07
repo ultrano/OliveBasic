@@ -860,23 +860,26 @@ MnValue ut_getconst( MnMFunction* f, MnIndex idx )
 
 OvBool ut_meta_newindex( MnState* s, MnValue& c, MnValue& n, MnValue& v ) 
 {
-	ut_pushvalue( s, ut_getmeta( s, c ) );
-	mn_pushstring( s, METHOD_NEWINDEX );
-	mn_getfield( s, -2 );
+	if ( !MnIsNil(ut_getmeta( s, c )) )
+	{
+		ut_pushvalue( s, ut_getmeta( s, c ) );
+		mn_pushstring( s, METHOD_NEWINDEX );
+		mn_getfield( s, -2 );
 
-	if ( mn_isfunction( s, -1 ) )
-	{
-		ut_pushvalue( s, c );
-		ut_pushvalue( s, n );
-		ut_pushvalue( s, v );
-		mn_call( s, 3, 0 );
-		mn_pop( s, 1 );
-		return true;
-	}
-	else
-	{
-		mn_pop( s, 2 );
-		return false;
+		if ( mn_isfunction( s, -1 ) )
+		{
+			ut_pushvalue( s, c );
+			ut_pushvalue( s, n );
+			ut_pushvalue( s, v );
+			mn_call( s, 3, 0 );
+			mn_pop( s, 1 );
+			return true;
+		}
+		else
+		{
+			mn_pop( s, 2 );
+			return false;
+		}
 	}
 	return false;
 }
@@ -906,20 +909,23 @@ void ut_settable( MnState* s, MnValue& t, MnValue& n, MnValue& v )
 
 MnValue ut_meta_index( MnState* s, MnValue& c, MnValue& n ) 
 {
-	ut_pushvalue( s, ut_getmeta( s, c ) );
-	mn_pushstring( s, METHOD_INDEX );
-	mn_getfield( s, -2 );
-	if ( mn_isfunction( s, -1 ) )
+	if ( !MnIsNil(ut_getmeta( s, c )) )
 	{
-		ut_pushvalue( s, c );
-		ut_pushvalue( s, n );
-		mn_call( s, 2, 1 );
+		ut_pushvalue( s, ut_getmeta( s, c ) );
+		mn_pushstring( s, METHOD_INDEX );
+		mn_getfield( s, -2 );
+		if ( mn_isfunction( s, -1 ) )
+		{
+			ut_pushvalue( s, c );
+			ut_pushvalue( s, n );
+			mn_call( s, 2, 1 );
 
-		MnValue ret = ut_getstack( s, -1 );
-		mn_pop( s, 2 );
-		return ret;
+			MnValue ret = ut_getstack( s, -1 );
+			mn_pop( s, 2 );
+			return ret;
+		}
+		mn_pop(s,2);
 	}
-	mn_pop(s,2);
 	return MnValue();
 }
 

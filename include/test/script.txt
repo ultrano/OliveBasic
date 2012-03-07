@@ -1,1 +1,1 @@
-var["field1"] = 1 + 1;
+tbl["field1"] = 1 + 1;
