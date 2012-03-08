@@ -1,2 +1,4 @@
 tbl["key"] = "field1";
 tbl[tbl["key"]] = 1 + 1;
+
+var = tbl["field1"];
