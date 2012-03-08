@@ -1,4 +1,6 @@
 tbl["key"] = "field1";
-tbl[tbl["key"]] = 1 + 1;
+tbl[tbl["key"]] = (12 / 3) * (2 + 1);
 
 var = tbl["field1"];
+
+print("aaa");

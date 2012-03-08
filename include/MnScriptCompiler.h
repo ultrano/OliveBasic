@@ -66,6 +66,7 @@ enum opcode
 	op_block_begin,
 	op_block_end,
 
+	op_call,
 	op_return,
 };
 
@@ -445,13 +446,35 @@ void	sm_exp::postexp()
 {
 	primary();
 
-	while ( cs_toptional(cs,'[') )
+	while (true)
 	{
-		top();
-		exp_order();
-		top();
-		get(-1).type = efield;
-		cs_texpected(cs,']');
+		if ( cs_toptional(cs,'[') )
+		{
+			top();
+			exp_order();
+			top();
+			get(-1).type = efield;
+			cs_texpected(cs,']');
+		}
+		else if ( cs_toptional(cs,'(') )
+		{
+			OvShort func = top();pop();
+			cs->funcstat->addcode( cs_code( op_move, push(), func, 0 ) );
+			func = top();
+			OvShort narg = 0;
+			if ( !cs_ttype(cs,')') ) do
+			{
+				exp_order();
+				OvShort arg = top();pop();
+				++narg;
+				cs->funcstat->addcode( cs_code( op_move, push(), arg, 0 ) );
+			}
+			while ( cs_toptional(cs,',') );
+			cs->funcstat->addcode( cs_code( op_call, func, narg, 1 ) );
+			while ( narg-- ) pop();
+			cs_texpected(cs,')');
+		}
+		else break;
 	}
 }
 
@@ -828,6 +851,15 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 		case op_add :
 			vA = MnToNumber(vB) + MnToNumber(vC);
 			break;
+		case op_sub :
+			vA = MnToNumber(vB) - MnToNumber(vC);
+			break;
+		case op_mul :
+			vA = MnToNumber(vB) * MnToNumber(vC);
+			break;
+		case op_div :
+			vA = MnToNumber(vB) / MnToNumber(vC);
+			break;
 
 		case op_move :
 			vA = vB;
@@ -847,6 +879,9 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 			vA = ut_getfield( s, vB, vC );
 			break;
 
+		case op_call :
+			ut_call( s, iA, oB );
+			break;
 		case op_return :
 			return oA;
 			break;

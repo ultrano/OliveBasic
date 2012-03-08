@@ -104,6 +104,10 @@ const MnTypeStr g_type_str[] =
 #define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.func: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
+OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func );
+
+//////////////////////////////////////////////////////////////////////////
+
 OvBool ut_str2num( const OvString& str, MnNumber &num ) 
 {
 	OvInt i = 0;
@@ -1500,3 +1504,59 @@ MnValue ut_meta_call( MnState* s, MnValue& c )
 }
 
 //////////////////////////////////////////////////////////////////////////
+
+void ut_call( MnState* s, MnIndex funcidx, OvInt nrets ) 
+{
+	MnValue* func = ut_getstack_ptr(s, funcidx );
+
+	if ( func && !MnIsClosure(*func) )
+	{
+		ut_setstack( s, funcidx, ut_meta_call( s, *func ) );
+		func = ut_getstack_ptr(s, funcidx );
+	}
+
+	MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
+	ci->prev	= s->ci;
+	ci->savepc	= s->pc;
+	ci->base	= s->base - s->begin;
+
+	s->ci    = ci;
+	s->base  = func;
+
+	OvInt r = 0;
+	if ( func && MnIsClosure(*func) )
+	{
+		MnClosure* cls = MnToClosure(*func);
+		ci->cls  = cls;
+		if ( cls->type == CCL )
+		{
+			MnClosure::CClosure* ccl = cls->u.c;
+			r = ccl->func(s);
+		}
+		else
+		{
+			MnClosure::MClosure* mcl = cls->u.m;
+			r = excuter_ver_0_0_3( s, MnToFunction( mcl->func ) );
+		}
+	}
+
+	ut_close_upval( s, s->base );
+	ut_ensure_stack( s, max( nrets, r ) );
+
+	func = s->base;
+	MnValue* newtop = func + nrets;
+	MnValue* first_ret  = s->top - r;
+	first_ret = max( func, first_ret );
+
+	if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  (*func++) = (*first_ret++);
+
+	while ( func < newtop ) (*func++) = MnValue();
+	while ( newtop < s->top ) *(--s->top) = MnValue();
+
+	ci = s->ci;
+	s->top	= newtop;
+	s->base = ci->base + s->begin;
+	s->pc	= ci->savepc;
+	s->ci	= ci->prev;
+	ut_free(ci);
+}

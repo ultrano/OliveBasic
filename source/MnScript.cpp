@@ -398,59 +398,8 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 {
 	nargs = max(nargs,0);
 	MnIndex funcidx = -(1 + nargs);
-	MnValue* func = ut_getstack_ptr(s, funcidx );
-
-	if ( func && !MnIsClosure(*func) )
-	{
-		ut_setstack( s, funcidx, ut_meta_call( s, *func ) );
-		func = ut_getstack_ptr(s, funcidx );
-	}
-
-	MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
-	ci->prev	= s->ci;
-	ci->savepc	= s->pc;
-	ci->base	= s->base - s->begin;
-
-	s->ci    = ci;
-	s->base  = func;
-
-	OvInt r = 0;
-	if ( func && MnIsClosure(*func) )
-	{
-		MnClosure* cls = MnToClosure(*func);
-		ci->cls  = cls;
-		if ( cls->type == CCL )
-		{
-			MnClosure::CClosure* ccl = cls->u.c;
-			r = ccl->func(s);
-		}
-		else
-		{
-			MnClosure::MClosure* mcl = cls->u.m;
-			r = excuter_ver_0_0_3( s, MnToFunction( mcl->func ) );
-		}
-	}
-
-	ut_close_upval( s, s->base );
-	ut_ensure_stack( s, max( nrets, r ) );
-
-	func = s->base;
-	MnValue* newtop = func + nrets;
-	MnValue* first_ret  = s->top - r;
-	first_ret = max( func, first_ret );
-
-	if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  (*func++) = (*first_ret++);
-
-	mn_settop( s, nrets - 1 );
-	while ( func < newtop ) (*func++) = MnValue();
-	while ( newtop < s->top ) *(--s->top) = MnValue();
-
-	ci = s->ci;
-	s->top	= newtop;
-	s->base = ci->base + s->begin;
-	s->pc	= ci->savepc;
-	s->ci	= ci->prev;
-	ut_free(ci);
+	ut_call(s, funcidx, nrets);
+	mn_settop( s, funcidx + nrets - 1 );
 }
 
 void mn_do_file( MnState* s, const OvString& file )
