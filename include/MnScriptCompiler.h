@@ -264,10 +264,11 @@ public:
 
 	OvShort			alloc_temp();
 
-	const expdesc&	get( MnIndex idx );
+	expdesc&		get( MnIndex idx );
+	OvShort			top();
 	void			push( exptype type, OvShort idx );
 	OvShort			push();
-	OvShort			pop();
+	void			pop();
 	OvShort			regist();
 
 	void			statexp();
@@ -323,7 +324,7 @@ OvShort		sm_exp::alloc_temp()
 	return idx;
 };
 
-const expdesc&	sm_exp::get( MnIndex idx )
+expdesc&		sm_exp::get( MnIndex idx )
 {
 	if ( idx < 0 && targets.size() >= abs(idx) )
 	{
@@ -337,10 +338,32 @@ const expdesc&	sm_exp::get( MnIndex idx )
 	return noneexp;
 }
 
+OvShort sm_exp::top()
+{
+	switch ( get(-1).type )
+	{
+	case efield :
+		{
+			OvShort con = get(-2).idx;
+			OvShort key = get(-1).idx;
+			pop();pop();
+			cs->funcstat->addcode( cs_code( op_getfield, push(), con, key ) );
+		}
+		break;
+	case eglobal :
+		{
+			OvShort idx = get(-1).idx;
+			pop();
+			cs->funcstat->addcode( cs_code( op_getglobal, push(), idx, 0 ) );
+		}
+		break;
+	}
+	return get(-1).idx;
+}
+
 void		sm_exp::push( exptype type, OvShort idx )
 {
 	targets.push_back( expdesc(type,idx) );
-	while ( !cs_isconst(idx) && cs_index(idx) >= ntemp ) ++ntemp;
 }
 
 OvShort		sm_exp::push()
@@ -348,29 +371,11 @@ OvShort		sm_exp::push()
 	push( etemp, alloc_temp() ); return targets.back().idx;
 }
 
-OvShort		sm_exp::pop()
+void		sm_exp::pop()
 {
 	expdesc exp = get(-1);
 	if ( !cs_isconst(exp.idx) && cs_index(exp.idx) == (ntemp-1) ) --ntemp;
 	targets.pop_back();
-
-	OvShort reg = push();
-	if ( exp.type == efield )
-	{
-		expdesc con = get(-1);
-		if ( !cs_isconst(con.idx) && cs_index(con.idx) == (ntemp-1) ) --ntemp;
-		targets.pop_back();
-
-		cs->funcstat->addcode( cs_code( op_getfield, reg, con.idx, exp.idx ) );
-	}
-	else if ( exp.type == eglobal )
-	{
-		cs->funcstat->addcode( cs_code( op_getglobal, reg, exp.idx, 0 ) );
-	}
-	return reg;
-	pop();
-
-	return exp.idx;
 }
 
 void	sm_exp::statexp()
@@ -388,18 +393,18 @@ void	sm_exp::exp_order3()
 	while ( cs_toptional( cs, '=' ) )
 	{
 		exp_order();
-		OvShort idx = pop();
+		OvShort val = top();pop();
 		switch ( get(-1).type )
 		{
 		case efield :
-			cs->funcstat->addcode( cs_code( op_setfield, get(-2).idx, get(-1).idx, idx ) );
+			cs->funcstat->addcode( cs_code( op_setfield, get(-2).idx, get(-1).idx, val ) );
 			break;
 		case eglobal :
-			cs->funcstat->addcode( cs_code( op_setglobal, 0, get(-1).idx, idx ) );
+			cs->funcstat->addcode( cs_code( op_setglobal, 0, get(-1).idx, val ) );
 			break;
 		case etemp :
 		case evariable :
-			cs->funcstat->addcode( cs_code( op_move, get(-1).idx, idx, 0 ) );
+			cs->funcstat->addcode( cs_code( op_move, get(-1).idx, val, 0 ) );
 			break;
 		}
 	}
@@ -412,8 +417,8 @@ void	sm_exp::exp_order2()
 	{
 		opcode op = cs_toptional( cs, '+' )? op_add : cs_toptional( cs, '-' )? op_sub : op_none;
 		exp_order1();
-		OvShort reg2 = pop();
-		OvShort reg1 = pop();
+		OvShort reg2 = top();pop();
+		OvShort reg1 = top();pop();
 		cs->funcstat->addcode( cs_code( op, push(), reg1, reg2 ) );
 	}
 }
@@ -425,8 +430,8 @@ void	sm_exp::exp_order1()
 	{
 		opcode op = cs_toptional( cs, '*' )? op_mul : cs_toptional( cs, '/' )? op_div : op_none;
 		term();
-		OvShort reg2 = pop();
-		OvShort reg1 = pop();
+		OvShort reg2 = top();pop();
+		OvShort reg1 = top();pop();
 		cs->funcstat->addcode( cs_code( op, push(), reg1, reg2 ) );
 	}
 }
@@ -440,16 +445,13 @@ void	sm_exp::postexp()
 {
 	primary();
 
-	while ( cs_ttype(cs,'[') || cs_ttype(cs,'.') )
+	while ( cs_toptional(cs,'[') )
 	{
-		if ( cs_toptional(cs,'[') )
-		{
-			push( etemp, pop() );
-			exp_order();
-			push( efield, pop() );
-			cs_texpected(cs,']');
-			continue;
-		}
+		top();
+		exp_order();
+		top();
+		get(-1).type = efield;
+		cs_texpected(cs,']');
 	}
 }
 
