@@ -1,13 +1,13 @@
 
-local func = function ( v )
+local func = function ( v, b )
 {
 	local var = v * 2;
-	print( var );
+	print( var + b );
 };
 
 local var = 123;
 
 
-func( var );
+func( var, 123 );
 
 print( var );

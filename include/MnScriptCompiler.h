@@ -502,6 +502,7 @@ void	sm_exp::primary()
 		{
 			block.addvar( cs_tstr(cs) );
 			cs_tnext(cs);
+			if ( cs_toptional(cs,',') ) continue; else break;
 		}
 		cs_texpected(cs,')');
 
