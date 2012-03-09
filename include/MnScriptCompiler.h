@@ -888,6 +888,7 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 
 		case op_call :
 			ut_call( s, iA, oB );
+			mn_settop( s, func->maxstack );
 			break;
 		case op_return :
 			return oA;

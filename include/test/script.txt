@@ -1,7 +1,8 @@
 
 local func = function ( v )
-{ 
-	print( v );
+{
+	local var = v * 2;
+	print( var );
 };
 
 local var = 123;
@@ -9,3 +10,4 @@ local var = 123;
 
 func( var );
 
+print( var );
