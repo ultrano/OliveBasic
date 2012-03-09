@@ -399,13 +399,12 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 {
 	nargs = max(nargs,0);
 	MnIndex funcidx = -(1 + nargs);
-	MnValue* vfunc = ut_getstack_ptr(s, funcidx );
-	if ( vfunc && !MnIsClosure(*vfunc) )
+	MnValue* pfunc = ut_getstack_ptr(s, funcidx );
+	if ( pfunc && !MnIsClosure(*pfunc) )
 	{
-		ut_setstack( s, funcidx, ut_meta_call( s, *vfunc ) );
-		vfunc = ut_getstack_ptr(s, funcidx );
+		ut_setstack( s, funcidx, ut_meta_call( s, *pfunc ) );
+		pfunc = ut_getstack_ptr(s, funcidx );
 	}
-
 	//////////////////////////////////////////////////////////////////////////
 
 	MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
@@ -415,12 +414,11 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 	ci->base = s->base - s->begin;
 	ci->top	 = funcidx + nrets - 1;
 
-	s->base = vfunc;
-	s->ci	= ci;
-
-	if ( vfunc && MnIsClosure(*vfunc) )
+	if ( MnIsClosure( pfunc? *pfunc : MnValue() ) )
 	{
-		MnClosure* cls = MnToClosure(*vfunc);
+		s->base  = pfunc;
+		s->ci	 = ci;
+		MnClosure* cls = MnToClosure(*pfunc);
 		if ( cls->type == CCL )
 		{
 			s->pc	= NULL;
@@ -436,10 +434,13 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 			excuter_ver_0_0_3( s );
 		}
 	}
+	else
+	{
+		ut_restore_ci( s, nrets );
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 
-	mn_settop( s, nrets );
 }
 
 void mn_do_file( MnState* s, const OvString& file )
