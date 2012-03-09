@@ -161,9 +161,7 @@ MnValue		load_entrance( MnState* s, const OvString& file );
 
 void		stat_local( compile_state* cs );
 void		stat_global( compile_state* cs );
-void		stat_common_block( compile_state* cs );
-void		stat_nest_block( compile_state* cs );
-void		stat_func_block( compile_state* cs );
+void		stat_block( compile_state* cs );
 OvBool		stat( compile_state* cs );
 void		statements( compile_state* cs );
 void		stat_entrance( compile_state* cs );
@@ -268,7 +266,7 @@ public:
 	expdesc&		get( MnIndex idx );
 	OvShort			top();
 	void			push( exptype type, OvShort idx );
-	OvShort			push();
+	OvShort			push( exptype type );
 	void			pop();
 	OvShort			regist();
 
@@ -348,14 +346,14 @@ OvShort sm_exp::top()
 			OvShort con = get(-2).idx;
 			OvShort key = get(-1).idx;
 			pop();pop();
-			cs->funcstat->addcode( cs_code( op_getfield, push(), con, key ) );
+			cs->funcstat->addcode( cs_code( op_getfield, push(etemp), con, key ) );
 		}
 		break;
 	case eglobal :
 		{
 			OvShort idx = get(-1).idx;
 			pop();
-			cs->funcstat->addcode( cs_code( op_getglobal, push(), idx, 0 ) );
+			cs->funcstat->addcode( cs_code( op_getglobal, push(etemp), idx, 0 ) );
 		}
 		break;
 	}
@@ -367,9 +365,9 @@ void		sm_exp::push( exptype type, OvShort idx )
 	targets.push_back( expdesc(type,idx) );
 }
 
-OvShort		sm_exp::push()
+OvShort		sm_exp::push( exptype type )
 {
-	push( etemp, alloc_temp() ); return targets.back().idx;
+	push( type, alloc_temp() ); return targets.back().idx;
 }
 
 void		sm_exp::pop()
@@ -420,7 +418,7 @@ void	sm_exp::exp_order2()
 		exp_order1();
 		OvShort reg2 = top();pop();
 		OvShort reg1 = top();pop();
-		cs->funcstat->addcode( cs_code( op, push(), reg1, reg2 ) );
+		cs->funcstat->addcode( cs_code( op, push(etemp), reg1, reg2 ) );
 	}
 }
 
@@ -433,7 +431,7 @@ void	sm_exp::exp_order1()
 		term();
 		OvShort reg2 = top();pop();
 		OvShort reg1 = top();pop();
-		cs->funcstat->addcode( cs_code( op, push(), reg1, reg2 ) );
+		cs->funcstat->addcode( cs_code( op, push(etemp), reg1, reg2 ) );
 	}
 }
 
@@ -459,7 +457,7 @@ void	sm_exp::postexp()
 		else if ( cs_toptional(cs,'(') )
 		{
 			OvShort func = top();pop();
-			cs->funcstat->addcode( cs_code( op_move, push(), func, 0 ) );
+			cs->funcstat->addcode( cs_code( op_move, push(etemp), func, 0 ) );
 			func = top();
 			OvShort narg = 0;
 			if ( !cs_ttype(cs,')') ) do
@@ -467,7 +465,7 @@ void	sm_exp::postexp()
 				exp_order();
 				OvShort arg = top();pop();
 				++narg;
-				cs->funcstat->addcode( cs_code( op_move, push(), arg, 0 ) );
+				cs->funcstat->addcode( cs_code( op_move, push(etemp), arg, 0 ) );
 			}
 			while ( cs_toptional(cs,',') );
 			cs->funcstat->addcode( cs_code( op_call, func, narg, 1 ) );
@@ -490,6 +488,36 @@ void	sm_exp::primary()
 		push( econst, cs_findconst( cs, cs_tstr(cs) ) );
 		cs_tnext(cs);
 	}
+	else if ( cs_keyworld(cs,kw_function) )
+	{
+		cs_tnext(cs);
+
+		sm_func		fstat;
+		sm_block	block;
+		fstat.func		= ut_newfunction(cs->s);
+		fstat.block		= &block;
+
+		cs_texpected(cs,'(');
+		while ( cs_ttype(cs,tt_identifier) )
+		{
+			block.addvar( cs_tstr(cs) );
+			cs_tnext(cs);
+		}
+		cs_texpected(cs,')');
+
+		sm_func*	last = cs->funcstat;
+		cs->funcstat	 = &fstat;
+		cs_texpected(cs,'{');
+		statements(cs);
+		cs_texpected(cs,'}');
+		cs->funcstat = last;
+
+		fstat.func->maxstack = fstat.maxstack;
+		fstat.addcode( cs_code( op_return, 0, 0, 0 ) );
+
+		OvShort func = cs_findconst( cs, MnValue( MOT_FUNCPROTO, fstat.func ) );
+		cs->funcstat->addcode( cs_code( op_newclosure, push(eclosure), func, 0 ) );
+	}
 	else if ( cs_ttype( cs, tt_identifier ) )
 	{
 		sm_block* block = cs->funcstat->block;
@@ -504,21 +532,6 @@ void	sm_exp::primary()
 		}
 
 		cs_tnext(cs);
-	}
-	else if ( cs_keyworld(cs,kw_function) )
-	{
-		cs_tnext(cs);
-		sm_func* last = cs->funcstat;
-		sm_func fstat;
-		fstat.func = ut_newfunction(cs->s);
-
-		cs->funcstat = &fstat;
-		stat_func_block( cs );
-		fstat.func->maxstack = fstat.maxstack;
-		cs->funcstat = last;
-
-		OvShort func = cs_findconst( cs, MnValue( MOT_FUNCPROTO, fstat.func ) );
-		cs->funcstat->addcode( cs_code( op_newclosure, push(), func, 0 ) );
 	}
 	else if ( cs_toptional( cs, '(' ) )
 	{
@@ -732,7 +745,7 @@ void statements( compile_state* cs )
 
 OvBool stat( compile_state* cs )
 {
-	if ( cs_ttype(cs,'{') )				 	{ stat_nest_block( cs ); return true; }
+	if ( cs_ttype(cs,'{') )				 	{ stat_block( cs ); return true; }
 	else if ( cs_keyworld(cs,kw_local) ) 	{ stat_local(cs); return true; }
 	else if ( cs_keyworld(cs,kw_global) ) 	{ stat_global(cs); return true; }
 	else if ( cs_toptional(cs,';') )		{ return true; }
@@ -746,34 +759,20 @@ OvBool stat( compile_state* cs )
 	return false;
 }
 
-void stat_common_block( compile_state* cs ) 
-{
-	sm_block*	last = cs->funcstat->block;
-	sm_block	block;
-	cs->funcstat->block = &block;
-
-	statements(cs);
-
-	cs->funcstat->block = last;
-}
-
-void		stat_nest_block( compile_state* cs )
+void		stat_block( compile_state* cs )
 {
 	if ( cs_texpected(cs,'{') )
 	{
 		cs->funcstat->addcode( cs_code(op_block_begin,0,0,0) );
-		stat_common_block(cs);
+		
+		sm_block*	last = cs->funcstat->block;
+		sm_block	block;
+		cs->funcstat->block = &block;
+		statements(cs);
+		cs->funcstat->block = last;
+
 		cs_texpected(cs,'}');
 		cs->funcstat->addcode( cs_code(op_block_end,0,0,0) );
-	}
-};
-
-void		stat_func_block( compile_state* cs )
-{
-	if ( cs_texpected(cs,'{') )
-	{
-		stat_common_block(cs);
-		cs_texpected(cs,'}');
 	}
 };
 
@@ -877,6 +876,14 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 			break;
 		case op_getfield :
 			vA = ut_getfield( s, vB, vC );
+			break;
+
+		case op_newclosure :
+			{
+				MnClosure* cls = ut_newMclosure( s );
+				cls->u.m->func = vB;
+				vA = MnValue( MOT_CLOSURE, cls );
+			}
 			break;
 
 		case op_call :

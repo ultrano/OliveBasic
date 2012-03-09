@@ -1,6 +1,11 @@
-tbl["key"] = "field1";
-tbl[tbl["key"]] = (12 / 3) * (2 + 1);
 
-var = tbl["field1"];
+local func = function ( v )
+{ 
+	print( v );
+};
 
-print("aaa");
+local var = 123;
+
+
+func( var );
+
