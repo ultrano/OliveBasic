@@ -468,7 +468,7 @@ void	sm_exp::postexp()
 				cs->funcstat->addcode( cs_code( op_move, push(etemp), arg, 0 ) );
 			}
 			while ( cs_toptional(cs,',') );
-			cs->funcstat->addcode( cs_code( op_call, func, narg, 1 ) );
+			cs->funcstat->addcode( cs_code( op_call, func, narg, 0 ) );
 			while ( narg-- ) pop();
 			cs_texpected(cs,')');
 		}
@@ -804,9 +804,10 @@ void stat_global( compile_state* cs )
 	}
 }
 
+
 //////////////////////////////////////////////////////////////////////////
 
-OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
+void excuter_ver_0_0_3( MnState* s )
 {
 
 #define iOP (cs_getop(i))
@@ -823,18 +824,16 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 #define sB ( *(s->base + 1 + iB) )
 #define sC ( *(s->base + 1 + iC) )
 
-#define cB ( func->consts[ iB ] )
-#define cC ( func->consts[ iC ] )
+#define cB ( s->func->consts[ iB ] )
+#define cC ( s->func->consts[ iC ] )
 
 #define vA sA
 #define vB (cs_isconst( cs_getb(i) )? cB : sB)
 #define vC (cs_isconst( cs_getc(i) )? cC : sC)
 
-	mn_settop( s, func->maxstack );
-	MnInstruction* pc = func->codes.size()? &func->codes[0] : NULL;
 	while ( true )
 	{
-		MnInstruction& i = *pc++;
+		MnInstruction& i = *s->pc++;
 		switch ( iOP )
 		{
 		case op_add :
@@ -878,30 +877,47 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 
 		case op_call :
 			{
-				MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
-				ci->prev	= s->ci;
-				ci->savepc	= s->pc;
-				ci->base	= s->base - s->begin;
-				ci->top		= s->top - s->begin;
-				s->ci    = ci;
+				if ( !MnIsClosure(vA) ) vA = ut_meta_call( s, vA );
+				if ( MnIsClosure(vA) )
+				{
+					MnClosure* cls = MnToClosure(vA);
+					MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
+					ci->prev = s->ci;
+					ci->pc	 = s->pc;
+					ci->func = s->func;
+					ci->base = s->base - s->begin;
+					ci->top	 = s->top - s->begin;
 
-				ut_excute( s, (iA+1), oB );
+					s->ci		= ci;
+					s->base		= &vA;
 
-				ci = s->ci;
-				s->base = ci->base + s->begin;
-				s->top	= ci->top + s->begin;
-				s->pc	= ci->savepc;
-				s->ci	= ci->prev;
-				ut_free(ci);
+					if ( cls->type == CCL )
+					{
+						s->pc	= NULL;
+						s->func	= NULL;
+						MnClosure::CClosure* ccl = cls->u.c;
+						ut_restore_ci(s, ccl->func(s) );
+					}
+					else
+					{
+						s->func		= MnToFunction(cls->u.m->func);
+						s->pc		= &(s->func->codes[0]);
+						mn_settop( s, s->func->maxstack );
+					}
+				}
+
 			}
 			break;
+
 		case op_return :
-			return oA;
-			break;
+			{
+				ut_restore_ci(s, oA);
+				if ( s->func ) break; else return;
+			}
 		}
 	}
 
-	return 0;
+	return ;
 #undef iOP
 
 #undef oA

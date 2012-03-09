@@ -104,7 +104,7 @@ const MnTypeStr g_type_str[] =
 #define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.func: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
-OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func );
+void excuter_ver_0_0_3( MnState* s );
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -169,6 +169,7 @@ public:
 
 	MnCallInfo*	 ci;
 	MnInstruction* pc;
+	MnMFunction* func;
 
 };
 
@@ -180,7 +181,8 @@ public:
 	MnCallInfo*		prev;
 	MnIndex			base;
 	MnIndex			top;
-	MnInstruction*	savepc;
+	MnMFunction*	func;
+	MnInstruction*	pc;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1504,46 +1506,23 @@ MnValue ut_meta_call( MnState* s, MnValue& c )
 }
 
 //////////////////////////////////////////////////////////////////////////
-
-void ut_excute( MnState* s, MnIndex funcidx, OvInt nrets ) 
+void ut_restore_ci( MnState* s, OvInt nret ) 
 {
-	MnValue* func = ut_getstack_ptr(s, funcidx );
+	MnValue* vfunc		= s->base;
+	MnValue* first_ret  = s->top - nret;
+	ut_close_upval( s, vfunc );
+	first_ret = max( vfunc, first_ret );
+	if ( nret > 0 ) for ( OvInt i = 0 ; i < nret ; ++i )  (*vfunc++) = (*first_ret++);
 
-	if ( func && !MnIsClosure(*func) )
-	{
-		ut_setstack( s, funcidx, ut_meta_call( s, *func ) );
-		func = ut_getstack_ptr(s, funcidx );
-	}
-
-	s->base  = func;
-
-	OvInt r = 0;
-	if ( func && MnIsClosure(*func) )
-	{
-		MnClosure* cls = MnToClosure(*func);
-		if ( cls->type == CCL )
-		{
-			MnClosure::CClosure* ccl = cls->u.c;
-			r = ccl->func(s);
-		}
-		else
-		{
-			MnClosure::MClosure* mcl = cls->u.m;
-			r = excuter_ver_0_0_3( s, MnToFunction( mcl->func ) );
-		}
-	}
-
-	ut_close_upval( s, s->base );
-	ut_ensure_stack( s, max( nrets, r ) );
-
-	func = s->base;
-	MnValue* newtop = func + nrets;
-	MnValue* first_ret  = s->top - r;
-	first_ret = max( func, first_ret );
-
-	if ( r > 0 ) for ( OvInt i = 0 ; i < r ; ++i )  (*func++) = (*first_ret++);
-
-	while ( func < newtop ) (*func++) = MnValue();
+	MnValue* newtop = vfunc + nret;
+	while ( vfunc < newtop ) (*vfunc++) = MnValue();
 	while ( newtop < s->top ) *(--s->top) = MnValue();
 
+	MnCallInfo* ci = s->ci;
+	s->top	= ci->top + s->begin;
+	s->base = ci->base + s->begin;
+	s->pc	= ci->pc;
+	s->ci	= ci->prev;
+	s->func	= ci->func;
+	ut_free(ci);
 }
