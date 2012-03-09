@@ -1508,9 +1508,9 @@ MnValue ut_meta_call( MnState* s, MnValue& c )
 //////////////////////////////////////////////////////////////////////////
 void ut_restore_ci( MnState* s, OvInt nret ) 
 {
+	ut_close_upval( s, s->base );
 	MnValue* vfunc		= s->base;
 	MnValue* first_ret  = s->top - nret;
-	ut_close_upval( s, vfunc );
 	first_ret = max( vfunc, first_ret );
 	if ( nret > 0 ) for ( OvInt i = 0 ; i < nret ; ++i )  (*vfunc++) = (*first_ret++);
 
