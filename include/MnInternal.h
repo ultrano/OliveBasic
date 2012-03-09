@@ -179,7 +179,7 @@ class MnCallInfo : public OvMemObject
 public:
 	MnCallInfo*		prev;
 	MnIndex			base;
-	MnClosure*		cls;
+	MnIndex			top;
 	MnInstruction*	savepc;
 };
 
@@ -1505,7 +1505,7 @@ MnValue ut_meta_call( MnState* s, MnValue& c )
 
 //////////////////////////////////////////////////////////////////////////
 
-void ut_call( MnState* s, MnIndex funcidx, OvInt nrets ) 
+void ut_excute( MnState* s, MnIndex funcidx, OvInt nrets ) 
 {
 	MnValue* func = ut_getstack_ptr(s, funcidx );
 
@@ -1515,19 +1515,12 @@ void ut_call( MnState* s, MnIndex funcidx, OvInt nrets )
 		func = ut_getstack_ptr(s, funcidx );
 	}
 
-	MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
-	ci->prev	= s->ci;
-	ci->savepc	= s->pc;
-	ci->base	= s->base - s->begin;
-
-	s->ci    = ci;
 	s->base  = func;
 
 	OvInt r = 0;
 	if ( func && MnIsClosure(*func) )
 	{
 		MnClosure* cls = MnToClosure(*func);
-		ci->cls  = cls;
 		if ( cls->type == CCL )
 		{
 			MnClosure::CClosure* ccl = cls->u.c;
@@ -1553,10 +1546,4 @@ void ut_call( MnState* s, MnIndex funcidx, OvInt nrets )
 	while ( func < newtop ) (*func++) = MnValue();
 	while ( newtop < s->top ) *(--s->top) = MnValue();
 
-	ci = s->ci;
-	s->top	= newtop;
-	s->base = ci->base + s->begin;
-	s->pc	= ci->savepc;
-	s->ci	= ci->prev;
-	ut_free(ci);
 }

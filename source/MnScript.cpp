@@ -398,8 +398,22 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 {
 	nargs = max(nargs,0);
 	MnIndex funcidx = -(1 + nargs);
-	ut_call(s, funcidx, nrets);
-	mn_settop( s, funcidx + nrets - 1 );
+
+	MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
+	ci->prev	= s->ci;
+	ci->savepc	= s->pc;
+	ci->base	= s->base - s->begin;
+	ci->top		= funcidx + nrets - 1;
+	s->ci    = ci;
+
+	ut_excute(s, funcidx, nrets);
+
+	ci = s->ci;
+	s->base = ci->base + s->begin;
+	s->top	= ci->top + s->begin;
+	s->pc	= ci->savepc;
+	s->ci	= ci->prev;
+	ut_free(ci);
 }
 
 void mn_do_file( MnState* s, const OvString& file )

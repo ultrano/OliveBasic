@@ -878,9 +878,21 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 
 		case op_call :
 			{
-				MnIndex top = mn_gettop(s);
-				ut_call( s, (iA+1), oB );
-				mn_settop(s,top);
+				MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
+				ci->prev	= s->ci;
+				ci->savepc	= s->pc;
+				ci->base	= s->base - s->begin;
+				ci->top		= s->top - s->begin;
+				s->ci    = ci;
+
+				ut_excute( s, (iA+1), oB );
+
+				ci = s->ci;
+				s->base = ci->base + s->begin;
+				s->top	= ci->top + s->begin;
+				s->pc	= ci->savepc;
+				s->ci	= ci->prev;
+				ut_free(ci);
 			}
 			break;
 		case op_return :
