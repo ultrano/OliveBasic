@@ -815,26 +815,16 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 #define oB ( cs_getb(i) )
 #define oC ( cs_getc(i) )
 
-#define iA ( cs_index(oA) + 1 )
-#define iB ( cs_index(oB) + 1 )
-#define iC ( cs_index(oC) + 1 )
+#define iA ( cs_index(oA) )
+#define iB ( cs_index(oB) )
+#define iC ( cs_index(oC) )
 
-#ifdef _DEBUG
-#define sA (*ut_getstack_ptr( s, iA ))
-#define sB (*ut_getstack_ptr( s, iB ))
-#define sC (*ut_getstack_ptr( s, iC ))
+#define sA ( *(s->base + 1 + iA) )
+#define sB ( *(s->base + 1 + iB) )
+#define sC ( *(s->base + 1 + iC) )
 
-#define cB (ut_getconst( func, cs_index(cs_getb(i))+1 ))
-#define cC (ut_getconst( func, cs_index(cs_getc(i))+1 ))
-#else
-#define sA ( *(s->base + iCheck(cs_index(cs_geta(i))+1)) )
-#define sB ( *(s->base + iCheck(cs_index(cs_getb(i))+1)) )
-#define sC ( *(s->base + iCheck(cs_index(cs_getc(i))+1)) )
-
-#define cB ( func->consts[ cs_index(cs_getb(i))+1 ] )
-#define cC ( func->consts[ cs_index(cs_getc(i))+1 ] )
-#endif
-
+#define cB ( func->consts[ iB ] )
+#define cC ( func->consts[ iC ] )
 
 #define vA sA
 #define vB (cs_isconst( cs_getb(i) )? cB : sB)
@@ -887,8 +877,11 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 			break;
 
 		case op_call :
-			ut_call( s, iA, oB );
-			mn_settop( s, func->maxstack );
+			{
+				MnIndex top = mn_gettop(s);
+				ut_call( s, (iA+1), oB );
+				mn_settop(s,top);
+			}
 			break;
 		case op_return :
 			return oA;
@@ -902,10 +895,6 @@ OvInt excuter_ver_0_0_3( MnState* s, MnMFunction* func )
 #undef oA
 #undef oB
 #undef oC
-
-#undef iA
-#undef iB
-#undef iC
 
 #undef sA
 #undef sB
