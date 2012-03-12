@@ -407,15 +407,15 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 	}
 	//////////////////////////////////////////////////////////////////////////
 
-	MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
-	ci->prev = s->ci;
-	ci->pc	 = s->pc;
-	ci->func = s->func;
-	ci->base = s->base - s->begin;
-	ci->top	 = funcidx + nrets - 1;
-
 	if ( MnIsClosure( pfunc? *pfunc : MnValue() ) )
 	{
+		MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
+		ci->prev = s->ci;
+		ci->pc	 = s->pc;
+		ci->func = s->func;
+		ci->base = s->base - s->begin;
+		ci->top	 = (pfunc - s->base) + nrets - 1;
+
 		s->base  = pfunc;
 		s->ci	 = ci;
 		MnClosure* cls = MnToClosure(*pfunc);
@@ -434,11 +434,6 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 			excuter_ver_0_0_3( s );
 		}
 	}
-	else
-	{
-		ut_restore_ci( s, nrets );
-	}
-
 	//////////////////////////////////////////////////////////////////////////
 
 }

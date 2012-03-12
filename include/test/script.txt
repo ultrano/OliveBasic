@@ -1,13 +1,7 @@
 
-local func = function ( v, b )
+func = function ( v, b )
 {
-	local var = v * 2;
-	print( var + b );
+	local a = 1;
+	local b = 2;
+	return a+b;
 };
-
-local var = 123;
-
-
-func( var, 123 );
-
-print( var );

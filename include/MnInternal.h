@@ -553,10 +553,13 @@ MnValue::~MnValue()
 
 const MnValue& MnValue::operator=( const MnValue& v )
 {
-	ut_dec_ref(*this);
-	type = v.type;
-	u	 = v.u;
-	ut_inc_ref(*this);
+	if ( this != &v ) 
+	{
+		ut_dec_ref(*this);
+		type = v.type;
+		u	 = v.u;
+		ut_inc_ref(*this);
+	}
 	return *this;
 }
 

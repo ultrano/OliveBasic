@@ -162,6 +162,7 @@ MnValue		load_entrance( MnState* s, const OvString& file );
 void		stat_local( compile_state* cs );
 void		stat_global( compile_state* cs );
 void		stat_block( compile_state* cs );
+void		stat_return( compile_state* cs );
 OvBool		stat( compile_state* cs );
 void		statements( compile_state* cs );
 void		stat_entrance( compile_state* cs );
@@ -333,7 +334,7 @@ expdesc&		sm_exp::get( MnIndex idx )
 	{
 		return targets.at( -1 + idx );
 	}
-	static expdesc noneexp(enone,0);
+	static expdesc noneexp(enone,-1);
 	return noneexp;
 }
 
@@ -468,7 +469,7 @@ void	sm_exp::postexp()
 				cs->funcstat->addcode( cs_code( op_move, push(etemp), arg, 0 ) );
 			}
 			while ( cs_toptional(cs,',') );
-			cs->funcstat->addcode( cs_code( op_call, func, narg, 0 ) );
+			cs->funcstat->addcode( cs_code( op_call, func, narg, 1 ) );
 			while ( narg-- ) pop();
 			cs_texpected(cs,')');
 		}
@@ -749,6 +750,7 @@ OvBool stat( compile_state* cs )
 	if ( cs_ttype(cs,'{') )				 	{ stat_block( cs ); return true; }
 	else if ( cs_keyworld(cs,kw_local) ) 	{ stat_local(cs); return true; }
 	else if ( cs_keyworld(cs,kw_global) ) 	{ stat_global(cs); return true; }
+	else if ( cs_keyworld(cs,kw_return) ) 	{ stat_return(cs); return true; }
 	else if ( cs_toptional(cs,';') )		{ return true; }
 	else if ( cs_toptional(cs,tt_eos) ) 		{ return false; }
 	else
@@ -805,6 +807,23 @@ void stat_global( compile_state* cs )
 	}
 }
 
+void stat_return( compile_state* cs )
+{
+	if ( cs_keyworld(cs,kw_return) )
+	{
+		cs_tnext(cs);
+
+		sm_exp eret(cs);
+		eret.statexp();
+		OvShort idx = eret.top();
+		if ( !(idx < 0) )
+		{
+			cs->funcstat->addcode( cs_code( op_move, cs->funcstat->maxstack++, idx, 0 ) );
+		}
+
+		cs->funcstat->addcode( cs_code( op_return, !(idx < 0), 0, 0 ) );
+	}
+}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -879,9 +898,8 @@ void excuter_ver_0_0_3( MnState* s )
 		case op_call :
 			{
 				if ( !MnIsClosure(vA) ) vA = ut_meta_call( s, vA );
-				if ( MnIsClosure(vA) )
+				if ( MnClosure* cls = MnToClosure(vA) )
 				{
-					MnClosure* cls = MnToClosure(vA);
 					MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
 					ci->prev = s->ci;
 					ci->pc	 = s->pc;
