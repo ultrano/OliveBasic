@@ -1,7 +1,9 @@
 
 func = function ( v, b )
 {
-	local a = 1;
-	local c = 2;
-	return "hello world";
+	{
+		local a = 1;
+		local c = 2;
+	}
+		return "hello world";
 };
