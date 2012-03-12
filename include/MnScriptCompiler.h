@@ -216,6 +216,8 @@ public:
 	void	addcode( const MnInstruction& i );
 	OvInt	codesize();
 
+	void	addlocal( const OvString& name );
+
 };
 
 class sm_block
@@ -228,7 +230,6 @@ public:
 	sm_block() : outer(NULL) {};
 
 	OvInt	nvars();
-	void	addvar( const OvString& name );
 	OvShort	findvar( const OvString& name );
 
 };
@@ -287,17 +288,18 @@ public:
 void	sm_func::addcode( const MnInstruction& i ) { func->codes.push_back( i );	}
 OvInt	sm_func::codesize() { return func->codes.size(); } ;
 
+void sm_func::addlocal( const OvString& name )
+{
+	for each ( const OvString& n in block->vars ) if ( n == name ) return ;
+	block->vars.push_back(name);
+	++maxstack;
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 OvInt	sm_block::nvars()
 {
 	return vars.size() + (outer? outer->nvars():0);
-};
-
-void	sm_block::addvar( const OvString& name )
-{
-	for each ( const OvString& n in vars ) if ( n == name ) return ;
-	vars.push_back(name);
 };
 
 OvShort	sm_block::findvar( const OvString& name )
@@ -501,7 +503,7 @@ void	sm_exp::primary()
 		cs_texpected(cs,'(');
 		while ( cs_ttype(cs,tt_identifier) )
 		{
-			block.addvar( cs_tstr(cs) );
+			fstat.addlocal( cs_tstr(cs) );
 			cs_tnext(cs);
 			if ( cs_toptional(cs,',') ) continue; else break;
 		}
@@ -786,7 +788,9 @@ void stat_local( compile_state* cs )
 		cs_tnext(cs);
 		if ( cs_ttype(cs,tt_identifier) )
 		{
-			cs->funcstat->block->addvar( cs_tstr(cs) );
+			cs->funcstat->addlocal( cs_tstr(cs) );
+			OvSize nfixed = cs->funcstat->block->nvars();
+			cs->funcstat->maxstack = max(nfixed,cs->funcstat->maxstack);
 			sm_exp exp(cs);
 			exp.statexp();
 		}
@@ -800,7 +804,6 @@ void stat_global( compile_state* cs )
 		cs_tnext(cs);
 		if ( cs_ttype(cs,tt_identifier) )
 		{
-			cs->funcstat->block->addvar( cs_tstr(cs) );
 			sm_exp exp(cs);
 			exp.statexp();
 		}

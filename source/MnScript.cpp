@@ -32,12 +32,18 @@ void mn_closestate( MnState* s )
 	if ( s )
 	{
 		while ( s->ci ) { MnCallInfo* ci = s->ci; s->ci = ci->prev; ut_free(ci); }
-		s->begin = s->end = s->base = s->top = NULL;
-		s->stack.clear();
+		MnState::map_hash_val::iterator itor = s->global.begin();
+		for ( ; itor != s->global.end() ; ++itor )
+		{
+			itor = s->global.erase(itor);
+		}
 		s->global.clear();
+
 		s->openeduv.clear();
 		s->upvals.clear();
 		s->strtable.clear();
+		s->stack.clear();
+		s->begin = s->end = s->base = s->top = NULL;
 		mn_collect_garbage(s);
 		ut_free(s);
 	}
@@ -414,7 +420,7 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 		ci->pc	 = s->pc;
 		ci->func = s->func;
 		ci->base = s->base - s->begin;
-		ci->top	 = (pfunc - s->base) + nrets - 1;
+		ci->top	 = (pfunc - s->begin) + nrets;
 
 		s->base  = pfunc;
 		s->ci	 = ci;

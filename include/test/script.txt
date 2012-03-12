@@ -2,6 +2,6 @@
 func = function ( v, b )
 {
 	local a = 1;
-	local b = 2;
-	return a+b;
+	local c = 2;
+	return "hello world";
 };
