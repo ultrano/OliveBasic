@@ -785,7 +785,6 @@ void	cs_end_block( compile_state* cs )
 	sm_block* bs	= cs->fs->bs;
 	cs->fs->bs		= bs->outer;
 	OvShort base	= cs->fs->bs? cs->fs->bs->nlocals():0;
-	fs_addcode( cs->fs, cs_code(op_close_upval,0,base,0) );
 	ut_free( bs );
 }
 
@@ -832,6 +831,7 @@ OvBool stat( compile_state* cs )
 	{
 		sm_exp exp(cs);
 		exp.statexp();
+		cs_texpected(cs,';');
 		return (exp.get(-1).type != enone);
 	}
 	return false;
@@ -846,6 +846,7 @@ void		stat_block( compile_state* cs )
 		statements(cs);
 		cs_texpected(cs,'}');
 		cs_end_block(cs);
+		fs_addcode( cs->fs, cs_code(op_close_upval,0,begin,0) );
 	}
 };
 
@@ -925,6 +926,7 @@ void excuter_ver_0_0_3( MnState* s )
 	while ( true )
 	{
 		MnInstruction& i = *s->pc++;
+		MnIndex idx = iA;
 		switch ( iOP )
 		{
 		case op_add :

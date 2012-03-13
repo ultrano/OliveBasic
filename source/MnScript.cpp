@@ -32,13 +32,7 @@ void mn_closestate( MnState* s )
 	if ( s )
 	{
 		while ( s->ci ) { MnCallInfo* ci = s->ci; s->ci = ci->prev; ut_free(ci); }
-		MnState::map_hash_val::iterator itor = s->global.begin();
-		for ( ; itor != s->global.end() ; ++itor )
-		{
-			itor = s->global.erase(itor);
-		}
 		s->global.clear();
-
 		s->openeduv.clear();
 		s->upvals.clear();
 		s->strtable.clear();
