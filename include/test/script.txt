@@ -1,13 +1,23 @@
 local tf = function ()
 {
 
-local test = "hello?";
+local test = 2;
 local func = function ( )
 {
+	test = test + 1;
 	print( test );
 };
 
 return func;
 };
 
-tf()();
+local foo1 = tf();
+local foo2 = tf();
+foo1();
+foo2();
+foo2();
+foo2();
+foo2();
+foo2();
+foo2();
+foo1();

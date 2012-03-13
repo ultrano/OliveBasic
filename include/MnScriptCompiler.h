@@ -231,6 +231,11 @@ struct compile_state
 
 };
 
+struct upvaldesc
+{
+	OvString name;
+	expdesc	 exp;
+};
 class sm_func
 {
 public:
@@ -239,7 +244,7 @@ public:
 	sm_block*		bs;
 	OvUInt			maxstack;
 	sm_func*		last;
-	OvVector<expdesc> upvals;
+	OvVector<upvaldesc> upvals;
 };
 
 class sm_block
@@ -271,7 +276,7 @@ public:
 	expdesc&		get( MnIndex idx );
 	OvShort			top();
 	void			push( exptype type, OvShort idx );
-	OvShort			push( exptype type );
+	OvShort			push();
 	void			pop();
 	OvShort			regist();
 
@@ -350,21 +355,21 @@ OvShort sm_exp::top()
 			OvShort con = get(-2).idx;
 			OvShort key = get(-1).idx;
 			pop();pop();
-			fs_addcode( cs->fs, cs_code( op_getfield, push(etemp), con, key ) );
+			fs_addcode( cs->fs, cs_code( op_getfield, push(), con, key ) );
 		}
 		break;
 	case eupval :
 		{
 			OvShort idx = get(-1).idx;
 			pop();
-			fs_addcode( cs->fs, cs_code( op_getupval, push(etemp), idx, 0 ) );
+			fs_addcode( cs->fs, cs_code( op_getupval, push(), idx, 0 ) );
 		}
 		break;
 	case eglobal :
 		{
 			OvShort idx = get(-1).idx;
 			pop();
-			fs_addcode( cs->fs, cs_code( op_getglobal, push(etemp), idx, 0 ) );
+			fs_addcode( cs->fs, cs_code( op_getglobal, push(), idx, 0 ) );
 		}
 		break;
 	}
@@ -376,15 +381,15 @@ void		sm_exp::push( exptype type, OvShort idx )
 	targets.push_back( expdesc(type,idx) );
 }
 
-OvShort		sm_exp::push( exptype type )
+OvShort		sm_exp::push()
 {
-	push( type, alloc_temp() ); return targets.back().idx;
+	push( etemp, alloc_temp() ); return targets.back().idx;
 }
 
 void		sm_exp::pop()
 {
 	expdesc exp = get(-1);
-	if ( !cs_isconst(exp.idx) && cs_index(exp.idx) == (ntemp-1) ) --ntemp;
+	if ( exp.type == etemp && cs_index(exp.idx) == (ntemp-1) ) --ntemp;
 	targets.pop_back();
 }
 
@@ -432,7 +437,7 @@ void	sm_exp::exp_order2()
 		exp_order1();
 		OvShort reg2 = top();pop();
 		OvShort reg1 = top();pop();
-		fs_addcode( cs->fs, cs_code( op, push(etemp), reg1, reg2 ) );
+		fs_addcode( cs->fs, cs_code( op, push(), reg1, reg2 ) );
 	}
 }
 
@@ -445,7 +450,7 @@ void	sm_exp::exp_order1()
 		term();
 		OvShort reg2 = top();pop();
 		OvShort reg1 = top();pop();
-		fs_addcode( cs->fs, cs_code( op, push(etemp), reg1, reg2 ) );
+		fs_addcode( cs->fs, cs_code( op, push(), reg1, reg2 ) );
 	}
 }
 
@@ -471,7 +476,7 @@ void	sm_exp::postexp()
 		else if ( cs_toptional(cs,'(') )
 		{
 			OvShort func = top();pop();
-			fs_addcode( cs->fs, cs_code( op_move, push(etemp), func, 0 ) );
+			fs_addcode( cs->fs, cs_code( op_move, push(), func, 0 ) );
 			func = top();
 			OvShort narg = 0;
 			if ( !cs_ttype(cs,')') ) do
@@ -479,7 +484,7 @@ void	sm_exp::postexp()
 				exp_order();
 				OvShort arg = top();pop();
 				++narg;
-				fs_addcode( cs->fs, cs_code( op_move, push(etemp), arg, 0 ) );
+				fs_addcode( cs->fs, cs_code( op_move, push(), arg, 0 ) );
 			}
 			while ( cs_toptional(cs,',') );
 			fs_addcode( cs->fs, cs_code( op_call, func, narg, 1 ) );
@@ -532,15 +537,34 @@ void	sm_exp::varexp( sm_func* fs, expdesc& exp )
 		{
 			exp.type = evariable;
 			exp.idx = idx;
+			return;
 		}
 		else
 		{
+			const OvString& name = cs_tstr(cs);
+			for ( MnIndex i = 0 ; i < fs->upvals.size() ; ++i )
+			{
+				if ( fs->upvals[i].name == name )
+				{
+					exp.type = eupval;
+					exp.idx	 = cs_const(i);
+					return;
+				}
+			}
+
 			varexp( fs->last, exp );
 			if ( exp.type != eglobal )
 			{
-				fs->upvals.push_back( exp );
-				exp.type = eupval;
-				exp.idx	 = cs_const(fs->upvals.size() - 1);
+				upvaldesc desc;
+				desc.name	= name;
+				desc.exp	= exp;
+
+				exp.type	= eupval;
+				exp.idx		= cs_const( fs->upvals.size() );
+
+				fs->upvals.push_back( desc );
+
+				return;
 			}
 		}
 	}
@@ -577,10 +601,10 @@ void sm_exp::funcexp()
 		sm_func* fs = cs->fs;
 		cs->fs = fs->last;
 		OvShort idx = fs_findconst( fs->last, MnValue( MOT_FUNCPROTO, fs->f ) );
-		fs_addcode( fs->last, cs_code( op_newclosure, push(eclosure), idx, fs->upvals.size() ) );
-		for each ( const expdesc& exp in fs->upvals )
+		fs_addcode( fs->last, cs_code( op_newclosure, push(), idx, fs->upvals.size() ) );
+		for each ( const upvaldesc& desc in fs->upvals )
 		{
-			fs_addcode( fs->last, cs_code( (exp.type==eupval? op_getupval:op_move), exp.idx, 0, 0 ) );
+			fs_addcode( fs->last, cs_code( (desc.exp.type==eupval? op_getupval:op_move), desc.exp.idx, 0, 0 ) );
 		}
 		cs->fs = fs;
 
@@ -862,6 +886,7 @@ void stat_local( compile_state* cs )
 			cs->fs->maxstack = max(nfixed,cs->fs->maxstack);
 			sm_exp exp(cs);
 			exp.statexp();
+			cs_texpected(cs,';');
 		}
 	}
 }
@@ -925,8 +950,9 @@ void excuter_ver_0_0_3( MnState* s )
 
 	while ( true )
 	{
-		MnInstruction& i = *s->pc++;
-		MnIndex idx = iA;
+		MnInstruction i = *s->pc++;
+		MnIndex aidx = iA;
+		MnIndex bidx = iB;
 		switch ( iOP )
 		{
 		case op_add :
