@@ -226,6 +226,7 @@ void			ut_setmeta( MnState* s, MnValue& c, const MnValue& m );
 
 void			ut_setupval( MnState* s, MnIndex upvalidx,MnValue& v );
 MnValue			ut_getupval( MnState* s, MnIndex upvalidx );
+MnUpval*		ut_getupval_ptr( MnState* s, MnIndex upvalidx );
 
 void			ut_pushvalue( MnState* s, const MnValue& v );
 
@@ -773,15 +774,18 @@ void ut_correct_upval( MnState* s, MnValue* oldstack )
 
 void ut_close_upval( MnState* s, MnValue* level )
 {
-	MnState::set_upval opened = s->openeduv;
-	for each ( MnUpval* upval in opened )
+	MnState::set_upval::iterator itor = s->openeduv.begin();
+	while ( itor != s->openeduv.end() )
 	{
+		MnUpval* upval = *itor;
 		if ( (upval->link != &upval->hold) && (upval->link >= level) )
 		{
-			upval->hold = *upval->link;
-			upval->link = &upval->hold;
-			s->openeduv.erase( upval );
+			upval->hold = *(upval->link);
+			upval->link = &(upval->hold);
+			itor = s->openeduv.erase( itor );
+			continue;
 		}
+		++itor;
 	}
 }
 
@@ -995,15 +999,13 @@ MnValue ut_getarray( MnState* s, MnValue& a, MnValue& n )
 
 void ut_setupval( MnState* s, MnIndex upvalidx, MnValue& v )
 {
-	MnValue c;
-	if ( s->base >= s->begin ) c  = *s->base;
-
-	if ( MnIsClosure(c) )
+	if ( ( s->base >= s->begin ) && MnIsClosure(*s->base) )
 	{
-		MnClosure* cls = MnToClosure(c);
+		MnClosure* cls = MnToClosure(*s->base);
 		if ( upvalidx > 0 && upvalidx <= cls->upvals.size() )
 		{
-			cls->upvals[ upvalidx ] = v;
+			MnUpval* upval = MnToUpval(cls->upvals[upvalidx - 1]);
+			*upval->link = v;
 			return ;
 		}
 	}
@@ -1011,18 +1013,22 @@ void ut_setupval( MnState* s, MnIndex upvalidx, MnValue& v )
 
 MnValue ut_getupval( MnState* s, MnIndex upvalidx )
 {
-	MnValue c;
-	if ( s->base >= s->begin ) c  = *s->base;
+	MnUpval* upval = ut_getupval_ptr( s, upvalidx );
+	return (upval? *(upval->link) : MnValue());
+}
 
-	if ( MnIsClosure(c) )
+MnUpval* ut_getupval_ptr( MnState* s, MnIndex upvalidx )
+{
+	if ( ( s->base >= s->begin ) && MnIsClosure(*s->base) )
 	{
-		MnClosure* cls = MnToClosure(c);
+		MnClosure* cls = MnToClosure(*s->base);
 		if ( upvalidx > 0 && upvalidx <= cls->upvals.size() )
 		{
-			return cls->upvals.at( upvalidx - 1 );
+			MnValue val = cls->upvals[upvalidx - 1];
+			return MnToUpval(val);
 		}
 	}
-	return MnValue();
+	return NULL;
 }
 
 OvBool ut_isglobal( MnState* s, OvHash32 hash )

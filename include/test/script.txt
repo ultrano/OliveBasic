@@ -1,9 +1,10 @@
-
-func = function ( v, b )
 {
-	{
-		local a = 1;
-		local c = 2;
-	}
-		return "hello world";
+
+local test = "hello?"
+func = function ( )
+{
+	print( test );
 };
+
+};
+func();

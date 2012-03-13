@@ -353,6 +353,13 @@ OvShort sm_exp::top()
 			fs_addcode( cs->fs, cs_code( op_getfield, push(etemp), con, key ) );
 		}
 		break;
+	case eupval :
+		{
+			OvShort idx = get(-1).idx;
+			pop();
+			fs_addcode( cs->fs, cs_code( op_getupval, push(etemp), idx, 0 ) );
+		}
+		break;
 	case eglobal :
 		{
 			OvShort idx = get(-1).idx;
@@ -404,6 +411,9 @@ void	sm_exp::exp_order3()
 			break;
 		case eglobal :
 			fs_addcode( cs->fs, cs_code( op_setglobal, 0, get(-1).idx, val ) );
+			break;
+		case eupval :
+			fs_addcode( cs->fs, cs_code( op_setupval, 0, get(-1).idx, val ) );
 			break;
 		case etemp :
 		case evariable :
@@ -530,7 +540,7 @@ void	sm_exp::varexp( sm_func* fs, expdesc& exp )
 			{
 				fs->upvals.push_back( exp );
 				exp.type = eupval;
-				exp.idx	 = fs->upvals.size() - 1;
+				exp.idx	 = cs_const(fs->upvals.size() - 1);
 			}
 		}
 	}
@@ -564,14 +574,15 @@ void sm_exp::funcexp()
 		statements(cs);
 		cs_texpected(cs,'}');
 
-
 		sm_func* fs = cs->fs;
+		cs->fs = fs->last;
 		OvShort idx = fs_findconst( fs->last, MnValue( MOT_FUNCPROTO, fs->f ) );
 		fs_addcode( fs->last, cs_code( op_newclosure, push(eclosure), idx, fs->upvals.size() ) );
 		for each ( const expdesc& exp in fs->upvals )
 		{
-			fs_addcode( fs->last, cs_code( (exp.type==eupval? op_getupval:op_move), exp.idx, idx, 0 ) );
+			fs_addcode( fs->last, cs_code( (exp.type==eupval? op_getupval:op_move), exp.idx, 0, 0 ) );
 		}
+		cs->fs = fs;
 
 		cs_end_block(cs);
 		cs_end_func(cs);
@@ -933,6 +944,13 @@ void excuter_ver_0_0_3( MnState* s )
 			vA = vB;
 			break;
 
+		case op_setupval :
+			ut_setupval( s, iB + 1, vC );
+			break;
+		case op_getupval :
+			vA = ut_getupval( s, iB + 1 );
+			break;
+
 		case op_setglobal :
 			ut_setglobal( s, vB, vC );
 			break;
@@ -956,24 +974,23 @@ void excuter_ver_0_0_3( MnState* s )
 				while (links--)
 				{
 					i = *s->pc++;
-					MnValue v;
+					MnUpval* upval = NULL;
 					switch ( iOP )
 					{
 					case op_getupval :
 						{
-							v = ut_getupval(s, iA );
+							upval = ut_getupval_ptr(s, iA + 1 );
 						}
 						break;
 					case op_move :
 						{
-							MnUpval* upval = ut_newupval(s);
-							upval->link = &vA;
+							upval = ut_newupval(s);
+							upval->link = ut_getstack_ptr( s, iA + 1 );
 							s->openeduv.insert( upval );
-							v = MnValue( MOT_UPVAL, upval );
 						}
 						break;
 					}
-					cls->upvals.push_back( v );
+					cls->upvals.push_back( MnValue( MOT_UPVAL, upval ) );
 				}
 			}
 			break;
