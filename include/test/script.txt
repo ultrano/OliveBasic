@@ -2,22 +2,22 @@ local tf = function ()
 {
 
 local test = 2;
-local func = function ( )
+local func2;
+local func1 = function ( )
 {
 	test = test + 1;
 	print( test );
+	func2();
 };
 
-return func;
+func2 = function ( )
+{
+	test = test + 1;
+	print( test );
+	func1();
 };
 
-local foo1 = tf();
-local foo2 = tf();
-foo1();
-foo2();
-foo2();
-foo2();
-foo2();
-foo2();
-foo2();
-foo1();
+	func1();
+};
+
+tf();

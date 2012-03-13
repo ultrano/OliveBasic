@@ -777,7 +777,7 @@ void cs_scan( compile_state* cs )
 
 void	cs_begin_func( compile_state* cs )
 {
-	sm_func* fs		= (sm_func*)ut_alloc(sizeof(sm_func));
+	sm_func* fs		= new(ut_alloc(sizeof(sm_func))) sm_func;
 	fs->f			= ut_newfunction(cs->s);
 	fs->bs			= NULL;
 	fs->last		= cs->fs;
@@ -797,7 +797,7 @@ void	cs_end_func( compile_state* cs )
 
 void	cs_begin_block( compile_state* cs )
 {
-	sm_block* bs	= (sm_block*)ut_alloc(sizeof(sm_block));
+	sm_block* bs	= new(ut_alloc(sizeof(sm_block))) sm_block;
 	bs->outer		= cs->fs->bs;
 	bs->fs			= cs->fs;
 
