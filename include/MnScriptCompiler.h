@@ -55,6 +55,9 @@ enum opcode
 
 	op_move,
 
+	op_getupval,
+	op_setupval,
+
 	op_getfield,
 	op_setfield,
 
@@ -160,9 +163,8 @@ const OvChar* g_kwtable[] =
 	">=",
 };
 
-OvShort		cs_findconst( compile_state* cs, const MnValue& val );
-OvShort		cs_findconst( compile_state* cs, const MnNumber& val );
-OvShort		cs_findconst( compile_state* cs, const OvString& val );
+OvShort		fs_findconst( sm_func* fs, const MnValue& val );
+void		fs_addcode( sm_func* fs, const MnInstruction& i );
 
 void		cs_tnext( compile_state* cs );
 void		cs_tprev( compile_state* cs );
@@ -182,7 +184,6 @@ void		cs_begin_func( compile_state* cs );
 void		cs_end_func( compile_state* cs );
 void		cs_begin_block( compile_state* cs );
 void		cs_end_block( compile_state* cs );
-void		cs_addcode( compile_state* cs, const MnInstruction& i );
 
 void		stat_local( compile_state* cs );
 void		stat_global( compile_state* cs );
@@ -202,6 +203,7 @@ struct compile_state
 		, head(NULL)
 		, tail(NULL)
 		, tok(NULL)
+		, fs(NULL)
 	{
 	}
 	~compile_state()
@@ -282,6 +284,7 @@ public:
 	void			term();
 	void			postexp();
 	void			primary();
+	void			varexp( sm_func* fs, expdesc& exp );
 	void			funcexp();
 
 };
@@ -347,14 +350,14 @@ OvShort sm_exp::top()
 			OvShort con = get(-2).idx;
 			OvShort key = get(-1).idx;
 			pop();pop();
-			cs_addcode( cs, cs_code( op_getfield, push(etemp), con, key ) );
+			fs_addcode( cs->fs, cs_code( op_getfield, push(etemp), con, key ) );
 		}
 		break;
 	case eglobal :
 		{
 			OvShort idx = get(-1).idx;
 			pop();
-			cs_addcode( cs, cs_code( op_getglobal, push(etemp), idx, 0 ) );
+			fs_addcode( cs->fs, cs_code( op_getglobal, push(etemp), idx, 0 ) );
 		}
 		break;
 	}
@@ -397,14 +400,14 @@ void	sm_exp::exp_order3()
 		switch ( get(-1).type )
 		{
 		case efield :
-			cs_addcode( cs, cs_code( op_setfield, get(-2).idx, get(-1).idx, val ) );
+			fs_addcode( cs->fs, cs_code( op_setfield, get(-2).idx, get(-1).idx, val ) );
 			break;
 		case eglobal :
-			cs_addcode( cs, cs_code( op_setglobal, 0, get(-1).idx, val ) );
+			fs_addcode( cs->fs, cs_code( op_setglobal, 0, get(-1).idx, val ) );
 			break;
 		case etemp :
 		case evariable :
-			cs_addcode( cs, cs_code( op_move, get(-1).idx, val, 0 ) );
+			fs_addcode( cs->fs, cs_code( op_move, get(-1).idx, val, 0 ) );
 			break;
 		}
 	}
@@ -419,7 +422,7 @@ void	sm_exp::exp_order2()
 		exp_order1();
 		OvShort reg2 = top();pop();
 		OvShort reg1 = top();pop();
-		cs_addcode( cs, cs_code( op, push(etemp), reg1, reg2 ) );
+		fs_addcode( cs->fs, cs_code( op, push(etemp), reg1, reg2 ) );
 	}
 }
 
@@ -432,7 +435,7 @@ void	sm_exp::exp_order1()
 		term();
 		OvShort reg2 = top();pop();
 		OvShort reg1 = top();pop();
-		cs_addcode( cs, cs_code( op, push(etemp), reg1, reg2 ) );
+		fs_addcode( cs->fs, cs_code( op, push(etemp), reg1, reg2 ) );
 	}
 }
 
@@ -458,7 +461,7 @@ void	sm_exp::postexp()
 		else if ( cs_toptional(cs,'(') )
 		{
 			OvShort func = top();pop();
-			cs_addcode( cs, cs_code( op_move, push(etemp), func, 0 ) );
+			fs_addcode( cs->fs, cs_code( op_move, push(etemp), func, 0 ) );
 			func = top();
 			OvShort narg = 0;
 			if ( !cs_ttype(cs,')') ) do
@@ -466,10 +469,10 @@ void	sm_exp::postexp()
 				exp_order();
 				OvShort arg = top();pop();
 				++narg;
-				cs_addcode( cs, cs_code( op_move, push(etemp), arg, 0 ) );
+				fs_addcode( cs->fs, cs_code( op_move, push(etemp), arg, 0 ) );
 			}
 			while ( cs_toptional(cs,',') );
-			cs_addcode( cs, cs_code( op_call, func, narg, 1 ) );
+			fs_addcode( cs->fs, cs_code( op_call, func, narg, 1 ) );
 			while ( narg-- ) pop();
 			cs_texpected(cs,')');
 		}
@@ -481,12 +484,14 @@ void	sm_exp::primary()
 {
 	if ( cs_ttype( cs, tt_number ) )
 	{
-		push( econst, cs_findconst( cs, cs_tnum(cs) ) );
+		MnValue vnum(cs_tnum(cs));
+		push( econst, fs_findconst( cs->fs, vnum ) );
 		cs_tnext(cs);
 	}
 	else if ( cs_ttype( cs, tt_string ) )
 	{
-		push( econst, cs_findconst( cs, cs_tstr(cs) ) );
+		MnValue vstr( MOT_STRING, ut_newstring(cs->s,cs_tstr(cs)) );
+		push( econst, fs_findconst( cs->fs, vstr ) );
 		cs_tnext(cs);
 	}
 	else if ( cs_keyworld(cs,kw_function) )
@@ -495,24 +500,45 @@ void	sm_exp::primary()
 	}
 	else if ( cs_ttype( cs, tt_identifier ) )
 	{
-		sm_func*	func  = cs->fs;
-		sm_block*	block = func->bs;
-		MnIndex idx = block->findlocal( cs_tstr(cs) );
-		if ( idx < 0 )
-		{
-			push( eglobal, cs_findconst( cs, cs_tstr(cs) ) );
-		}
-		else
-		{
-			push( evariable, idx );
-		}
-
+		expdesc exp;
+		varexp(cs->fs,exp);
+		push( exp.type, exp.idx );
 		cs_tnext(cs);
 	}
 	else if ( cs_toptional( cs, '(' ) )
 	{
 		exp_order();
 		cs_toptional( cs, ')' );
+	}
+}
+
+void	sm_exp::varexp( sm_func* fs, expdesc& exp ) 
+{
+	if ( fs )
+	{
+		sm_block*	block = fs->bs;
+		MnIndex idx = block->findlocal( cs_tstr(cs) );
+		if ( idx >= 0 )
+		{
+			exp.type = evariable;
+			exp.idx = idx;
+		}
+		else
+		{
+			varexp( fs->last, exp );
+			if ( exp.type != eglobal )
+			{
+				fs->upvals.push_back( exp );
+				exp.type = eupval;
+				exp.idx	 = fs->upvals.size() - 1;
+			}
+		}
+	}
+	else
+	{
+		MnValue vstr( MOT_STRING, ut_newstring(cs->s,cs_tstr(cs)) );
+		exp.type = eglobal;
+		exp.idx = fs_findconst( cs->fs, vstr );;
 	}
 }
 
@@ -537,14 +563,18 @@ void sm_exp::funcexp()
 		cs_texpected(cs,'{');
 		statements(cs);
 		cs_texpected(cs,'}');
-		cs_addcode( cs, cs_code( op_return, 0, 0, 0 ) );
+
+
+		sm_func* fs = cs->fs;
+		OvShort idx = fs_findconst( fs->last, MnValue( MOT_FUNCPROTO, fs->f ) );
+		fs_addcode( fs->last, cs_code( op_newclosure, push(eclosure), idx, fs->upvals.size() ) );
+		for each ( const expdesc& exp in fs->upvals )
+		{
+			fs_addcode( fs->last, cs_code( (exp.type==eupval? op_getupval:op_move), exp.idx, idx, 0 ) );
+		}
 
 		cs_end_block(cs);
-
-		MnMFunction* func = cs->fs->f;
 		cs_end_func(cs);
-		OvShort idx = cs_findconst( cs, MnValue( MOT_FUNCPROTO, func ) );
-		cs_addcode( cs, cs_code( op_newclosure, push(eclosure), idx, 0 ) );
 	}
 }
 //////////////////////////////////////////////////////////////////////////
@@ -553,9 +583,9 @@ void sm_exp::funcexp()
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-OvShort cs_findconst( compile_state* cs, const MnValue& val )
+OvShort fs_findconst( sm_func* fs, const MnValue& val )
 {
-	MnMFunction* func = cs->fs->f;
+	MnMFunction* func = fs->f;
 	if ( MnIsNumber(val) || MnIsString(val) )
 	{
 		for ( MnIndex i = 0; i < func->consts.size(); ++i )
@@ -573,16 +603,6 @@ OvShort cs_findconst( compile_state* cs, const MnValue& val )
 	}
 	func->consts.push_back( val );
 	return cs_const( func->consts.size() - 1 );
-}
-
-OvShort		cs_findconst( compile_state* cs, const MnNumber& val )
-{
-	return cs_findconst( cs, MnValue(val) );
-}
-
-OvShort		cs_findconst( compile_state* cs, const OvString& val )
-{
-	return cs_findconst( cs, MnValue( MOT_STRING, ut_newstring(cs->s,val) ));
 }
 
 OvReal&		cs_tnum( compile_state* cs ) { static OvReal temp=0; return (( cs->tok )? cs->tok->num:temp);};
@@ -735,6 +755,7 @@ void	cs_end_func( compile_state* cs )
 {
 	sm_func* fs	= cs->fs;
 	fs->f->maxstack = fs->maxstack;
+	fs_addcode( cs->fs, cs_code( op_return, 0, 0, 0 ) );
 	cs->fs = fs->last;
 	ut_free( fs );
 }
@@ -752,12 +773,14 @@ void	cs_end_block( compile_state* cs )
 {
 	sm_block* bs	= cs->fs->bs;
 	cs->fs->bs		= bs->outer;
+	OvShort base	= cs->fs->bs? cs->fs->bs->nlocals():0;
+	fs_addcode( cs->fs, cs_code(op_close_upval,0,base,0) );
 	ut_free( bs );
 }
 
-void		cs_addcode( compile_state* cs, const MnInstruction& i )
+void		fs_addcode( sm_func* fs, const MnInstruction& i )
 {
-	cs->fs->f->codes.push_back( i );
+	fs->f->codes.push_back( i );
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -772,7 +795,7 @@ MnValue	load_entrance( MnState* s, const OvString& file )
 	cs_begin_func(&cs);
 	cs_begin_block(&cs);
 	statements(&cs);
-	cs_addcode( &cs, cs_code( op_return, 0, 0, 0 ) );
+	fs_addcode( cs.fs, cs_code( op_return, 0, 0, 0 ) );
 	MnMFunction* func = cs.fs->f;
 	cs_end_block(&cs);
 	cs_end_func(&cs);
@@ -812,8 +835,6 @@ void		stat_block( compile_state* cs )
 		statements(cs);
 		cs_texpected(cs,'}');
 		cs_end_block(cs);
-
-		cs_addcode( cs, cs_code(op_close_upval,0,begin,0) );
 	}
 };
 
@@ -857,10 +878,10 @@ void stat_return( compile_state* cs )
 		OvShort idx = eret.top();
 		if ( !(idx < 0) )
 		{
-			cs_addcode( cs, cs_code( op_move, cs->fs->maxstack++, idx, 0 ) );
+			fs_addcode( cs->fs, cs_code( op_move, cs->fs->maxstack++, idx, 0 ) );
 		}
 
-		cs_addcode( cs, cs_code( op_return, !(idx < 0), 0, 0 ) );
+		fs_addcode( cs->fs, cs_code( op_return, !(idx < 0), 0, 0 ) );
 	}
 }
 
@@ -931,6 +952,29 @@ void excuter_ver_0_0_3( MnState* s )
 				MnClosure* cls = ut_newMclosure( s );
 				cls->u.m->func = vB;
 				vA = MnValue( MOT_CLOSURE, cls );
+				OvUInt links = oC;
+				while (links--)
+				{
+					i = *s->pc++;
+					MnValue v;
+					switch ( iOP )
+					{
+					case op_getupval :
+						{
+							v = ut_getupval(s, iA );
+						}
+						break;
+					case op_move :
+						{
+							MnUpval* upval = ut_newupval(s);
+							upval->link = &vA;
+							s->openeduv.insert( upval );
+							v = MnValue( MOT_UPVAL, upval );
+						}
+						break;
+					}
+					cls->upvals.push_back( v );
+				}
 			}
 			break;
 

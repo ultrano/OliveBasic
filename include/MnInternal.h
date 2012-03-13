@@ -1511,7 +1511,6 @@ MnValue ut_meta_call( MnState* s, MnValue& c )
 //////////////////////////////////////////////////////////////////////////
 void ut_restore_ci( MnState* s, OvInt nret ) 
 {
-	ut_close_upval( s, s->base );
 	MnValue* vfunc		= s->base;
 	MnValue* first_ret  = s->top - nret;
 	first_ret = max( vfunc, first_ret );
