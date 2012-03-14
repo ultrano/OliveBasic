@@ -82,6 +82,7 @@ enum toktype
 struct s_token
 {
 	s_token() : next(NULL), prev(NULL), type(0) {};
+	s_token( const OvString* s ) : next(NULL), prev(NULL), type(0) { str = s; };
 	s_token*	next;
 	s_token*	prev;
 
@@ -89,7 +90,7 @@ struct s_token
 	union
 	{
 		OvReal	num;
-		OvString* str;
+		const OvString* str;
 	};
 };
 
@@ -172,9 +173,9 @@ OvBool		cs_ttype( compile_state* cs, OvInt type );
 OvBool		cs_toptional( compile_state* cs, OvInt type );
 OvBool		cs_texpected( compile_state* cs, OvInt type );
 OvReal&		cs_tnum( compile_state* cs );
-OvString&	cs_tstr( compile_state* cs );
+const OvString&	cs_tstr( compile_state* cs );
 OvBool		cs_keyworld( compile_state* cs, keyworld kw );
-OvString*	cs_new_str( compile_state* cs, OvString& str );
+const OvString*	cs_new_str( compile_state* cs, OvString& str );
 s_token*	cs_new_tok( compile_state* cs, OvChar type );
 void		cs_scan( compile_state* cs );
 void		cs_scan_file( compile_state* cs, const OvString& file );
@@ -641,7 +642,7 @@ OvShort fs_findconst( sm_func* fs, const MnValue& val )
 }
 
 OvReal&		cs_tnum( compile_state* cs ) { static OvReal temp=0; return (( cs->tok )? cs->tok->num:temp);};
-OvString&	cs_tstr( compile_state* cs ) { static OvString temp; return (( cs->tok )? *(cs->tok->str):temp);};
+const OvString&	cs_tstr( compile_state* cs ) { static OvString temp; return (( cs->tok )? *(cs->tok->str):temp);};
 
 void		cs_tnext( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL; };
 void		cs_tprev( compile_state* cs ) 	{ cs->tok = (cs->tok)? cs->tok->next : NULL; };
@@ -673,7 +674,7 @@ void		cs_scan_file( compile_state* cs, const OvString& file )
 	cs_scan(cs);
 }
 
-OvString* cs_new_str( compile_state* cs, OvString& str ) 
+const OvString* cs_new_str( compile_state* cs, OvString& str ) 
 {
 	compile_state::set_str::iterator itor = cs->strset.find( str );
 	if ( itor == cs->strset.end() )
@@ -687,6 +688,24 @@ OvString* cs_new_str( compile_state* cs, OvString& str )
 s_token* cs_new_tok( compile_state* cs, OvInt type ) 
 {
 	s_token* tok = new(ut_alloc( sizeof(s_token) )) s_token;
+	tok->type = type;
+
+	if ( !cs->head )
+	{
+		cs->head = tok;
+		cs->tok = tok;
+	}
+	if ( cs->tail ) cs->tail->next = tok;
+
+	tok->prev = cs->tail;
+	cs->tail  = tok;
+
+	return tok;
+}
+
+s_token* cs_new_tok( compile_state* cs, OvInt type, const OvString* s ) 
+{
+	s_token* tok = new(ut_alloc( sizeof(s_token) )) s_token(s);
 	tok->type = type;
 
 	if ( !cs->head )
@@ -747,7 +766,7 @@ void cs_scan( compile_state* cs )
 			} while ( cp_read() && c != '"' );
 			cp_read();
 
-			cs_new_tok( cs, tt_string )->str = cs_new_str(cs, str);
+			cs_new_tok( cs, tt_string, cs_new_str(cs, str) );
 		}
 		else if ( isalpha(c) || c == '_' )
 		{
@@ -757,7 +776,7 @@ void cs_scan( compile_state* cs )
 				str.push_back(c);
 			} while ( cp_read() && (isalnum(c) || c == '_') );
 
-			cs_new_tok( cs, tt_identifier )->str = cs_new_str(cs, str);
+			cs_new_tok( cs, tt_identifier, cs_new_str(cs, str) );
 		}
 		else if ( isspace( c ) )
 		{
