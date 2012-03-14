@@ -52,6 +52,17 @@ enum opcode
 	op_sub,
 	op_mul,
 	op_div,
+	op_mod,
+	
+	op_push,
+	op_pull,
+
+	op_bit_or,
+	op_bit_xor,
+	op_bit_and,
+
+	op_or,
+	op_and,
 
 	op_move,
 
@@ -74,9 +85,9 @@ enum opcode
 
 enum toktype
 {
-	tt_string		= 256,
-	tt_number		= 257,
-	tt_identifier	= 258,
+	tt_identifier	= 256,
+	tt_string		= 257,
+	tt_number		= 258,
 	tt_eos			= 259,
 };
 struct s_token
@@ -114,7 +125,7 @@ struct expdesc
 	OvShort idx;
 };
 
-enum keyworld
+enum keyword
 {
 	kw_unknown	= 0,
 	kw_true,
@@ -174,7 +185,8 @@ OvBool		cs_toptional( compile_state* cs, OvInt type );
 OvBool		cs_texpected( compile_state* cs, OvInt type );
 OvReal&		cs_tnum( compile_state* cs );
 const OvString&	cs_tstr( compile_state* cs );
-OvBool		cs_keyworld( compile_state* cs, keyworld kw );
+OvBool		cs_keyword( compile_state* cs, keyword kw );
+OvBool		cs_kwoptional( compile_state* cs, keyword kw );
 const OvString*	cs_new_str( compile_state* cs, OvString& str );
 s_token*	cs_new_tok( compile_state* cs, OvChar type );
 void		cs_scan( compile_state* cs );
@@ -283,6 +295,12 @@ public:
 
 	void			statexp();
 	void			exp_order();
+	void			exp_order9();
+	void			exp_order8();
+	void			exp_order7();
+	void			exp_order6();
+	void			exp_order5();
+	void			exp_order4();
 	void			exp_order3();
 	void			exp_order2();
 	void			exp_order1();
@@ -401,11 +419,11 @@ void	sm_exp::statexp()
 
 void	sm_exp::exp_order()
 {
-	exp_order3();
+	exp_order9();
 }
-void	sm_exp::exp_order3()
+void	sm_exp::exp_order9()
 {
-	exp_order2();
+	exp_order8();
 	while ( cs_toptional( cs, '=' ) )
 	{
 		exp_order();
@@ -429,6 +447,79 @@ void	sm_exp::exp_order3()
 	}
 }
 
+void	sm_exp::exp_order8()
+{
+	exp_order7();
+	while ( cs_kwoptional( cs, kw_or ) )
+	{
+		exp_order7();
+		OvShort reg2 = top();pop();
+		OvShort reg1 = top();pop();
+		fs_addcode( cs->fs, cs_code( op_or, push(), reg1, reg2 ) );
+	}
+}
+
+void	sm_exp::exp_order7()
+{
+	exp_order6();
+	while ( cs_kwoptional( cs, kw_and ) )
+	{
+		exp_order6();
+		OvShort reg2 = top();pop();
+		OvShort reg1 = top();pop();
+		fs_addcode( cs->fs, cs_code( op_and, push(), reg1, reg2 ) );
+	}
+}
+
+void	sm_exp::exp_order6()
+{
+	exp_order5();
+	while ( !cs_keyword( cs, kw_or ) && cs_toptional( cs, '|' ) )
+	{
+		exp_order5();
+		OvShort reg2 = top();pop();
+		OvShort reg1 = top();pop();
+		fs_addcode( cs->fs, cs_code( op_bit_or, push(), reg1, reg2 ) );
+	}
+}
+
+void	sm_exp::exp_order5()
+{
+	exp_order4();
+	while ( cs_toptional( cs, '^' ) )
+	{
+		exp_order4();
+		OvShort reg2 = top();pop();
+		OvShort reg1 = top();pop();
+		fs_addcode( cs->fs, cs_code( op_bit_xor, push(), reg1, reg2 ) );
+	}
+}
+
+void	sm_exp::exp_order4()
+{
+	exp_order3();
+	while ( !cs_keyword( cs, kw_and ) && cs_toptional( cs, '&' ) )
+	{
+		exp_order3();
+		OvShort reg2 = top();pop();
+		OvShort reg1 = top();pop();
+		fs_addcode( cs->fs, cs_code( op_bit_and, push(), reg1, reg2 ) );
+	}
+}
+
+void	sm_exp::exp_order3()
+{
+	exp_order2();
+	while ( cs_keyword( cs, kw_push ) || cs_keyword( cs, kw_pull ) )
+	{
+		opcode op = cs_kwoptional( cs, kw_push )? op_push : cs_kwoptional( cs, kw_pull )? op_pull : op_none;
+		exp_order2();
+		OvShort reg2 = top();pop();
+		OvShort reg1 = top();pop();
+		fs_addcode( cs->fs, cs_code( op, push(), reg1, reg2 ) );
+	}
+}
+
 void	sm_exp::exp_order2()
 {
 	exp_order1();
@@ -445,9 +536,9 @@ void	sm_exp::exp_order2()
 void	sm_exp::exp_order1()
 {
 	term();
-	while ( cs_ttype( cs, '*' ) || cs_ttype( cs, '/' ) )
+	while ( cs_ttype( cs, '*' ) || cs_ttype( cs, '/' ) || cs_ttype( cs, '%' ) )
 	{
-		opcode op = cs_toptional( cs, '*' )? op_mul : cs_toptional( cs, '/' )? op_div : op_none;
+		opcode op = cs_toptional( cs, '*' )? op_mul : cs_toptional( cs, '/' )? op_div : cs_toptional( cs, '%' )? op_mod : op_none;
 		term();
 		OvShort reg2 = top();pop();
 		OvShort reg1 = top();pop();
@@ -510,7 +601,7 @@ void	sm_exp::primary()
 		push( econst, fs_findconst( cs->fs, vstr ) );
 		cs_tnext(cs);
 	}
-	else if ( cs_keyworld(cs,kw_function) )
+	else if ( cs_keyword(cs,kw_function) )
 	{
 		funcexp();
 	}
@@ -579,7 +670,7 @@ void	sm_exp::varexp( sm_func* fs, expdesc& exp )
 
 void sm_exp::funcexp() 
 {
-	if ( cs_keyworld(cs,kw_function) )
+	if ( cs_keyword(cs,kw_function) )
 	{
 		cs_tnext(cs);
 
@@ -660,9 +751,43 @@ OvBool		cs_texpected( compile_state* cs, OvInt type )
 	return false;
 }
 
-OvBool		cs_keyworld( compile_state* cs, keyworld kw )
+OvBool		cs_keyword( compile_state* cs, keyword kw )
 {
 	if ( cs_ttype(cs,tt_identifier) ) return ( cs_tstr(cs) == g_kwtable[kw] );
+	else if ( cs->tok->type < tt_identifier )
+	{
+		s_token* tok = cs->tok;
+		OvString str;
+		while ( cs->tok->type < tt_identifier )
+		{
+			str.push_back( (char)cs->tok->type );
+			cs_tnext(cs);
+		}
+		cs->tok = tok;
+		return ( str == g_kwtable[kw] );
+	}
+	return false;
+}
+
+OvBool		cs_kwoptional( compile_state* cs, keyword kw )
+{
+	if ( cs_ttype(cs,tt_identifier) ) return ( cs_tstr(cs) == g_kwtable[kw] );
+	else if ( cs->tok->type < tt_identifier )
+	{
+		s_token* tok = cs->tok;
+		OvString str;
+		while ( cs->tok->type < tt_identifier )
+		{
+			str.push_back( (char)cs->tok->type );
+			cs_tnext(cs);
+		}
+		if ( str == g_kwtable[kw] ) return true;
+		else
+		{
+			cs->tok = tok;
+			return false;
+		}
+	}
 	return false;
 }
 
@@ -865,9 +990,9 @@ void statements( compile_state* cs )
 OvBool stat( compile_state* cs )
 {
 	if ( cs_ttype(cs,'{') )				 	{ stat_block( cs ); return true; }
-	else if ( cs_keyworld(cs,kw_local) ) 	{ stat_local(cs); return true; }
-	else if ( cs_keyworld(cs,kw_global) ) 	{ stat_global(cs); return true; }
-	else if ( cs_keyworld(cs,kw_return) ) 	{ stat_return(cs); return true; }
+	else if ( cs_keyword(cs,kw_local) ) 	{ stat_local(cs); return true; }
+	else if ( cs_keyword(cs,kw_global) ) 	{ stat_global(cs); return true; }
+	else if ( cs_keyword(cs,kw_return) ) 	{ stat_return(cs); return true; }
 	else if ( cs_toptional(cs,';') )		{ return true; }
 	else if ( cs_toptional(cs,tt_eos) ) 		{ return false; }
 	else
@@ -895,7 +1020,7 @@ void		stat_block( compile_state* cs )
 
 void stat_local( compile_state* cs ) 
 {
-	if ( cs_keyworld(cs,kw_local) )
+	if ( cs_keyword(cs,kw_local) )
 	{
 		cs_tnext(cs);
 		if ( cs_ttype(cs,tt_identifier) )
@@ -912,7 +1037,7 @@ void stat_local( compile_state* cs )
 
 void stat_global( compile_state* cs ) 
 {
-	if ( cs_keyworld(cs,kw_global) )
+	if ( cs_keyword(cs,kw_global) )
 	{
 		cs_tnext(cs);
 		if ( cs_ttype(cs,tt_identifier) )
@@ -925,7 +1050,7 @@ void stat_global( compile_state* cs )
 
 void stat_return( compile_state* cs )
 {
-	if ( cs_keyworld(cs,kw_return) )
+	if ( cs_keyword(cs,kw_return) )
 	{
 		cs_tnext(cs);
 
@@ -985,6 +1110,30 @@ void excuter_ver_0_0_3( MnState* s )
 			break;
 		case op_div :
 			vA = MnToNumber(vB) / MnToNumber(vC);
+			break;
+
+		case op_push :
+			vA = (MnNumber)((OvInt)MnToNumber(vB) << (OvInt)MnToNumber(vC));
+			break;
+		case op_pull :
+			vA = (MnNumber)((OvInt)MnToNumber(vB) >> (OvInt)MnToNumber(vC));
+			break;
+
+		case op_bit_or :
+			vA = (MnNumber)((OvInt)MnToNumber(vB) | (OvInt)MnToNumber(vC));
+			break;
+		case op_bit_xor :
+			vA = (MnNumber)((OvInt)MnToNumber(vB) ^ (OvInt)MnToNumber(vC));
+			break;
+		case op_bit_and :
+			vA = (MnNumber)((OvInt)MnToNumber(vB) & (OvInt)MnToNumber(vC));
+			break;
+
+		case op_or :
+			vA = ut_toboolean(vB) || ut_toboolean(vC);
+			break;
+		case op_and :
+			vA = ut_toboolean(vB) && ut_toboolean(vC);
 			break;
 
 		case op_move :

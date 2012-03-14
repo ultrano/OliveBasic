@@ -1221,6 +1221,10 @@ MnNumber ut_tonumber( const MnValue& val )
 		MnNumber num; 
 		if (ut_str2num( MnToString(val)->get_str(), num ) ) return num;;
 	}
+	else if ( MnIsBoolean(val) )
+	{
+		return MnToBoolean(val)? 1.0 : 0.0;
+	}
 	return 0;
 }
 
@@ -1235,6 +1239,10 @@ OvString ut_tostring( const MnValue& val )
 		OvString str;
 		ut_num2str( MnToNumber(val), str );
 		return str;
+	}
+	else if ( MnIsBoolean(val) )
+	{
+		return (MnToBoolean(val)? "true":"false");
 	}
 	static OvString empty;
 	return empty;
