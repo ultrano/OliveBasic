@@ -1,3 +1,8 @@
 
-
-print( (1 && 0) );
+local foo;
+if (1)
+{
+	local var = true;
+	foo = function () {print(var)};
+}
+foo();

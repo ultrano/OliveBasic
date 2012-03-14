@@ -79,6 +79,9 @@ enum opcode
 
 	op_close_upval,
 
+	op_jmp,
+	op_fjp,
+
 	op_call,
 	op_return,
 };
@@ -128,6 +131,7 @@ struct expdesc
 enum keyword
 {
 	kw_unknown	= 0,
+	kw_nil,
 	kw_true,
 	kw_false,
 	kw_function,
@@ -153,6 +157,7 @@ enum keyword
 const OvChar* g_kwtable[] = 
 {
 	"unknown",
+	"nil",
 	"true",
 	"false",
 	"function",
@@ -202,6 +207,7 @@ void		stat_local( compile_state* cs );
 void		stat_global( compile_state* cs );
 void		stat_block( compile_state* cs );
 void		stat_return( compile_state* cs );
+void		stat_if( compile_state* cs );
 OvBool		stat( compile_state* cs );
 void		statements( compile_state* cs );
 void		stat_entrance( compile_state* cs );
@@ -601,6 +607,10 @@ void	sm_exp::primary()
 		push( econst, fs_findconst( cs->fs, vstr ) );
 		cs_tnext(cs);
 	}
+	else if ( cs_keyword(cs,kw_true) || cs_keyword(cs,kw_false) )
+	{
+		push( econst, fs_findconst( cs->fs, MnValue( cs_kwoptional(cs,kw_true)? true : cs_kwoptional(cs,kw_false)? false : false ) ) );
+	}
 	else if ( cs_keyword(cs,kw_function) )
 	{
 		funcexp();
@@ -713,7 +723,7 @@ void sm_exp::funcexp()
 OvShort fs_findconst( sm_func* fs, const MnValue& val )
 {
 	MnMFunction* func = fs->f;
-	if ( MnIsNumber(val) || MnIsString(val) )
+	if ( MnIsNil(val) || MnIsBoolean(val) || MnIsNumber(val) || MnIsString(val) )
 	{
 		for ( MnIndex i = 0; i < func->consts.size(); ++i )
 		{
@@ -723,6 +733,14 @@ OvShort fs_findconst( sm_func* fs, const MnValue& val )
 				return cs_const( i );
 			}
 			else if ( MnIsString(val) && MnIsString(v) && (MnToString(v)->get_str() == MnToString(val)->get_str()) )
+			{
+				return cs_const( i );
+			}
+			else if ( MnIsBoolean(val) && MnIsBoolean(v) && (MnToBoolean(val)==MnToBoolean(v)) )
+			{
+				return cs_const( i );
+			}
+			else if ( MnIsNil(v) )
 			{
 				return cs_const( i );
 			}
@@ -771,7 +789,11 @@ OvBool		cs_keyword( compile_state* cs, keyword kw )
 
 OvBool		cs_kwoptional( compile_state* cs, keyword kw )
 {
-	if ( cs_ttype(cs,tt_identifier) ) return ( cs_tstr(cs) == g_kwtable[kw] );
+	if ( cs_ttype(cs,tt_identifier) && ( cs_tstr(cs) == g_kwtable[kw] ) )
+	{
+		cs_tnext(cs);
+		return true;
+	}
 	else if ( cs->tok->type < tt_identifier )
 	{
 		s_token* tok = cs->tok;
@@ -993,6 +1015,7 @@ OvBool stat( compile_state* cs )
 	else if ( cs_keyword(cs,kw_local) ) 	{ stat_local(cs); return true; }
 	else if ( cs_keyword(cs,kw_global) ) 	{ stat_global(cs); return true; }
 	else if ( cs_keyword(cs,kw_return) ) 	{ stat_return(cs); return true; }
+	else if ( cs_keyword(cs,kw_if) ) 		{ stat_if(cs); return true; }
 	else if ( cs_toptional(cs,';') )		{ return true; }
 	else if ( cs_toptional(cs,tt_eos) ) 		{ return false; }
 	else
@@ -1017,6 +1040,41 @@ void		stat_block( compile_state* cs )
 		fs_addcode( cs->fs, cs_code(op_close_upval,0,begin,0) );
 	}
 };
+
+void		stat_if( compile_state* cs )
+{
+	if ( cs_kwoptional(cs,kw_if) )
+	{
+		cs_texpected(cs,'(');
+		sm_exp exp(cs);
+		exp.statexp();
+		cs_texpected(cs,')');
+
+		OvInt ifjmp = cs->fs->f->codes.size();
+		fs_addcode( cs->fs, cs_code(op_fjp,0,0,exp.top()) );
+
+		stat(cs);
+
+		OvInt elsejmp = cs->fs->f->codes.size();
+
+		if ( cs_kwoptional(cs,kw_else) )
+		{
+			fs_addcode( cs->fs, cs_code(op_jmp,0,0,0) );
+			stat(cs);
+			cs_seta( cs->fs->f->codes[elsejmp], cs->fs->f->codes.size() - elsejmp );
+			++elsejmp;
+		}
+		cs_seta( cs->fs->f->codes[ifjmp], elsejmp - ifjmp );
+	}
+}
+
+void		stat_else( compile_state* cs )
+{
+	if ( cs_kwoptional(cs,kw_else) )
+	{
+		stat(cs);
+	}
+}
 
 void stat_local( compile_state* cs ) 
 {
@@ -1193,6 +1251,13 @@ void excuter_ver_0_0_3( MnState* s )
 
 		case op_close_upval :
 				ut_close_upval( s, s->base + oB );
+			break;
+
+		case op_fjp :
+			if ( !ut_toboolean(vC) ) s->pc += oA - 1;
+			break;
+		case op_jmp :
+			s->pc += oA - 1;
 			break;
 
 		case op_call :
