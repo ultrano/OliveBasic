@@ -14,6 +14,7 @@ class 	sm_exp;
 #define asize 	(8)
 #define bsize 	(9)
 #define csize 	(9)
+#define isize	(opsize+asize+bsize+csize)
 
 #define oppos	(0)
 #define apos	(oppos + opsize)
@@ -26,10 +27,10 @@ class 	sm_exp;
 #define cs_geta(i)		(cs_getbit( i, asize, apos ))
 #define cs_seta(i,a)	(cs_setbit( i, asize, apos, a ))
 
-#define cs_getb(i)		(cs_getbit( i, bsize, bpos ))
+#define cs_getb(i)		(cs_getbit( i, bsize, bpos ) | ((-cs_getbit( i, 1, bpos + bsize - 1 ))<<bsize) )
 #define cs_setb(i,b)	(cs_setbit( i, bsize, bpos, b ))
 
-#define cs_getc(i)		(cs_getbit( i, csize, cpos ))
+#define cs_getc(i)		(cs_getbit( i, csize, cpos ) | ((-cs_getbit( i, 1, cpos + csize - 1 ))<<csize) )
 #define cs_setc(i,c)	(cs_setbit( i, csize, cpos, c ))
 
 #define cs_isconst(v)	(!!(cs_bit1(1,asize)&(v)))
@@ -203,12 +204,13 @@ void		cs_end_func( compile_state* cs );
 void		cs_begin_block( compile_state* cs );
 void		cs_end_block( compile_state* cs );
 
+OvBool		stat( compile_state* cs );
 void		stat_local( compile_state* cs );
 void		stat_global( compile_state* cs );
 void		stat_block( compile_state* cs );
 void		stat_return( compile_state* cs );
 void		stat_if( compile_state* cs );
-OvBool		stat( compile_state* cs );
+void		stat_while( compile_state* cs );
 void		statements( compile_state* cs );
 void		stat_entrance( compile_state* cs );
 
@@ -1016,6 +1018,7 @@ OvBool stat( compile_state* cs )
 	else if ( cs_keyword(cs,kw_global) ) 	{ stat_global(cs); return true; }
 	else if ( cs_keyword(cs,kw_return) ) 	{ stat_return(cs); return true; }
 	else if ( cs_keyword(cs,kw_if) ) 		{ stat_if(cs); return true; }
+	else if ( cs_keyword(cs,kw_while) ) 	{ stat_while(cs); return true; }
 	else if ( cs_toptional(cs,';') )		{ return true; }
 	else if ( cs_toptional(cs,tt_eos) ) 		{ return false; }
 	else
@@ -1061,18 +1064,34 @@ void		stat_if( compile_state* cs )
 		{
 			fs_addcode( cs->fs, cs_code(op_jmp,0,0,0) );
 			stat(cs);
-			cs_seta( cs->fs->f->codes[elsejmp], cs->fs->f->codes.size() - elsejmp );
+			cs_setb( cs->fs->f->codes[elsejmp], cs->fs->f->codes.size() - elsejmp );
 			++elsejmp;
 		}
-		cs_seta( cs->fs->f->codes[ifjmp], elsejmp - ifjmp );
+		cs_setb( cs->fs->f->codes[ifjmp], elsejmp - ifjmp );
 	}
 }
 
-void		stat_else( compile_state* cs )
+void		stat_while( compile_state* cs )
 {
-	if ( cs_kwoptional(cs,kw_else) )
+	if ( cs_kwoptional(cs,kw_while) )
 	{
+		OvInt begin = cs->fs->f->codes.size();
+
+		cs_texpected(cs,'(');
+		sm_exp exp(cs);
+		exp.statexp();
+		cs_texpected(cs,')');
+
+		OvInt fjmp = cs->fs->f->codes.size();
+		fs_addcode( cs->fs, cs_code(op_fjp,0,0,exp.top()) );
+
 		stat(cs);
+
+		OvInt end = cs->fs->f->codes.size();
+		fs_addcode( cs->fs, cs_code(op_jmp,0,0,exp.top()) );
+
+		cs_setb( cs->fs->f->codes[fjmp], end - fjmp );
+		cs_setb( cs->fs->f->codes[end], begin - end );
 	}
 }
 
@@ -1154,7 +1173,7 @@ void excuter_ver_0_0_3( MnState* s )
 	{
 		MnInstruction i = *s->pc++;
 		MnIndex aidx = iA;
-		MnIndex bidx = iB;
+		MnIndex bidx = oB;
 		switch ( iOP )
 		{
 		case op_add :
@@ -1254,10 +1273,10 @@ void excuter_ver_0_0_3( MnState* s )
 			break;
 
 		case op_fjp :
-			if ( !ut_toboolean(vC) ) s->pc += oA - 1;
+			if ( !ut_toboolean(vC) ) s->pc += oB - 1;
 			break;
 		case op_jmp :
-			s->pc += oA - 1;
+			s->pc += oB - 1;
 			break;
 
 		case op_call :
