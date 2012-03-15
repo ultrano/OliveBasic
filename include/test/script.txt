@@ -1,8 +1,6 @@
 
 local var = 0;
 
-local foo = function ()
-{
 	while (1)
 	{
 		var = var + 1;
@@ -11,9 +9,7 @@ local foo = function ()
 		if ( local & 16 )
 		{
 			var = function(){print("¤»¤»¤»");print(local);};
-			return;
+			break;
 		}
 	}
-}
-foo();
 var();

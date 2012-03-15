@@ -128,6 +128,7 @@ void		stat_block( compile_state* cs );
 void		stat_return( compile_state* cs );
 void		stat_if( compile_state* cs );
 void		stat_while( compile_state* cs );
+void		stat_break( compile_state* cs );
 void		statements( compile_state* cs );
 void		stat_entrance( compile_state* cs );
 
@@ -162,11 +163,9 @@ struct compile_state
 
 	s_token*		head;
 	s_token*		tail;
-
 	s_token*		tok;
-
 	sm_func*		fs;
-
+	OvVector<OvInt> breaks;
 };
 
 struct upvaldesc
@@ -936,6 +935,7 @@ OvBool stat( compile_state* cs )
 	else if ( cs_keyword(cs,kw_return) ) 	{ stat_return(cs); return true; }
 	else if ( cs_keyword(cs,kw_if) ) 		{ stat_if(cs); return true; }
 	else if ( cs_keyword(cs,kw_while) ) 	{ stat_while(cs); return true; }
+	else if ( cs_keyword(cs,kw_break) ) 	{ stat_break(cs); return true; }
 	else if ( cs_toptional(cs,';') )		{ return true; }
 	else if ( cs_toptional(cs,tt_eos) ) 		{ return false; }
 	else
@@ -999,16 +999,33 @@ void		stat_while( compile_state* cs )
 		exp.statexp();
 		cs_texpected(cs,')');
 
+		OvInt fix  = cs->breaks.size();
 		OvInt fjmp = cs->fs->f->codes.size();
 		fs_addcode( cs->fs, cs_code(op_fjp,0,0,exp.top()) );
 
 		stat(cs);
 
 		OvInt end = cs->fs->f->codes.size();
-		fs_addcode( cs->fs, cs_code(op_jmp,0,0,exp.top()) );
+		fs_addcode( cs->fs, cs_code(op_jmp,0,0,0) );
 
-		cs_setb( cs->fs->f->codes[fjmp], end - fjmp );
+		cs_setb( cs->fs->f->codes[fjmp], end - fjmp + 1 );
 		cs_setb( cs->fs->f->codes[end], begin - end );
+		for ( OvInt i = fix ; i < cs->breaks.size() ; ++i )
+		{
+			MnIndex brk = cs->breaks[i];
+			cs_setb( cs->fs->f->codes[ brk ], end - brk + 1 );
+		}
+		cs->breaks.resize(fix);
+	}
+}
+
+void		stat_break( compile_state* cs )
+{
+	if ( cs_kwoptional(cs,kw_break) )
+	{
+		fs_addcode( cs->fs, cs_code(op_close_upval,0,0,0) );
+		cs->breaks.push_back( cs->fs->f->codes.size() );
+		fs_addcode( cs->fs, cs_code(op_jmp,0,0,0) );
 	}
 }
 
@@ -1044,10 +1061,8 @@ void stat_global( compile_state* cs )
 
 void stat_return( compile_state* cs )
 {
-	if ( cs_keyword(cs,kw_return) )
+	if ( cs_kwoptional(cs,kw_return) )
 	{
-		cs_tnext(cs);
-
 		sm_exp eret(cs);
 		eret.statexp();
 		OvShort idx = eret.top();
