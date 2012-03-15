@@ -253,7 +253,7 @@ public:
 	MnInstruction*	pc;
 	MnClosure*		cls;
 	MnMFunction*	func;
-
+	OvUInt			accumid;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -377,6 +377,7 @@ public:
 
 	/* field */
 	MnState*const 	state;
+	const OvUInt	id;
 	MnRefCounter*	refcnt;
 
 	MnObject*	next;
@@ -390,6 +391,7 @@ public:
 
 MnObject::MnObject( MnState* s ) 
 : state(s)
+, id(++s->accumid)
 , next(NULL)
 , prev(NULL)
 , mark(UNMARKED)

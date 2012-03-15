@@ -24,6 +24,7 @@ MnState* mn_openstate()
 	s->pc	= NULL;
 	s->cls	= NULL;
 	s->func	= NULL;
+	s->accumid = 0;
 	ut_ensure_stack(s,1);
 	return s;
 }
