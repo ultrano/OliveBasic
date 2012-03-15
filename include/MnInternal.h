@@ -1789,8 +1789,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 
 					if ( cls->type == CCL )
 					{
-						MnClosure::CClosure* ccl = cls->u.c;
-						ut_restore_ci(s, ccl->func(s) );
+						ut_restore_ci(s, cls->u.c->func(s) );
 					}
 					else
 					{

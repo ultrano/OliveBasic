@@ -1,15 +1,15 @@
 
 local var = 0;
 
-	while (1)
+while (1)
+{
+	var = var + 1;
+	local local = var;
+	print(local);
+	if ( local & 16 )
 	{
-		var = var + 1;
-		local local = var;
-		print(local);
-		if ( local & 16 )
-		{
-			var = function(){print("せせせ");print(local);};
-			break;
-		}
+		var = function(){print("せせせ");print(local);};
+		return;
 	}
+}
 var();
