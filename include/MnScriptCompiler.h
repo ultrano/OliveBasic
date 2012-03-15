@@ -1145,7 +1145,7 @@ void stat_return( compile_state* cs )
 
 //////////////////////////////////////////////////////////////////////////
 
-void excuter_ver_0_0_3( MnState* s )
+void ut_excute_func( MnState* s, MnMFunction* func )
 {
 
 #define iOP (cs_getop(i))
@@ -1162,12 +1162,16 @@ void excuter_ver_0_0_3( MnState* s )
 #define sB ( *(s->base + 1 + iB) )
 #define sC ( *(s->base + 1 + iC) )
 
-#define cB ( MnToFunction(s->cls->u.m->func)->consts[ iB ] )
-#define cC ( MnToFunction(s->cls->u.m->func)->consts[ iC ] )
+#define cB ( s->func->consts[ iB ] )
+#define cC ( s->func->consts[ iC ] )
 
 #define vA sA
 #define vB (cs_isconst( cs_getb(i) )? cB : sB)
 #define vC (cs_isconst( cs_getc(i) )? cC : sC)
+
+	s->func	= func;
+	s->pc	= &(func->codes[0]);
+	mn_settop( s, func->maxstack );
 
 	while ( true )
 	{
@@ -1288,24 +1292,26 @@ void excuter_ver_0_0_3( MnState* s )
 					ci->prev = s->ci;
 					ci->pc	 = s->pc;
 					ci->cls  = s->cls;
+					ci->func = s->func;
 					ci->base = s->base - s->begin;
 					ci->top	 = s->top - s->begin;
 
-					s->ci		= ci;
-					s->cls		= cls;
-					s->base		= &vA;
+					s->ci	= ci;
+					s->cls	= cls;
+					s->base	= &vA;
+					s->pc	= NULL;
+					s->func	= NULL;
 
 					if ( cls->type == CCL )
 					{
-						s->pc	= NULL;
 						MnClosure::CClosure* ccl = cls->u.c;
 						ut_restore_ci(s, ccl->func(s) );
 					}
 					else
 					{
-						MnMFunction* func = MnToFunction(s->cls->u.m->func);
-						s->pc		= &(func->codes[0]);
-						mn_settop( s, func->maxstack );
+						s->func		= MnToFunction(s->cls->u.m->func);
+						s->pc		= &(s->func->codes[0]);
+						mn_settop( s, s->func->maxstack );
 					}
 				}
 

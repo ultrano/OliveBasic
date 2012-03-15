@@ -104,7 +104,6 @@ const MnTypeStr g_type_str[] =
 #define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.func: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
-void excuter_ver_0_0_3( MnState* s );
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -170,6 +169,7 @@ public:
 	MnCallInfo*		ci;
 	MnInstruction*	pc;
 	MnClosure*		cls;
+	MnMFunction*	func;
 
 };
 
@@ -182,6 +182,7 @@ public:
 	MnIndex			base;
 	MnIndex			top;
 	MnClosure*		cls;
+	MnMFunction*	func;
 	MnInstruction*	pc;
 };
 
@@ -235,6 +236,7 @@ OvInt			ut_type( const MnValue& v );
 
 MnValue			ut_getconst( MnMFunction* f, MnIndex idx );
 
+void			ut_excute_func( MnState* s, MnMFunction* func );
 //////////////////////////////////////////////////////////////////////////
 
 class MnRefCounter : public OvMemObject
@@ -1541,5 +1543,6 @@ void ut_restore_ci( MnState* s, OvInt nret )
 	s->pc	= ci->pc;
 	s->ci	= ci->prev;
 	s->cls  = ci->cls;
+	s->func = ci->func;
 	ut_free(ci);
 }
