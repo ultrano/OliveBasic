@@ -167,9 +167,9 @@ public:
 	set_upval	 upvals;
 	set_upval	 openeduv;
 
-	MnCallInfo*	 ci;
-	MnInstruction* pc;
-	MnMFunction* func;
+	MnCallInfo*		ci;
+	MnInstruction*	pc;
+	MnClosure*		cls;
 
 };
 
@@ -181,7 +181,7 @@ public:
 	MnCallInfo*		prev;
 	MnIndex			base;
 	MnIndex			top;
-	MnMFunction*	func;
+	MnClosure*		cls;
 	MnInstruction*	pc;
 };
 
@@ -999,9 +999,9 @@ MnValue ut_getarray( MnState* s, MnValue& a, MnValue& n )
 
 void ut_setupval( MnState* s, MnIndex upvalidx, MnValue& v )
 {
-	if ( ( s->base >= s->begin ) && MnIsClosure(*s->base) )
+	if ( s->cls )
 	{
-		MnClosure* cls = MnToClosure(*s->base);
+		MnClosure* cls = s->cls;
 		if ( upvalidx > 0 && upvalidx <= cls->upvals.size() )
 		{
 			MnUpval* upval = MnToUpval(cls->upvals[upvalidx - 1]);
@@ -1019,9 +1019,9 @@ MnValue ut_getupval( MnState* s, MnIndex upvalidx )
 
 MnUpval* ut_getupval_ptr( MnState* s, MnIndex upvalidx )
 {
-	if ( ( s->base >= s->begin ) && MnIsClosure(*s->base) )
+	if ( s->cls )
 	{
-		MnClosure* cls = MnToClosure(*s->base);
+		MnClosure* cls = s->cls;
 		if ( upvalidx > 0 && upvalidx <= cls->upvals.size() )
 		{
 			MnValue val = cls->upvals[upvalidx - 1];
@@ -1540,6 +1540,6 @@ void ut_restore_ci( MnState* s, OvInt nret )
 	s->base = ci->base + s->begin;
 	s->pc	= ci->pc;
 	s->ci	= ci->prev;
-	s->func	= ci->func;
+	s->cls  = ci->cls;
 	ut_free(ci);
 }

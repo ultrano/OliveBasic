@@ -22,7 +22,7 @@ MnState* mn_openstate()
 	s->top  = (MnValue*)+0;
 	s->ci	= NULL;
 	s->pc	= NULL;
-	s->func	= NULL;
+	s->cls	= NULL;
 	ut_ensure_stack(s,1);
 	return s;
 }
@@ -412,25 +412,25 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 		MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
 		ci->prev = s->ci;
 		ci->pc	 = s->pc;
-		ci->func = s->func;
+		ci->cls  = s->cls;
 		ci->base = s->base - s->begin;
 		ci->top	 = (pfunc - s->begin) + nrets;
 
+		MnClosure* cls = MnToClosure(*pfunc);
 		s->base  = pfunc;
 		s->ci	 = ci;
-		MnClosure* cls = MnToClosure(*pfunc);
+		s->cls	 = cls;
 		if ( cls->type == CCL )
 		{
 			s->pc	= NULL;
-			s->func	= NULL;
 			MnClosure::CClosure* ccl = cls->u.c;
 			ut_restore_ci(s,ccl->func(s));
 		}
 		else
 		{
-			s->pc	= &(MnToFunction( cls->u.m->func )->codes[0]);
-			s->func	= MnToFunction( cls->u.m->func );
-			mn_settop( s, s->func->maxstack );
+			MnMFunction* func = MnToFunction( cls->u.m->func );
+			s->pc	= &(func->codes[0]);
+			mn_settop( s, func->maxstack );
 			excuter_ver_0_0_3( s );
 		}
 	}

@@ -1162,8 +1162,8 @@ void excuter_ver_0_0_3( MnState* s )
 #define sB ( *(s->base + 1 + iB) )
 #define sC ( *(s->base + 1 + iC) )
 
-#define cB ( s->func->consts[ iB ] )
-#define cC ( s->func->consts[ iC ] )
+#define cB ( MnToFunction(s->cls->u.m->func)->consts[ iB ] )
+#define cC ( MnToFunction(s->cls->u.m->func)->consts[ iC ] )
 
 #define vA sA
 #define vB (cs_isconst( cs_getb(i) )? cB : sB)
@@ -1287,25 +1287,25 @@ void excuter_ver_0_0_3( MnState* s )
 					MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
 					ci->prev = s->ci;
 					ci->pc	 = s->pc;
-					ci->func = s->func;
+					ci->cls  = s->cls;
 					ci->base = s->base - s->begin;
 					ci->top	 = s->top - s->begin;
 
 					s->ci		= ci;
+					s->cls		= cls;
 					s->base		= &vA;
 
 					if ( cls->type == CCL )
 					{
 						s->pc	= NULL;
-						s->func	= NULL;
 						MnClosure::CClosure* ccl = cls->u.c;
 						ut_restore_ci(s, ccl->func(s) );
 					}
 					else
 					{
-						s->func		= MnToFunction(cls->u.m->func);
-						s->pc		= &(s->func->codes[0]);
-						mn_settop( s, s->func->maxstack );
+						MnMFunction* func = MnToFunction(s->cls->u.m->func);
+						s->pc		= &(func->codes[0]);
+						mn_settop( s, func->maxstack );
 					}
 				}
 
@@ -1315,7 +1315,7 @@ void excuter_ver_0_0_3( MnState* s )
 		case op_return :
 			{
 				ut_restore_ci(s, oA);
-				if ( s->func ) break; else return;
+				if ( s->pc ) break; else return;
 			}
 		}
 	}
