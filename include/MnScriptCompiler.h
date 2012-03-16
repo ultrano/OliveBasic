@@ -219,6 +219,7 @@ public:
 
 	void			statexp();
 	void			exp_order();
+	void			exp_order10();
 	void			exp_order9();
 	void			exp_order8();
 	void			exp_order7();
@@ -343,11 +344,11 @@ void	sm_exp::statexp()
 
 void	sm_exp::exp_order()
 {
-	exp_order9();
+	exp_order10();
 }
-void	sm_exp::exp_order9()
+void	sm_exp::exp_order10()
 {
-	exp_order8();
+	exp_order9();
 	while ( cs_toptional( cs, '=' ) )
 	{
 		exp_order();
@@ -367,6 +368,42 @@ void	sm_exp::exp_order9()
 		case evariable :
 			fs_addcode( cs->fs, cs_code( op_move, get(-1).idx, val, 0 ) );
 			break;
+		}
+	}
+}
+
+void	sm_exp::exp_order9()
+{
+	exp_order8();
+	while ( true )
+	{
+		keyword kw = cs_kwoptional(cs,kw_eq)?  kw_eq  : cs_kwoptional(cs,kw_neq)? kw_neq :
+			cs_kwoptional(cs,kw_leq)? kw_leq : cs_kwoptional(cs,kw_geq)? kw_geq : kw_unknown;
+		opcode op = op_none;
+		if ( kw == kw_unknown )
+		{
+			op = cs_toptional(cs,'>')? op_gt : cs_toptional(cs,'<')? op_lt : op_none;
+		}
+		if ( op == op_none && kw == kw_unknown ) break;
+		OvShort reg1 = top();
+		exp_order8();
+		OvShort reg2 = top();
+
+		if ( (kw == kw_leq) || (kw == kw_geq) )
+		{
+			OvShort temp1 = push();
+			OvShort temp2 = push();
+			pop();pop();pop();pop();
+			op = (kw == kw_leq)? op_lt : (kw == kw_geq)? op_gt : op_none;
+			fs_addcode( cs->fs, cs_code( op, temp1, reg1, reg2 ) );
+			fs_addcode( cs->fs, cs_code( op_eq, temp2, reg1, reg2 ) );
+			fs_addcode( cs->fs, cs_code( op_or, push(), temp1, temp2 ) );
+		}
+		else
+		{
+			pop();pop();
+			op = (kw == kw_eq)? op_eq : (kw == kw_neq)? op_neq : op;
+			fs_addcode( cs->fs, cs_code( op, push(), reg1, reg2 ) );
 		}
 	}
 }

@@ -1,15 +1,15 @@
 
 local var = 0;
 
-while (1)
+scaning( file );
+
+tok.next();
+tok.save();
+tok.load();
+
+
+while ( var < 16 )
 {
 	var = var + 1;
-	local local = var;
-	print(local);
-	if ( local & 16 )
-	{
-		var = function(){print("¤»¤»¤»");print(local);};
-		return;
-	}
+	print(var);
 }
-var();

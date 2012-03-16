@@ -184,6 +184,12 @@ enum opcode
 	op_jmp,
 	op_fjp,
 
+	op_eq,
+	op_neq,
+	op_not,
+	op_lt,
+	op_gt,
+
 	op_call,
 	op_return,
 };
@@ -1702,6 +1708,22 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 			break;
 		case op_and :
 			vA = ut_toboolean(vB) && ut_toboolean(vC);
+			break;
+
+		case op_not :
+			vA = !ut_toboolean(vB);
+			break;
+		case op_eq :
+			vA = MnToNumber(vB) == MnToNumber(vC);
+			break;
+		case op_neq :
+			vA = MnToNumber(vB) != MnToNumber(vC);
+			break;
+		case op_lt :
+			vA = MnToNumber(vB) < MnToNumber(vC);
+			break;
+		case op_gt :
+			vA = MnToNumber(vB) > MnToNumber(vC);
 			break;
 
 		case op_move :
