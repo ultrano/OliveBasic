@@ -1064,7 +1064,7 @@ void ut_setarray( MnState* s, MnValue& a, MnValue& n, MnValue& v )
 		MnArray* arr = MnToArray(a);
 		if ( MnIsNumber(n) )
 		{
-			MnIndex idx = (MnIndex)MnToNumber(n);
+			MnIndex idx = (MnIndex)MnToNumber(n) - 1;
 			if ( idx >= 0 && idx < arr->array.size() )
 			{
 				arr->array[idx] = v;
@@ -1081,7 +1081,7 @@ MnValue ut_getarray( MnState* s, MnValue& a, MnValue& n )
 		MnArray* arr = MnToArray(a);
 		if ( MnIsNumber(n) )
 		{
-			MnIndex idx = (MnIndex)MnToNumber(n);
+			MnIndex idx = (MnIndex)MnToNumber(n) - 1;
 			if ( idx >= 0 && idx < arr->array.size() )
 			{
 				return arr->array.at(idx);

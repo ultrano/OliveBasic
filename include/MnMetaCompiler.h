@@ -866,6 +866,12 @@ void cs_scan( compile_state* cs )
 
 			cs_new_tok( cs, tt_number )->num = num;
 		}
+		else if ( c == '\'' )
+		{
+			cp_read();
+			cs_new_tok( cs, tt_number )->num = c;
+			cp_read();
+		}
 		else if ( c == '"' )
 		{
 			OvString str;

@@ -24,7 +24,6 @@ void			mn_version( OvByte& major, OvByte& minor, OvByte& patch );
 
 MnState*		mn_openstate();
 void			mn_closestate( MnState* s );
-void			mn_lib_default( MnState* s );
 
 void			mn_setstack( MnState* s, MnIndex idx );
 void			mn_getstack( MnState* s, MnIndex idx );
@@ -88,3 +87,7 @@ void			mn_do_file( MnState* s, const OvString& file );
 
 //////////////////////////////////////////////////////////////////////////
 
+void			mn_lib_default( MnState* s );
+void			mn_lib_metascript( MnState* s );
+
+//////////////////////////////////////////////////////////////////////////
