@@ -1,5 +1,13 @@
 
 scaning( "../OliveBasic/include/test/script.txt" );
 
-print( tokarr[1].type );
-print( tokarr[1].val );
+local pos = 1;
+
+while ( tokarr[pos] )
+{
+print( tokarr[pos].type );
+print( tokarr[pos].val );
+print( "======================================" );
+pos = pos + 1;
+};
+

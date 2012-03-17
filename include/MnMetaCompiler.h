@@ -1019,6 +1019,7 @@ void		stat_if( compile_state* cs )
 		cs_texpected(cs,'(');
 		sm_exp exp(cs);
 		exp.statexp();
+		exp.top();
 		cs_texpected(cs,')');
 
 		OvInt ifjmp = cs->fs->f->codes.size();
@@ -1032,10 +1033,10 @@ void		stat_if( compile_state* cs )
 		{
 			fs_addcode( cs->fs, cs_code(op_jmp,0,0,0) );
 			stat(cs);
-			cs_setb( cs->fs->f->codes[elsejmp], cs->fs->f->codes.size() - elsejmp );
+			cs_setb( cs->fs->f->codes[elsejmp], cs->fs->f->codes.size() - elsejmp - 1 );
 			++elsejmp;
 		}
-		cs_setb( cs->fs->f->codes[ifjmp], elsejmp - ifjmp );
+		cs_setb( cs->fs->f->codes[ifjmp], elsejmp - ifjmp - 1 );
 	}
 }
 
@@ -1048,6 +1049,7 @@ void		stat_while( compile_state* cs )
 		cs_texpected(cs,'(');
 		sm_exp exp(cs);
 		exp.statexp();
+		exp.top();
 		cs_texpected(cs,')');
 
 		OvInt fix  = cs->breaks.size();
@@ -1059,12 +1061,12 @@ void		stat_while( compile_state* cs )
 		OvInt end = cs->fs->f->codes.size();
 		fs_addcode( cs->fs, cs_code(op_jmp,0,0,0) );
 
-		cs_setb( cs->fs->f->codes[fjmp], end - fjmp + 1 );
-		cs_setb( cs->fs->f->codes[end], begin - end );
+		cs_setb( cs->fs->f->codes[fjmp], end - fjmp );
+		cs_setb( cs->fs->f->codes[end], begin - end - 1 );
 		for ( OvInt i = fix ; i < cs->breaks.size() ; ++i )
 		{
 			MnIndex brk = cs->breaks[i];
-			cs_setb( cs->fs->f->codes[ brk ], end - brk + 1 );
+			cs_setb( cs->fs->f->codes[ brk ], end - brk );
 		}
 		cs->breaks.resize(fix);
 	}

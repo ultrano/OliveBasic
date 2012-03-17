@@ -1830,10 +1830,10 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 			break;
 
 		case op_fjp :
-			if ( !ut_toboolean(vC) ) s->pc += oB - 1;
+			if ( !ut_toboolean(vC) ) s->pc += oB;
 			break;
 		case op_jmp :
-			s->pc += oB - 1;
+			s->pc += oB;
 			break;
 
 		case op_call :
