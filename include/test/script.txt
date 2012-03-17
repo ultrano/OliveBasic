@@ -1,15 +1,29 @@
 
-local var = 0;
+local meta	= table();
+local t		= table();
 
-scaning( file );
+meta.__call = function() { print("call"); };
+meta.__add = function(a,b) { print("add : "+b); };
+meta.__sub = function(a,b) { print("sub : "+b); };
+meta.__mul = function(a,b) { print("mul : "+b); };
+meta.__div = function(a,b) { print("div : "+b); };
+meta.__mod = function(a,b) { print("mod : "+b); };
 
-tok.next();
-tok.save();
-tok.load();
+meta.__eq = function(a,b) { print("__eq : "+b); };
+meta.__neq = function(a,b) { print("__neq : "+b); };
+meta.__lt = function(a,b) { print("__lt : "+b); };
+meta.__gt = function(a,b) { print("__gt : "+b); };
 
+setmeta( t, meta );
 
-while ( var < 16 )
-{
-	var = var + 1;
-	print(var);
-}
+t();
+print( t+10 );
+print( t-15 );
+print( t*44 );
+print( t/76 );
+print( t%5 );
+
+print( t==15 );
+print( t!=44 );
+print( t<76 );
+print( t>5 );

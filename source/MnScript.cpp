@@ -46,6 +46,15 @@ void mn_closestate( MnState* s )
 
 void mn_lib_default( MnState* s )
 {
+
+	mn_pushstring( s, "table" );
+	mn_pushfunction( s, ex_table );
+	mn_setglobal( s );
+
+	mn_pushstring( s, "setmeta" );
+	mn_pushfunction( s, ex_setmeta );
+	mn_setglobal( s );
+
 	mn_pushstring( s, "length" );
 	mn_pushfunction( s, ex_global_length );
 	mn_setglobal( s );
@@ -166,13 +175,13 @@ void mn_setmeta( MnState* s, MnIndex idx )
 {
 	MnValue v = ut_getstack(s,idx);
 	MnValue m = ut_getstack(s,-1);
-	ut_setmeta(s,v,m);
+	ut_setmeta(v,m);
 	mn_pop(s,1);
 }
 
 void mn_getmeta( MnState* s, MnIndex idx )
 {
-	ut_pushvalue( s, ut_getmeta(s,ut_getstack(s,idx)) );
+	ut_pushvalue( s, ut_getmeta( ut_getstack(s,idx) ) );
 }
 
 void mn_setupval( MnState* s, MnIndex upvalidx )

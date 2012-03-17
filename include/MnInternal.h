@@ -47,6 +47,7 @@ const MnTypeStr g_type_str[] =
 };
 
 #define METHOD_EQ ("__eq")
+#define METHOD_NEQ ("__neq")
 #define METHOD_LT ("__lt")
 #define METHOD_GT ("__gt")
 #define METHOD_NEWINDEX ("__newindex")
@@ -56,6 +57,7 @@ const MnTypeStr g_type_str[] =
 #define METHOD_SUB ("__sub")
 #define METHOD_MUL ("__mul")
 #define METHOD_DIV ("__div")
+#define METHOD_MOD ("__mod")
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -311,8 +313,8 @@ MnValue			ut_getarray( MnState* s, MnValue& t, MnValue& n );
 void			ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v );
 MnValue			ut_getfield( MnState* s, MnValue& c, MnValue& n );
 
-MnValue			ut_getmeta( MnState* s, const MnValue& c );
-void			ut_setmeta( MnState* s, MnValue& c, const MnValue& m );
+MnValue			ut_getmeta( const MnValue& c );
+void			ut_setmeta( MnValue& c, const MnValue& m );
 
 void			ut_setupval( MnState* s, MnIndex upvalidx,MnValue& v );
 MnValue			ut_getupval( MnState* s, MnIndex upvalidx );
@@ -966,9 +968,9 @@ MnValue ut_getconst( MnMFunction* f, MnIndex idx )
 
 OvBool ut_meta_newindex( MnState* s, MnValue& c, MnValue& n, MnValue& v ) 
 {
-	if ( !MnIsNil(ut_getmeta( s, c )) )
+	if ( !MnIsNil(ut_getmeta( c )) )
 	{
-		ut_pushvalue( s, ut_getmeta( s, c ) );
+		ut_pushvalue( s, ut_getmeta( c ) );
 		mn_pushstring( s, METHOD_NEWINDEX );
 		mn_getfield( s, -2 );
 
@@ -1015,9 +1017,9 @@ void ut_settable( MnState* s, MnValue& t, MnValue& n, MnValue& v )
 
 MnValue ut_meta_index( MnState* s, MnValue& c, MnValue& n ) 
 {
-	if ( !MnIsNil(ut_getmeta( s, c )) )
+	if ( !MnIsNil(ut_getmeta( c )) )
 	{
-		ut_pushvalue( s, ut_getmeta( s, c ) );
+		ut_pushvalue( s, ut_getmeta( c ) );
 		mn_pushstring( s, METHOD_INDEX );
 		mn_getfield( s, -2 );
 		if ( mn_isfunction( s, -1 ) )
@@ -1160,7 +1162,7 @@ MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 	return MnValue();
 }
 
-void ut_setmeta( MnState* s, MnValue& c, MnValue& m )
+void ut_setmeta( MnValue& c, MnValue& m )
 {
 	if ( MnIsTable(c) )			MnToTable(c)->metatable = m;
 	else if ( MnIsArray(c) )	MnToArray(c)->metatable = m;
@@ -1168,7 +1170,7 @@ void ut_setmeta( MnState* s, MnValue& c, MnValue& m )
 	else if ( MnIsMiniData(c) ) MnToMiniData(c)->metatable = m;
 }
 
-MnValue ut_getmeta( MnState* s, const MnValue& c )
+MnValue ut_getmeta( const MnValue& c )
 {
 	if ( MnIsTable(c) )			return MnToTable(c)->metatable;
 	else if ( MnIsArray(c) )	return MnToArray(c)->metatable;
@@ -1456,6 +1458,17 @@ OvInt ex_dump_stack( MnState* s )
 	return 0;
 }
 
+OvInt ex_table( MnState* s )
+{
+	ut_pushvalue( s, MnValue( MOT_TABLE,ut_newtable(s) ) );
+	return 1;
+}
+
+OvInt ex_setmeta( MnState* s )
+{
+	ut_setmeta( ut_getstack(s,1), ut_getstack(s,2) );
+	return 0;
+}
 //////////////////////////////////////////////////////////////////////////
 struct MnOpCodeABC : public OvMemObject
 {
@@ -1545,7 +1558,7 @@ MnValue ut_method_arith( MnState* s, MnOperate op, const MnValue& a, const MnVal
 	else
 	{
 		OvString method =	(op == MOP_ADD)? METHOD_ADD : (op == MOP_SUB)? METHOD_SUB : (op == MOP_MUL)? METHOD_MUL : (op == MOP_DIV)? METHOD_DIV : "";
-		ut_pushvalue( s, ut_getmeta( s, a ) );
+		ut_pushvalue( s, ut_getmeta( a ) );
 		mn_pushstring(s,method);
 		mn_getfield(s,-2);
 
@@ -1578,7 +1591,7 @@ MnValue ut_method_logical( MnState* s,MnOperate op, MnValue& a, MnValue& b )
 	else
 	{
 		OvString method =	(op == MOP_EQ)? METHOD_EQ : (op == MOP_LT)? METHOD_LT : (op == MOP_GT)? METHOD_GT : "";
-		ut_pushvalue( s, ut_getmeta( s, a ) );
+		ut_pushvalue( s, ut_getmeta( a ) );
 		mn_pushstring(s,method);
 		mn_getfield(s,-2);
 
@@ -1598,7 +1611,7 @@ MnValue ut_method_logical( MnState* s,MnOperate op, MnValue& a, MnValue& b )
 
 MnValue ut_meta_call( MnState* s, MnValue& c ) 
 {
-	MnValue meta = ut_getmeta( s, c );
+	MnValue meta = ut_getmeta( c );
 	if ( !MnIsNil(meta) )
 	{
 		ut_pushvalue( s, meta );	//< push meta
@@ -1638,6 +1651,21 @@ void ut_restore_ci( MnState* s, OvInt nret )
 	ut_free(ci);
 }
 
+MnValue ut_pair_param_method( MnState* s, const OvString& method, const MnValue& a, const MnValue b )
+{
+	ut_pushvalue( s, ut_getmeta(a) );
+	mn_pushstring( s, method );
+	mn_getfield( s, -2 );
+	if ( mn_isnil( s, -1 ) ) { mn_pop(s,1); return MnValue(); }
+
+	ut_pushvalue( s, a );
+	ut_pushvalue( s, b );
+	mn_call( s, 2, 1 );
+	MnValue ret = ut_getstack( s, -1 );
+	mn_pop(s,1);
+	return ret;
+}
+
 void ut_excute_func( MnState* s, MnMFunction* func )
 {
 
@@ -1662,6 +1690,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 #define vB (cs_isconst( cs_getb(i) )? cB : sB)
 #define vC (cs_isconst( cs_getc(i) )? cC : sC)
 
+	MnCallInfo* callinfo = s->ci;
 	s->func	= func;
 	s->pc	= &(func->codes[0]);
 	mn_settop( s, func->maxstack );
@@ -1674,16 +1703,25 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		switch ( iOP )
 		{
 		case op_add :
-			vA = MnToNumber(vB) + MnToNumber(vC);
+			if ( vB.type == MOT_NUMBER ) vA =  MnValue( MnToNumber(vB) + ut_tonumber(vC) );
+			else if ( vB.type == MOT_STRING ) vA =  MnValue( MOT_STRING, ut_newstring( s, MnToString(vB)->get_str() + ut_tostring( vC ) ) );
+			else vA = ut_pair_param_method( s, METHOD_ADD, vB, vC );
 			break;
 		case op_sub :
-			vA = MnToNumber(vB) - MnToNumber(vC);
+			if ( vB.type == MOT_NUMBER ) vA =  MnValue( MnToNumber(vB) - ut_tonumber(vC) );
+			else vA = ut_pair_param_method( s, METHOD_SUB, vB, vC );
 			break;
 		case op_mul :
-			vA = MnToNumber(vB) * MnToNumber(vC);
+			if ( vB.type == MOT_NUMBER ) vA =  MnValue( MnToNumber(vB) * ut_tonumber(vC) );
+			else vA = ut_pair_param_method( s, METHOD_MUL, vB, vC );
 			break;
 		case op_div :
-			vA = MnToNumber(vB) / MnToNumber(vC);
+			if ( vB.type == MOT_NUMBER ) vA =  MnValue( MnToNumber(vB) / ut_tonumber(vC) );
+			else vA = ut_pair_param_method( s, METHOD_DIV, vB, vC );
+			break;
+		case op_mod :
+			if ( vB.type == MOT_NUMBER ) vA =  MnValue( (MnNumber)((OvInt)MnToNumber(vB) % (OvInt)ut_tonumber(vC)) );
+			else vA = ut_pair_param_method( s, METHOD_MOD, vB, vC );
 			break;
 
 		case op_push :
@@ -1714,16 +1752,22 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 			vA = !ut_toboolean(vB);
 			break;
 		case op_eq :
-			vA = MnToNumber(vB) == MnToNumber(vC);
+			if ( vB.type == MOT_NUMBER ) vA = (ut_tonumber(vB) == ut_tonumber(vC));
+			else if ( vB.type == MOT_STRING ) vA = (ut_tostring(vB) == ut_tostring(vC));
+			else vA = ut_pair_param_method( s, METHOD_EQ, vB, vC );
 			break;
 		case op_neq :
-			vA = MnToNumber(vB) != MnToNumber(vC);
+			if ( vB.type == MOT_NUMBER ) vA = (ut_tonumber(vB) != ut_tonumber(vC));
+			else if ( vB.type == MOT_STRING ) vA = (ut_tostring(vB) != ut_tostring(vC));
+			else vA = ut_pair_param_method( s, METHOD_NEQ, vB, vC );
 			break;
 		case op_lt :
-			vA = MnToNumber(vB) < MnToNumber(vC);
+			if ( vB.type == MOT_NUMBER ) vA = (ut_tonumber(vB) < ut_tonumber(vC));
+			else vA = ut_pair_param_method( s, METHOD_LT, vB, vC );
 			break;
 		case op_gt :
-			vA = MnToNumber(vB) > MnToNumber(vC);
+			if ( vB.type == MOT_NUMBER ) vA = (ut_tonumber(vB) > ut_tonumber(vC));
+			else vA = ut_pair_param_method( s, METHOD_GT, vB, vC );
 			break;
 
 		case op_move :
@@ -1828,8 +1872,9 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 
 		case op_return :
 			{
+				OvBool isend = (callinfo == s->ci);
 				ut_restore_ci(s, oA);
-				if ( s->pc ) break; else return;
+				if ( isend ) return; else break;
 			}
 		}
 	}

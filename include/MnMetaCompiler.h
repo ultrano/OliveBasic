@@ -526,6 +526,14 @@ void	sm_exp::postexp()
 			get(-1).type = efield;
 			cs_texpected(cs,']');
 		}
+		else if ( cs_toptional(cs,'.') )
+		{
+			top();
+			MnValue vstr( MOT_STRING, ut_newstring(cs->s,cs_tstr(cs)) );
+			push( econst, fs_findconst( cs->fs, vstr ) );
+			get(-1).type = efield;
+			cs_tnext(cs);
+		}
 		else if ( cs_toptional(cs,'(') )
 		{
 			OvShort func = top();pop();
