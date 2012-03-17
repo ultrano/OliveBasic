@@ -1,13 +1,13 @@
 
-scaning( "../OliveBasic/include/test/script.txt" );
+tokarr = nil;
+tokpos = 1;
 
-local pos = 1;
-
-while ( tokarr[pos] )
+function foo()
 {
-print( tokarr[pos].type );
-print( tokarr[pos].val );
-print( "======================================" );
-pos = pos + 1;
-};
+	print("foo woo~");
+}
+foo();
+
+
+
 

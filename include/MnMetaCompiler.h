@@ -574,6 +574,10 @@ void	sm_exp::primary()
 	{
 		push( econst, fs_findconst( cs->fs, MnValue( cs_kwoptional(cs,kw_true)? true : cs_kwoptional(cs,kw_false)? false : false ) ) );
 	}
+	else if ( cs_kwoptional(cs,kw_nil) )
+	{
+		push( econst, fs_findconst( cs->fs, MnValue() ) );
+	}
 	else if ( cs_keyword(cs,kw_function) )
 	{
 		funcexp();
@@ -650,6 +654,12 @@ void sm_exp::funcexp()
 		cs_begin_func(cs);
 		cs_begin_block(cs);
 
+		MnValue globalfunc;
+		if ( cs_ttype(cs,tt_identifier) )
+		{
+			globalfunc = MnValue(MOT_STRING,ut_newstring(cs->s,cs_tstr(cs)));
+			cs_tnext(cs);
+		}
 		cs_texpected(cs,'(');
 		while ( cs_ttype(cs,tt_identifier) )
 		{
@@ -666,15 +676,18 @@ void sm_exp::funcexp()
 		sm_func* fs = cs->fs;
 		cs->fs = fs->last;
 		OvShort idx = fs_findconst( fs->last, MnValue( MOT_FUNCPROTO, fs->f ) );
-		fs_addcode( fs->last, cs_code( op_newclosure, push(), idx, fs->upvals.size() ) );
+		OvShort clsidx = push();
+		fs_addcode( fs->last, cs_code( op_newclosure, clsidx, idx, fs->upvals.size() ) );
 		for each ( const upvaldesc& desc in fs->upvals )
 		{
 			fs_addcode( fs->last, cs_code( (desc.exp.type==eupval? op_getupval:op_move), desc.exp.idx, 0, 0 ) );
 		}
+		if ( !MnIsNil(globalfunc) ) fs_addcode( fs->last, cs_code( op_setglobal, 0, fs_findconst(fs->last,globalfunc), clsidx ) );
 		cs->fs = fs;
 
 		cs_end_block(cs);
 		cs_end_func(cs);
+
 	}
 }
 //////////////////////////////////////////////////////////////////////////
@@ -703,7 +716,7 @@ OvShort fs_findconst( sm_func* fs, const MnValue& val )
 			{
 				return cs_const( i );
 			}
-			else if ( MnIsNil(v) )
+			else if ( MnIsNil(v) && MnIsNil(val) )
 			{
 				return cs_const( i );
 			}
