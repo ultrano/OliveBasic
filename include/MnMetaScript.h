@@ -97,6 +97,22 @@ OvInt cp_scaning( MnState* s )
 
 void mn_lib_metascript( MnState* s )
 {
+	mn_pushstring(s,"tt_identifier");
+	mn_pushnumber(s,tt_identifier);
+	mn_setglobal(s);
+
+	mn_pushstring(s,"tt_number");
+	mn_pushnumber(s,tt_number);
+	mn_setglobal(s);
+
+	mn_pushstring(s,"tt_string");
+	mn_pushnumber(s,tt_string);
+	mn_setglobal(s);
+
+	mn_pushstring(s,"tt_eos");
+	mn_pushnumber(s,tt_eos);
+	mn_setglobal(s);
+
 	mn_pushstring(s,"scaning");
 	mn_pushfunction( s, cp_scaning );
 	mn_setglobal(s);

@@ -2,12 +2,23 @@
 tokarr = nil;
 tokpos = 1;
 
-function foo()
+scaning( "../OliveBasic/include/test/meta_script.txt" );
+
+tok = table();
+tok.next = function () { tokpos = tokpos + 1; }
+tok.prev = function () { tokpos = tokpos - 1; }
+tok.type = function () { return (tokarr[tokpos].type); }
+tok.val  = function () { return (tokarr[tokpos].val); }
+tok.check = function (type) { return tok.type() == type; }
+
+
+keyword = table();
+keyword.check( kw )
 {
-	print("foo woo~");
+	return (tok.check(tt_identifier) && (tok.val() == kw ));
 }
-foo();
 
-
-
-
+function statement()
+{
+	if ( keyword.check( "local" ) ) state
+}
