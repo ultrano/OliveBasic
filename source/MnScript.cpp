@@ -1,7 +1,5 @@
 #include "MnScript.h"
 #include "MnInternal.h"
-#include "MnMetaCompiler.h"
-#include "MnMetaScript.h"
 
 ////////////////////*    version info    *///////////////////
 
@@ -449,9 +447,4 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 
 void mn_do_file( MnState* s, const OvString& file )
 {
-	MnValue main( MOT_CLOSURE, ut_newMclosure(s) );
-	MnClosure* cls = MnToClosure(main);
-	cls->u.m->func = load_entrance( s, file );
-	ut_pushvalue(s,main);
-	mn_call(s,0,0);
 }
