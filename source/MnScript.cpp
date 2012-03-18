@@ -1,5 +1,6 @@
 #include "MnScript.h"
 #include "MnInternal.h"
+#include "MnCompiler.h"
 
 ////////////////////*    version info    *///////////////////
 
@@ -445,6 +446,25 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 
 }
 
-void mn_do_file( MnState* s, const OvString& file )
+void mn_compile_test( const OvString& file )
 {
+	MnState* s = mn_openstate();
+	CmCompiler icm(s);
+	CmCompiler* cm = &icm;
+	CmScaning( cm, file );
+
+	printf( "================start scaning test================\n" );
+	for each ( const CmToken& tok in cm->tokens )
+	{
+		printf( " type: %3d, row: %3d, col: %3d ", tok.type, tok.row, tok.col );
+		if ( MnIsString( tok.val ) ) printf( "val: %s", MnToString(tok.val)->get_str().c_str() );
+		else if ( MnIsNumber( tok.val ) ) printf( "val: %d", MnToNumber(tok.val) );
+		printf( "\n" );
+	}
+	printf( "================end scaning test================\n" );
+
+	printf( "================start parsing test================\n" );
+	CmParsing(cm);
+	printf( "================end parsing test================\n" );
+	mn_closestate(s);
 }
