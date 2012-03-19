@@ -1,2 +1,2 @@
 
-print(true);
+bb = tt * aa = aa > aa < aa == aa != aa >= aa <= aa | aa ^ aa & aa - aa + aa % aa / aa;

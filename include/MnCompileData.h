@@ -1,25 +1,5 @@
 #pragma once
 
-enum eStoreType
-{
-	stConst,
-	stStack,
-	stGlobal,
-	stTemp,
-};
-
-struct CmStoreInfo
-{
-	eStoreType	type;
-	MnIndex		idx;
-};
-
-struct CmExpression
-{
-	CmStoreInfo store1;
-	CmStoreInfo store2;
-};
-
 enum CmTokenType
 {
 	tt_identifier = 256,
@@ -50,68 +30,99 @@ public:
 	OvVector<OvUInt>	savepos;
 
 	CmCompiler( MnState* _s ) : s(_s), tokpos(0) {};
-
 };
 
 
-#define cm_tok				( ( cm->tokpos<cm->tokens.size() )? cm->tokens[cm->tokpos] : CmToken() )
-#define cm_lookahead		( ((cm->tokpos+1)<(cm->tokens.size()))? cm->tokens[cm->tokpos+1] : CmToken() )
-#define cm_savepos()		( cm->savepos.push_back( cm->tokpos ), (cm->savepos.size()-1) )
-#define cm_loadpos(idx)		( if (idx<cm->savepos.size()) {cm->tokpos = cm->savepos.back();cm->savepos.resize(idx);} )
-
-#define cm_toktest(t)		( (cm_tok.type) == (t) )
-#define cm_tokmust(t)		( cm_toktest(t)? (cm_toknext(),true) : cm_errmessage(#t + " is missing\n") )
-#define cm_tokoption(t)		( cm_toktest(t)? (cm_toknext(),true) : false )
-#define cm_tokkeyword(kw)	( cm_toktest(tt_identifier) && (MnToString(cm_tok.val)->get_str() == kw) )
-#define cm_toknext()		( ++cm->tokpos )
-
-#define cm_statmust(stat)	(statement::option(cm,statement::stat::test)? true : cm_errmessage(#stat + " is missing\n") )
-#define cm_statoption(stat)	(statement::option(cm,statement::stat::test))
-#define cm_statmatch(stat)	(statement::match(cm,statement::stat::test))
-#define cm_statparse(stat)	(statement::stat::parse(cm))
-
-#define cm_errmessage(msg)	(false)
 
 namespace statement
 {
+	//! 테스트 함수는 토큰의 진행을 되돌리진 않는다.
 	typedef OvBool (*testfunc)(CmCompiler*);
-	OvBool option( CmCompiler* cm, testfunc func )
+	//! 옵션 함수는 테스트가 성공하면 토큰 진행, 아니면 되돌린다.
+	OvBool option( CmCompiler* cm, testfunc func );
+	//! 매치 함수는 테스트의 성공여부와 관계 없이 토큰을 되돌린다.
+	OvBool	match( CmCompiler* cm, testfunc func );
+
+	namespace single_stat
 	{
-		OvUInt saveidx = cm_savepos();
-		OvBool ret = func();
-		if ( !ret ) cm_loadpos(saveidx);
-		return ret;
-	}
-	OvBool	match( CmCompiler* cm, testfunc func )
-	{
-		OvUInt saveidx = cm_savepos();
-		OvBool ret = func();
-		cm_loadpos(saveidx);
-		return ret;
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
 	}
 	namespace local
 	{
-		OvBool	test( CmCompiler* cm )
-		{
-			OvBool ret = cm_tokkeyword("local");cm_toknext();
-			ret = ret && cm_toktest(tt_identifier);cm_toknext();
-			if ( cm_tokoption('=') )
-			{
-				ret = ret && cm_statmust(expression);
-			}
-			ret = ret && cm_tokmust(';');
-		}
-		OvBool	parse( CmCompiler* cm )
-		{
-			if ( match(cm) ) next(cm);
-		}
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
 	};
-	
+
 	namespace expression
 	{
-		OvBool	check( CmCompiler* cm )
-		{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
 
-		}
+	namespace expr10
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace expr9
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace expr8
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace expr7
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace expr6
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace expr5
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace expr4
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace expr3
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace expr2
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace expr1
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace term
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
 	}
 }
