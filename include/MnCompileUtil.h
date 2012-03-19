@@ -1,5 +1,4 @@
 #pragma once
-
 OvInt CmScaning( CmCompiler* cm, const OvString& file )
 {
 	OvFileInputStream fis( file );
@@ -86,14 +85,28 @@ OvInt CmScaning( CmCompiler* cm, const OvString& file )
 	return 0;
 }
 
+void CmParsing( CmCompiler* cm );
+void CmStatements( CmCompiler* cm );
+OvBool CmStatement( CmCompiler* cm );
+
 void CmParsing( CmCompiler* cm )
 {
-	if ( cm_typematch(tt_number) )
+	CmStatements( cm );
+}
+
+void CmStatements( CmCompiler* cm )
+{
+	while ( CmStatement( cm ) );
+}
+
+OvBool CmStatement( CmCompiler* cm )
+{
+	if ( cm_statmatch(local) )
 	{
-		printf( "matched!!!\n" );
 	}
 	else
 	{
 		printf( "unmatched!!!\n" );
 	}
+	return false;
 }
