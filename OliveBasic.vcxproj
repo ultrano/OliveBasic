@@ -1,0 +1,180 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{80E86864-A7EB-4123-8C81-4DDB28F441E7}</ProjectGuid>
+    <RootNamespace>OliveBasic</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Configuration)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>./include;./source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName)D.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>./include;./source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="source\OliveBasic.cpp" />
+    <ClCompile Include="source\OvGlobalFunc.cpp" />
+    <ClCompile Include="source\OvObjectFactory.cpp" />
+    <ClCompile Include="source\OvObjectManager.cpp" />
+    <ClCompile Include="source\OvObjectID.cpp" />
+    <ClCompile Include="source\OvObject.cpp" />
+    <ClCompile Include="source\OvFile.cpp" />
+    <ClCompile Include="source\OvBuffer.cpp" />
+    <ClCompile Include="source\OvXObject.cpp" />
+    <ClCompile Include="source\OvRect.cpp" />
+    <ClCompile Include="source\OvVector2.cpp" />
+    <ClCompile Include="source\OvVector3.cpp" />
+    <ClCompile Include="source\OvMatrix.cpp" />
+    <ClCompile Include="source\OvQuaternion.cpp" />
+    <ClCompile Include="source\OvColor.cpp" />
+    <ClCompile Include="source\OvMemoryPool.cpp" />
+    <ClCompile Include="source\OvMemObject.cpp" />
+    <ClCompile Include="source\OvMemoryMgr.cpp" />
+    <ClCompile Include="source\OvBufferInputStream.cpp" />
+    <ClCompile Include="source\OvBufferOutputStream.cpp" />
+    <ClCompile Include="source\OvFileInputStream.cpp" />
+    <ClCompile Include="source\OvFileOutputStream.cpp" />
+    <ClCompile Include="source\OvObjectInputStream.cpp" />
+    <ClCompile Include="source\OvObjectOutputStream.cpp" />
+    <ClCompile Include="source\OvOutputStream.cpp" />
+    <ClCompile Include="source\OvInputStream.cpp" />
+    <ClCompile Include="source\OvByteInputStream.cpp" />
+    <ClCompile Include="source\OvByteOutputStream.cpp" />
+    <ClCompile Include="source\OvSolidString.cpp" />
+    <ClCompile Include="source\OvRefable.cpp" />
+    <ClCompile Include="source\OvRefCounter.cpp" />
+    <ClCompile Include="source\OvScreenDrawer.cpp" />
+    <ClCompile Include="source\OvUtility.cpp" />
+    <ClCompile Include="source\OvUtility_container.cpp" />
+    <ClCompile Include="source\OvUtility_string.cpp" />
+    <ClCompile Include="source\OvUtility_path.cpp" />
+    <ClCompile Include="source\OvUtility_dataconvert.cpp" />
+    <ClCompile Include="source\MnScript.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\MnCompileData.h" />
+    <ClInclude Include="include\MnCompiler.h" />
+    <ClInclude Include="include\MnCompileUtil.h" />
+    <ClInclude Include="include\OliveBasic.h" />
+    <ClInclude Include="include\OvSingleton.h" />
+    <ClInclude Include="include\OvBitFlags.h" />
+    <ClInclude Include="include\OvGlobalFunc.h" />
+    <ClInclude Include="include\OvMacro.h" />
+    <ClInclude Include="include\OvObjectFactory.h" />
+    <ClInclude Include="include\OvObjectManager.h" />
+    <ClInclude Include="include\OvRTTI.h" />
+    <ClInclude Include="include\OvTypeDef.h" />
+    <ClInclude Include="include\OvObjectID.h" />
+    <ClInclude Include="include\OvCriticalSection.h" />
+    <ClInclude Include="include\OvAutoSection.h" />
+    <ClInclude Include="include\OvThreadSyncer.h" />
+    <ClInclude Include="include\OvObject.h" />
+    <ClInclude Include="include\OvFile.h" />
+    <ClInclude Include="include\OvBuffer.h" />
+    <ClInclude Include="include\OvXObject.h" />
+    <ClInclude Include="include\OvRect.h" />
+    <ClInclude Include="include\OvVector2.h" />
+    <ClInclude Include="include\OvVector3.h" />
+    <ClInclude Include="include\OvMatrix.h" />
+    <ClInclude Include="include\OvQuaternion.h" />
+    <ClInclude Include="include\OvColor.h" />
+    <ClInclude Include="include\OvMemoryPool.h" />
+    <ClInclude Include="include\OvMemObject.h" />
+    <ClInclude Include="include\OvMemoryMgr.h" />
+    <ClInclude Include="include\OvBufferInputStream.h" />
+    <ClInclude Include="include\OvBufferOutputStream.h" />
+    <ClInclude Include="include\OvFileInputStream.h" />
+    <ClInclude Include="include\OvFileOutputStream.h" />
+    <ClInclude Include="include\OvObjectInputStream.h" />
+    <ClInclude Include="include\OvObjectOutputStream.h" />
+    <ClInclude Include="include\OvOutputStream.h" />
+    <ClInclude Include="include\OvInputStream.h" />
+    <ClInclude Include="include\OvByteInputStream.h" />
+    <ClInclude Include="include\OvByteOutputStream.h" />
+    <ClInclude Include="include\OvSolidString.h" />
+    <ClInclude Include="include\OvRefable.h" />
+    <ClInclude Include="include\OvRefCounter.h" />
+    <ClInclude Include="include\OvAutoPtr.h" />
+    <ClInclude Include="include\OvScreenDrawer.h" />
+    <ClInclude Include="include\OvUtility.h" />
+    <ClInclude Include="include\OvUtility_container.h" />
+    <ClInclude Include="include\OvUtility_string.h" />
+    <ClInclude Include="include\OvUtility_path.h" />
+    <ClInclude Include="include\OvUtility_rtti.h" />
+    <ClInclude Include="include\OvUtility_thread.h" />
+    <ClInclude Include="include\OvUtility_dataconvert.h" />
+    <ClInclude Include="include\MnInternal.h" />
+    <ClInclude Include="include\MnScript.h" />
+    <ClInclude Include="include\test\ScriptTest.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="include\OvArrayAutoPtr.inl" />
+    <None Include="include\OvAutoPtr.inl" />
+    <None Include="ReadMe.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

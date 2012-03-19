@@ -1,0 +1,471 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="OliveBasic">
+      <UniqueIdentifier>{b632117c-2444-4e4e-af47-e0a298d0df86}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base">
+      <UniqueIdentifier>{89b94a91-cd73-4e94-827f-e027c0b91f06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvSingleton">
+      <UniqueIdentifier>{62783ac5-056a-4898-99a7-1433e2e6180a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvBitFlags">
+      <UniqueIdentifier>{b66d1aea-abc9-4488-bfbc-117b406911d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvGlobalFunc">
+      <UniqueIdentifier>{2aa7ce1a-c909-4a30-9539-8b9c1a585b61}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvMacro">
+      <UniqueIdentifier>{21f90680-e74f-4ea5-bb46-6ed84ee12ddd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvObjectFactory">
+      <UniqueIdentifier>{76f31cc5-8570-4433-b789-cbb73fc512b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvObjectManager">
+      <UniqueIdentifier>{2d75cf6d-89dc-4a86-8d23-035ea09aa7c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvRTTI">
+      <UniqueIdentifier>{aeda7c28-648d-486c-99db-58f8b3a6b9e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvTypeDef">
+      <UniqueIdentifier>{af2b60a5-361e-49f2-96de-cbeb78defffc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvObjectID">
+      <UniqueIdentifier>{6857e5be-69f8-475e-8518-280c2ded12ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvCriticalSection">
+      <UniqueIdentifier>{ad6b345c-46c9-4982-823b-879d8cb053aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvAutoSection">
+      <UniqueIdentifier>{61ce29a5-fdc5-4e4b-86d0-4775d43ed8f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvThreadSyncer">
+      <UniqueIdentifier>{e1657a9a-baed-49d2-9162-7356dbe78a35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvObject">
+      <UniqueIdentifier>{ff35c7af-23c3-43bf-ba3e-b23872aa587a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvFile">
+      <UniqueIdentifier>{8a021829-9e8a-4449-a467-428224455ef5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvBuffer">
+      <UniqueIdentifier>{bad9ecd8-05ff-4109-92bb-5247598661fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvXObject">
+      <UniqueIdentifier>{1dd9706c-00e8-4fc5-b80f-89a578262635}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvRect">
+      <UniqueIdentifier>{db81e5e3-ac98-4c08-aa71-6016e857ab15}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvVector2">
+      <UniqueIdentifier>{32ab0afb-99a3-43c4-93cd-c3634cf0f7c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvVector3">
+      <UniqueIdentifier>{f97a435c-5d2c-4fe0-91d2-72c69e951fdc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvMatrix">
+      <UniqueIdentifier>{b3650a1c-00f7-4f61-acad-bf3a3a911e09}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvQuaternion">
+      <UniqueIdentifier>{228b2c88-0112-4fde-94f8-cc24684b6c37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvColor">
+      <UniqueIdentifier>{5199f987-c6c5-47c7-b3c4-2e137966b75b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Memory">
+      <UniqueIdentifier>{6a9d155d-59bf-4484-8f89-925f0201be0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Memory\OvMemoryPool">
+      <UniqueIdentifier>{53e3b6eb-f877-4b06-9c64-a2cef1b10237}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Memory\OvMemObject">
+      <UniqueIdentifier>{b8327c74-e29b-4df5-8560-a32a06742b6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Memory\OvMemoryMgr">
+      <UniqueIdentifier>{47b858dc-3974-42e2-88cb-64dcfd9baf51}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream">
+      <UniqueIdentifier>{3d320c43-dd2a-49fe-999d-f73d13c9da6d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvBuffer">
+      <UniqueIdentifier>{f8b7c4c2-24db-460a-9bfc-66ce5fceaae7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvBuffer\OvBufferInputStream">
+      <UniqueIdentifier>{cac91333-fa9c-42ff-b607-4ddc2f9acac7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvBuffer\OvBufferOutputStream">
+      <UniqueIdentifier>{2cc3cab8-82d7-41ad-a345-8c69b0f6a209}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvFile">
+      <UniqueIdentifier>{e0577320-7ee6-48f5-a281-03d489e398ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvFile\OvFileInputStream">
+      <UniqueIdentifier>{a8753343-19cb-43a3-89c8-a3930bbc71a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvFile\OvFileOutputStream">
+      <UniqueIdentifier>{57269955-f00c-411a-8db3-8835dc8278a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvObject">
+      <UniqueIdentifier>{287fcbf2-63d5-4dd5-8aef-7a12ea730501}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvObject\OvObjectInputStream">
+      <UniqueIdentifier>{3fda06a5-e518-4a80-8cff-ed54aa83c57d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvObject\OvObjectOutputStream">
+      <UniqueIdentifier>{39506743-f71f-47a4-944a-5f7197524934}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\Base">
+      <UniqueIdentifier>{066c361c-58c7-44da-9c1e-20dce6290d68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\Base\OvOutputStream">
+      <UniqueIdentifier>{91f8ea7b-4f9c-45a8-b8fe-98ea92c9a37c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\Base\OvInputStream">
+      <UniqueIdentifier>{65268c18-612f-41c0-9f26-996be3d01f59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvByte">
+      <UniqueIdentifier>{7acb50ae-eba2-4675-8eec-91205dc690c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvByte\OvByteInputStream">
+      <UniqueIdentifier>{2d63e82a-02b7-4783-97b9-75eab8b15e8a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Stream\OvByte\OvByteOutputStream">
+      <UniqueIdentifier>{4d0b35d5-66b4-4fa9-8820-441d5337fc8d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvSolidString">
+      <UniqueIdentifier>{fc7cf949-1166-4204-a5c3-7efd82a7f757}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvRefable">
+      <UniqueIdentifier>{9462aab3-1a3e-4257-9058-0317a103b36e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvRefCounter">
+      <UniqueIdentifier>{2aa96297-57e4-4171-9025-e0de50c91787}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvAutoPtr">
+      <UniqueIdentifier>{f4cace46-a0c4-4c80-aedf-9f00cd25c938}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OvScreenDrawer">
+      <UniqueIdentifier>{54d477f1-0ade-4a8b-92ec-51c50a95a6e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utility">
+      <UniqueIdentifier>{41d4ab0a-9d6b-4d88-8fd3-895096c72252}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utility\OvUtility_container">
+      <UniqueIdentifier>{cb45e229-fb82-4978-8da7-f85023a23818}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utility\OvUtility_string">
+      <UniqueIdentifier>{ed956f4d-966d-4020-9f67-ed7953a023c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utility\OvUtility_path">
+      <UniqueIdentifier>{50c58215-2c41-4244-9b06-7147385e5e68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utility\OvUtility_rtti">
+      <UniqueIdentifier>{7cd1b293-65a3-4401-a36d-33a7dac59bfb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utility\OvUtility_thread">
+      <UniqueIdentifier>{a6e1e06c-6048-497a-89bd-d47b230ff9e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utility\OvUtility_dataconvert">
+      <UniqueIdentifier>{651dd2bf-24b8-4f47-8931-4dd70c13934e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="InProgress">
+      <UniqueIdentifier>{9746ab72-bfb1-403d-83ea-faa7e1a9c59c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="InProgress\MnScript">
+      <UniqueIdentifier>{68b06eee-2584-4c34-a681-96843c9c4f87}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="InProgress\TestCases">
+      <UniqueIdentifier>{81c3f373-d1a1-4af3-a42a-f4acdda5011e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\OliveBasic.cpp">
+      <Filter>OliveBasic</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvGlobalFunc.cpp">
+      <Filter>Base\OvGlobalFunc</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvObjectFactory.cpp">
+      <Filter>Base\OvObjectFactory</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvObjectManager.cpp">
+      <Filter>Base\OvObjectManager</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvObjectID.cpp">
+      <Filter>Base\OvObjectID</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvObject.cpp">
+      <Filter>Base\OvObject</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvFile.cpp">
+      <Filter>Base\OvFile</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvBuffer.cpp">
+      <Filter>Base\OvBuffer</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvXObject.cpp">
+      <Filter>Base\OvXObject</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvRect.cpp">
+      <Filter>Base\OvRect</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvVector2.cpp">
+      <Filter>Base\OvVector2</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvVector3.cpp">
+      <Filter>Base\OvVector3</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvMatrix.cpp">
+      <Filter>Base\OvMatrix</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvQuaternion.cpp">
+      <Filter>Base\OvQuaternion</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvColor.cpp">
+      <Filter>Base\OvColor</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvMemoryPool.cpp">
+      <Filter>Base\Memory\OvMemoryPool</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvMemObject.cpp">
+      <Filter>Base\Memory\OvMemObject</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvMemoryMgr.cpp">
+      <Filter>Base\Memory\OvMemoryMgr</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvBufferInputStream.cpp">
+      <Filter>Base\Stream\OvBuffer\OvBufferInputStream</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvBufferOutputStream.cpp">
+      <Filter>Base\Stream\OvBuffer\OvBufferOutputStream</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvFileInputStream.cpp">
+      <Filter>Base\Stream\OvFile\OvFileInputStream</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvFileOutputStream.cpp">
+      <Filter>Base\Stream\OvFile\OvFileOutputStream</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvObjectInputStream.cpp">
+      <Filter>Base\Stream\OvObject\OvObjectInputStream</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvObjectOutputStream.cpp">
+      <Filter>Base\Stream\OvObject\OvObjectOutputStream</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvOutputStream.cpp">
+      <Filter>Base\Stream\Base\OvOutputStream</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvInputStream.cpp">
+      <Filter>Base\Stream\Base\OvInputStream</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvByteInputStream.cpp">
+      <Filter>Base\Stream\OvByte\OvByteInputStream</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvByteOutputStream.cpp">
+      <Filter>Base\Stream\OvByte\OvByteOutputStream</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvSolidString.cpp">
+      <Filter>Base\OvSolidString</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvRefable.cpp">
+      <Filter>Base\OvRefable</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvRefCounter.cpp">
+      <Filter>Base\OvRefCounter</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvScreenDrawer.cpp">
+      <Filter>Base\OvScreenDrawer</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvUtility.cpp">
+      <Filter>Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvUtility_container.cpp">
+      <Filter>Utility\OvUtility_container</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvUtility_string.cpp">
+      <Filter>Utility\OvUtility_string</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvUtility_path.cpp">
+      <Filter>Utility\OvUtility_path</Filter>
+    </ClCompile>
+    <ClCompile Include="source\OvUtility_dataconvert.cpp">
+      <Filter>Utility\OvUtility_dataconvert</Filter>
+    </ClCompile>
+    <ClCompile Include="source\MnScript.cpp">
+      <Filter>InProgress\MnScript</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\OliveBasic.h">
+      <Filter>OliveBasic</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvSingleton.h">
+      <Filter>Base\OvSingleton</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvBitFlags.h">
+      <Filter>Base\OvBitFlags</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvGlobalFunc.h">
+      <Filter>Base\OvGlobalFunc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvMacro.h">
+      <Filter>Base\OvMacro</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvObjectFactory.h">
+      <Filter>Base\OvObjectFactory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvObjectManager.h">
+      <Filter>Base\OvObjectManager</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvRTTI.h">
+      <Filter>Base\OvRTTI</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvTypeDef.h">
+      <Filter>Base\OvTypeDef</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvObjectID.h">
+      <Filter>Base\OvObjectID</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvCriticalSection.h">
+      <Filter>Base\OvCriticalSection</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvAutoSection.h">
+      <Filter>Base\OvAutoSection</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvThreadSyncer.h">
+      <Filter>Base\OvThreadSyncer</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvObject.h">
+      <Filter>Base\OvObject</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvFile.h">
+      <Filter>Base\OvFile</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvBuffer.h">
+      <Filter>Base\OvBuffer</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvXObject.h">
+      <Filter>Base\OvXObject</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvRect.h">
+      <Filter>Base\OvRect</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvVector2.h">
+      <Filter>Base\OvVector2</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvVector3.h">
+      <Filter>Base\OvVector3</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvMatrix.h">
+      <Filter>Base\OvMatrix</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvQuaternion.h">
+      <Filter>Base\OvQuaternion</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvColor.h">
+      <Filter>Base\OvColor</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvMemoryPool.h">
+      <Filter>Base\Memory\OvMemoryPool</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvMemObject.h">
+      <Filter>Base\Memory\OvMemObject</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvMemoryMgr.h">
+      <Filter>Base\Memory\OvMemoryMgr</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvBufferInputStream.h">
+      <Filter>Base\Stream\OvBuffer\OvBufferInputStream</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvBufferOutputStream.h">
+      <Filter>Base\Stream\OvBuffer\OvBufferOutputStream</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvFileInputStream.h">
+      <Filter>Base\Stream\OvFile\OvFileInputStream</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvFileOutputStream.h">
+      <Filter>Base\Stream\OvFile\OvFileOutputStream</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvObjectInputStream.h">
+      <Filter>Base\Stream\OvObject\OvObjectInputStream</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvObjectOutputStream.h">
+      <Filter>Base\Stream\OvObject\OvObjectOutputStream</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvOutputStream.h">
+      <Filter>Base\Stream\Base\OvOutputStream</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvInputStream.h">
+      <Filter>Base\Stream\Base\OvInputStream</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvByteInputStream.h">
+      <Filter>Base\Stream\OvByte\OvByteInputStream</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvByteOutputStream.h">
+      <Filter>Base\Stream\OvByte\OvByteOutputStream</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvSolidString.h">
+      <Filter>Base\OvSolidString</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvRefable.h">
+      <Filter>Base\OvRefable</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvRefCounter.h">
+      <Filter>Base\OvRefCounter</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvAutoPtr.h">
+      <Filter>Base\OvAutoPtr</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvScreenDrawer.h">
+      <Filter>Base\OvScreenDrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvUtility.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvUtility_container.h">
+      <Filter>Utility\OvUtility_container</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvUtility_string.h">
+      <Filter>Utility\OvUtility_string</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvUtility_path.h">
+      <Filter>Utility\OvUtility_path</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvUtility_rtti.h">
+      <Filter>Utility\OvUtility_rtti</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvUtility_thread.h">
+      <Filter>Utility\OvUtility_thread</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OvUtility_dataconvert.h">
+      <Filter>Utility\OvUtility_dataconvert</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MnInternal.h">
+      <Filter>InProgress\MnScript</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MnScript.h">
+      <Filter>InProgress\MnScript</Filter>
+    </ClInclude>
+    <ClInclude Include="include\test\ScriptTest.h">
+      <Filter>InProgress\TestCases</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MnCompiler.h">
+      <Filter>InProgress\MnScript</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MnCompileUtil.h">
+      <Filter>InProgress\MnScript</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MnCompileData.h">
+      <Filter>InProgress\MnScript</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="include\OvArrayAutoPtr.inl">
+      <Filter>Base\OvAutoPtr</Filter>
+    </None>
+    <None Include="include\OvAutoPtr.inl">
+      <Filter>Base\OvAutoPtr</Filter>
+    </None>
+    <None Include="ReadMe.txt" />
+  </ItemGroup>
+</Project>
