@@ -32,8 +32,6 @@ public:
 	CmCompiler( MnState* _s ) : s(_s), tokpos(0) {};
 };
 
-
-
 namespace statement
 {
 	//! 테스트 함수는 토큰의 진행을 되돌리진 않는다.
@@ -43,13 +41,13 @@ namespace statement
 	//! 매치 함수는 테스트의 성공여부와 관계 없이 토큰을 되돌린다.
 	OvBool	match( CmCompiler* cm, testfunc func );
 
-	namespace single_stat
+	namespace multi_stat
 	{
 		OvBool	test( CmCompiler* cm );
 		OvBool	parse( CmCompiler* cm );
 	}
 
-	namespace multi_stat
+	namespace single_stat
 	{
 		OvBool	test( CmCompiler* cm );
 		OvBool	parse( CmCompiler* cm );

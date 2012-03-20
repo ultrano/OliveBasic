@@ -72,7 +72,7 @@ OvInt CmScaning( CmCompiler* cm, const OvString& file )
 			{
 				str.push_back(c);
 				cp_read();
-			} while ( c != '"' );
+			} while ( (c != '"') && (c != EOF) );
 			cp_read();
 
 			tok.val = MnValue( MOT_STRING, ut_newstring( cm->s, str) );
@@ -118,6 +118,11 @@ void CmParsing( CmCompiler* cm )
 void CmStatements( CmCompiler* cm )
 {
 	cm_statoption(multi_stat);
+	if ( cm_tokmatch(tt_eos) )
+	{
+		cm->tokpos = 0;
+		cm_statparse(multi_stat);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -139,6 +144,21 @@ OvBool	statement::match( CmCompiler* cm, testfunc func )
 
 //////////////////////////////////////////////////////////////////////////
 
+OvBool	statement::multi_stat::test( CmCompiler* cm )
+{
+	while ( cm_statoption(single_stat) );
+	return true;
+}
+
+OvBool	statement::multi_stat::parse( CmCompiler* cm )
+{
+	printf("perfect sentence!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+	while ( cm_statparse(single_stat) );
+	return true;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 OvBool	statement::single_stat::test( CmCompiler* cm )
 {
 	if ( cm_statoption(local) ) return true;
@@ -152,21 +172,9 @@ OvBool	statement::single_stat::test( CmCompiler* cm )
 
 OvBool	statement::single_stat::parse( CmCompiler* cm )
 {
-	return true;
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-OvBool	statement::multi_stat::test( CmCompiler* cm )
-{
-	OvBool ret = false;
-	while ( cm_statoption(single_stat) ) ret = true;
-	return ret;
-}
-
-OvBool	statement::multi_stat::parse( CmCompiler* cm )
-{
-	return true;
+	if ( cm_statparse(local) ) return true;
+	else if ( cm_statparse(block) ) return true;
+	return cm_tokoption(';');
 }
 
 //////////////////////////////////////////////////////////////////////////
