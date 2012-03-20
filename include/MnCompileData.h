@@ -48,11 +48,24 @@ namespace statement
 		OvBool	test( CmCompiler* cm );
 		OvBool	parse( CmCompiler* cm );
 	}
+
+	namespace multi_stat
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
 	namespace local
 	{
 		OvBool	test( CmCompiler* cm );
 		OvBool	parse( CmCompiler* cm );
-	};
+	}
+
+	namespace block
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
 
 	namespace expression
 	{
@@ -121,6 +134,54 @@ namespace statement
 	}
 
 	namespace term
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace postexpr
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace primary
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace funcdesc
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace funcargs
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace callargs
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace returnstat
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace ifstat
+	{
+		OvBool	test( CmCompiler* cm );
+		OvBool	parse( CmCompiler* cm );
+	}
+
+	namespace whilestat
 	{
 		OvBool	test( CmCompiler* cm );
 		OvBool	parse( CmCompiler* cm );
