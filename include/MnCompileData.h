@@ -19,6 +19,14 @@ public:
 	CmToken( OvInt t, OvUInt r, OvUInt c ) : type(t) , row(r), col(c) {};
 };
 
+class CmSyminfo
+{
+public:
+	OvInt	type;
+	OvUInt	level;
+	MnIndex	index;
+};
+
 class CmCompiler
 {
 public:
@@ -28,6 +36,9 @@ public:
 	OvVector<CmToken>	tokens;
 	OvUInt				tokpos;
 	OvVector<OvUInt>	savepos;
+
+	OvUInt				level;
+	OvVector<CmSyminfo>	symbols;
 
 	CmCompiler( MnState* _s ) : s(_s), tokpos(0) {};
 };
