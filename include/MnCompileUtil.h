@@ -3,8 +3,8 @@
 #define cm_tok				( ( cm->tokpos<cm->tokens.size() )? cm->tokens[cm->tokpos] : CmToken() )
 #define cm_lookahead		( ((cm->tokpos+1)<(cm->tokens.size()))? cm->tokens[cm->tokpos+1] : CmToken() )
 #define cm_savepos()		( cm->savepos.push_back( cm->tokpos ), (cm->savepos.size()-1) )
-#define cm_loadpos(idx)		{ if (idx < cm->savepos.size()) {cm->tokpos = cm->savepos.back();cm->savepos.resize(idx);} }
-#define cm_removesabe(idx)	{ if (idx < cm->savepos.size()) cm->savepos.resize(idx); }
+#define cm_loadpos(idx)		{ if (idx < cm->savepos.size()) {cm->tokpos = cm->savepos.at(idx);cm->savepos.resize(idx);} }
+#define cm_removesave(idx)	{ if (idx < cm->savepos.size()) cm->savepos.resize(idx); }
 
 #define cm_lahmatch(t)		( (cm_lookahead.type) == (t) )
 #define cm_tokmatch(t)		( (cm_tok.type) == (t) )
@@ -14,10 +14,18 @@
 #define cm_toknext()		( ++cm->tokpos )
 #define cm_tokprev()		( --cm->tokpos )
 
-#define cm_statmatch(stat)	(statement::match(cm,&statement::stat::test))
-#define cm_statoption(stat)	(statement::option(cm,&statement::stat::test))
-#define cm_statmust(stat)	(cm_statoption(stat)? true : (printf( "statement: %s, row: %d, col: %d\n", #stat, cm_tok.row, cm_tok.col ),false) )
-#define cm_statparse(stat)	(statement::stat::parse(cm))
+#define cm_getexpr(idx)		( ((idx)>0)? cm->exprs.at( idx - 1 ) : ((idx)<0)? cm->exprs.at( cm->exprs.size() - idx ) : CmExpression() )
+#define cm_popexpr(count)	( statement::popexpr(cm,(count)) )
+#define cm_pushexpr(expr)	( cm->exprs.push_back( expr ) )
+#define cm_pushtemp()		( statement::pushtemp(cm) )
+
+#define cm_addcode(i)		( cm->fi->func->codes.push_back((i)) )
+#define cm_addbicode(op)	( statement::addbiop( cm, (op) ) )
+
+#define cm_statmatch(stat)	 (statement::match(cm,&statement::stat::test))
+#define cm_statoption(stat)	 (statement::option(cm,&statement::stat::test))
+#define cm_statmust(stat)	 (cm_statoption(stat)? true : (printf( "statement: %s, row: %d, col: %d\n", #stat, cm_tok.row, cm_tok.col ),false) )
+#define cm_interpret(stat)   ( statement::option(cm,&statement::stat::interpret) )
 
 #define cm_errmessage(msg)	(printf(msg), false)
 
@@ -121,25 +129,60 @@ void CmStatements( CmCompiler* cm )
 	if ( cm_tokmatch(tt_eos) )
 	{
 		cm->tokpos = 0;
-		cm_statparse(multi_stat);
+		cm_interpret(multi_stat);
 	}
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-OvBool statement::option( CmCompiler* cm, testfunc func )
+OvBool statement::option( CmCompiler* cm, statfunc func )
 {
 	OvUInt saveidx = cm_savepos();
 	OvBool ret = func(cm);
-	if ( !ret ) {cm_loadpos(saveidx);} else {cm_removesabe(saveidx);}
+	if ( !ret ) {cm_loadpos(saveidx);} else {cm_removesave(saveidx);}
 	return ret;
 }
-OvBool	statement::match( CmCompiler* cm, testfunc func )
+
+OvBool	statement::match( CmCompiler* cm, statfunc func )
 {
 	OvUInt saveidx = cm_savepos();
 	OvBool ret = func(cm);
 	cm_loadpos(saveidx);
 	return ret;
+}
+
+void	statement::pushtemp( CmCompiler* cm )
+{
+	CmExpression temp;
+	temp.type	= et_temp;
+	temp.idx	= cm->symbols.size() - cm->level.back() + cm->tempcount;
+	++cm->tempcount;
+	cm_pushexpr(temp);
+}
+
+void	statement::popexpr( CmCompiler* cm, OvSize count )
+{
+	for ( OvSize i = 0 ; i < count ; ++i )
+	{
+		CmExpression expr = cm_getexpr( -(i + 1) );
+		OvSize symtop = cm->symbols.size() - cm->level.back();
+		if ( !cs_isconst(expr.idx) && cs_index(expr.idx) >= symtop ) --cm->tempcount;
+		if ( !cs_isconst(expr.extra) && cs_index(expr.extra) >= symtop ) --cm->tempcount;
+	}
+
+	cm->tempcount = max(0,cm->tempcount);
+	cm->exprs.resize( cm->exprs.size() - count );
+}
+
+void statement::addbiop( CmCompiler* cm, opcode op )
+{
+	CmExpression left	= cm_getexpr(-2);
+	CmExpression right	= cm_getexpr(-1);
+	cm_popexpr(2);
+	cm_pushtemp();
+	CmExpression temp	= cm_getexpr(-1);
+	
+	cm_addcode( cs_code( op, temp.idx, left.idx, right.idx ) );
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -150,10 +193,10 @@ OvBool	statement::multi_stat::test( CmCompiler* cm )
 	return true;
 }
 
-OvBool	statement::multi_stat::parse( CmCompiler* cm )
+OvBool	statement::multi_stat::interpret( CmCompiler* cm )
 {
 	printf("perfect sentence!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-	while ( cm_statparse(single_stat) );
+	while ( cm_interpret(single_stat) );
 	return true;
 }
 
@@ -170,10 +213,10 @@ OvBool	statement::single_stat::test( CmCompiler* cm )
 	return cm_tokoption(';');
 }
 
-OvBool	statement::single_stat::parse( CmCompiler* cm )
+OvBool	statement::single_stat::interpret( CmCompiler* cm )
 {
-	if ( cm_statparse(local) ) return true;
-	else if ( cm_statparse(block) ) return true;
+	if ( cm_interpret(local) ) return true;
+	else if ( cm_interpret(block) ) return true;
 	return cm_tokoption(';');
 }
 
@@ -191,7 +234,7 @@ OvBool	statement::local::test( CmCompiler* cm )
 	return ret;
 }
 
-OvBool	statement::local::parse( CmCompiler* cm )
+OvBool	statement::local::interpret( CmCompiler* cm )
 {
 	return true;
 }
@@ -208,7 +251,7 @@ OvBool	statement::block::test( CmCompiler* cm )
 	return false;
 }
 
-OvBool	statement::block::parse( CmCompiler* cm )
+OvBool	statement::block::interpret( CmCompiler* cm )
 {
 	return cm_tokmatch(tt_identifier);
 }
@@ -220,7 +263,7 @@ OvBool	statement::expression::test( CmCompiler* cm )
 	return cm_statoption(expr10);
 }
 
-OvBool	statement::expression::parse( CmCompiler* cm )
+OvBool	statement::expression::interpret( CmCompiler* cm )
 {
 	return cm_tokmatch(tt_identifier);
 }
@@ -351,11 +394,22 @@ OvBool	statement::expr1::test( CmCompiler* cm )
 	return ret;
 }
 
+OvBool	statement::expr1::interpret( CmCompiler* cm )
+{
+	cm_interpret(term);
+	return false;
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 OvBool	statement::term::test( CmCompiler* cm )
 {
 	return cm_statoption(postexpr);
+}
+
+OvBool	statement::term::interpret( CmCompiler* cm )
+{
+	return cm_interpret(postexpr);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -381,6 +435,11 @@ OvBool	statement::postexpr::test( CmCompiler* cm )
 	return false;
 }
 
+OvBool	statement::postexpr::interpret( CmCompiler* cm )
+{
+	return cm_interpret(primary);
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 OvBool	statement::primary::test( CmCompiler* cm )
@@ -392,6 +451,20 @@ OvBool	statement::primary::test( CmCompiler* cm )
 	else if ( cm_tokoption('(') )
 	{
 		return cm_statmust(expression) && cm_tokmust(')');
+	}
+	return false;
+}
+
+OvBool	statement::primary::interpret( CmCompiler* cm )
+{
+	if ( cm_tokoption(tt_number) || cm_tokoption(tt_string) )
+	{
+		CmExpression expr;
+		expr.type = et_const;
+		expr.idx  = cs_const( cm->fi->func->consts.size() );
+		cm->fi->func->consts.push_back( cm_tok.val );
+		cm_pushexpr(expr);
+		return true;
 	}
 	return false;
 }
