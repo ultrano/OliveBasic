@@ -1,6 +1,9 @@
 #pragma once
+#pragma warning(disable:4146)
+#pragma warning(disable:4018)
 #include "MnScript.h"
 #include "OvMemObject.h"
+#include "OvBuffer.h"
 #include "OvSolidString.h"
 #include "OvFile.h"
 
@@ -490,6 +493,7 @@ public:
 
 	vec_value		consts;
 	vec_instruction	codes;
+	OvBufferSPtr	code;
 
 	OvUInt			nargs;
 	OvUInt			maxstack;
@@ -736,8 +740,8 @@ MnMFunction::MnMFunction( MnState* s )
 : MnObject(s)
 , nargs(0)
 , maxstack(0)
+, code( OvBuffer::CreateBuffer() )
 {
-
 }
 
 MnMFunction::~MnMFunction()

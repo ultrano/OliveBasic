@@ -24,5 +24,6 @@ interface_class OvOutputStream : public OvRefable
 		Write( size );
 		return ((sizeof(size) + size ) == WriteBytes( (OvByte*)&data[0], size ));
 	};
-
+	template<typename T>
+	OvOutputStream& operator << ( const T& data ) { Write( OvString(data) ); return *this; };
 };

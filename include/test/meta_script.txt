@@ -1,18 +1,1 @@
-
-tokarr = nil;
-tokpos = 1;
-
-scaning( "../OliveBasic/include/test/meta_script.txt" );
-
-tok = table();
-tok.next = function () { tokpos = tokpos + 1; };
-tok.prev = function () { tokpos = tokpos - 1; };
-tok.type = function () { return (tokarr[tokpos].type); };
-tok.val  = function () { return (tokarr[tokpos].val); };
-tok.check = function (type) { return tok.type() == type; };
-
-
-function statement()
-{
-	if ( keyword.check( "local" ) ) state;
-};
+local aa,bb,aa;
