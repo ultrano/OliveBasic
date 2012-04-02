@@ -42,7 +42,7 @@ OvInt CmScaning( CmCompiler* cm, const OvString& file )
 		}
 		else if ( isdigit(c) )
 		{
-			CmToken tok( tt_const, row, col );
+			CmToken tok( tt_number, row, col );
 			OvReal num = 0;
 			OvInt mult = 10;
 			if ( c == '0' )
@@ -67,7 +67,7 @@ OvInt CmScaning( CmCompiler* cm, const OvString& file )
 		}
 		else if ( c == '"' )
 		{
-			CmToken tok( tt_const, row, col );
+			CmToken tok( tt_string, row, col );
 			OvString str;
 			cp_read();
 			do
@@ -79,6 +79,13 @@ OvInt CmScaning( CmCompiler* cm, const OvString& file )
 
 			tok.val = MnValue( MOT_STRING, ut_newstring( cm->s, str) );
 			cm->tokens.push_back( tok );
+		}
+		else if ( c == '\'' )
+		{
+			CmToken tok( tt_char, row, col );
+			tok.val = MnValue( (MnNumber)c );
+			cm->tokens.push_back( tok );
+			cp_read();
 		}
 		else if ( isalpha(c) || c == '_' )
 		{
@@ -116,9 +123,12 @@ void CmParsing( CmCompiler* cm )
 {
 	CmFuncinfo ifi;
 	ifi.func = ut_newfunction(cm->s);
+	ifi.codestream.Reset( ifi.func->code );
+
 	cm->fi = &ifi;
-	cm->level.push_back( cm->symbols.size() );
+	cm->level.push_back( cm->locals.size() );
 	cm_compile(multi_stat);
+	cm->fi->codestream << op_return;
 }
 
 void CmStatements( CmCompiler* cm )
@@ -147,23 +157,25 @@ OvBool	statement::match( CmCompiler* cm, statfunc func )
 
 void	statement::multi_stat::compile( CmCompiler* cm )
 {
-	while ( cm_compile(single_stat) );
+	while ( true )
+	{
+		cm_compile(single_stat);
+		if ( cm_tokmatch(tt_eos) || cm_tokmatch('}')) return;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::single_stat::compile( CmCompiler* cm )
+void	statement::single_stat::compile( CmCompiler* cm )
 {
-	if ( cm_kwmatch("local") ) { cm_compile(local); return true; }
+	if ( cm_kwmatch("local") ) { cm_compile(local); }
 // 	else if ( cm_statoption(block) ) return true;
 // 	else if ( cm_statoption(returnstat) ) return true;
 // 	else if ( cm_statoption(ifstat) ) return true;
 // 	else if ( cm_statoption(whilestat) ) return true;
 // 	else if ( (cm_statoption(expression) && cm_tokmust(';')) ) return true;
-	else if ( cm_tokoption(';') ) return true;
-	else if ( cm_tokmatch(tt_eos) || cm_tokmatch('}')) return false;
-
-	return cm_tokerror();
+	else cm_compile(expression);
+	cm_tokoption(';');
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -184,21 +196,12 @@ void statement::addsymb::compile( CmCompiler* cm )
 	CmSyminfo symb;
 	symb.hash = MnToString(cm_tok.val)->get_hash();
 	symb.level = cm->fi->level;
-	symb.index = cm->symbols.size() - cm->level[cm->fi->level];
-	cm->symbols.push_back( symb );
+	symb.index = cm->locals.size() - cm->level[cm->fi->level];
+	cm->locals.push_back( symb );
 	cm_toknext();
 }
 
 //////////////////////////////////////////////////////////////////////////
-
-OvBool	statement::block::test( CmCompiler* cm )
-{
-	if ( cm_tokoption('{') )
-	{
-		return cm_tokmust('}');
-	}
-	return false;
-}
 
 void	statement::block::compile( CmCompiler* cm )
 {
@@ -207,30 +210,23 @@ void	statement::block::compile( CmCompiler* cm )
 
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::expression::test( CmCompiler* cm )
-{
-	return true;
-}
-
 void	statement::expression::compile( CmCompiler* cm )
 {
-	cm_tokmatch(tt_identifier);
+	cm_compile(expr10);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::expr10::test( CmCompiler* cm )
-{
-	while ( cm_tokoption('=') )
-	{
-	}
-	return true;
-}
+// while ( cm_tokoption('=') )
+// {
+// }
 
+void	statement::expr10::compile( CmCompiler* cm )
+{
+	cm_compile(expr9);
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::expr9::test( CmCompiler* cm )
-{
 // 	OvBool ret = cm_statoption(expr8);
 // 	while ( ret )
 // 	{
@@ -239,104 +235,105 @@ OvBool	statement::expr9::test( CmCompiler* cm )
 // 		else break;
 // 		ret = ret && cm_statmust(expr8);
 // 	}
-	// 	return ret;
-	return true;
-}
+// 	return ret;
 
+void	statement::expr9::compile( CmCompiler* cm )
+{
+	cm_compile(expr8);
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::expr8::test( CmCompiler* cm )
-{
 // 	OvBool ret = cm_statoption(expr7);
 // 	while ( ret && (cm_tokoption('|') && cm_tokoption('|')) )
 // 	{
 // 		ret = ret && cm_statmust(expr7);
 // 	}
 // 	return ret;
-	return true;
-}
 
+void	statement::expr8::compile( CmCompiler* cm )
+{
+	cm_compile(expr7);
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::expr7::test( CmCompiler* cm )
-{
 // 	OvBool ret = cm_statoption(expr6);
 // 	while ( ret && (cm_tokoption('&') && cm_tokoption('&')) )
 // 	{
 // 		ret = ret && cm_statmust(expr6);
 // 	}
-	// 	return ret;
-	return true;
+// 	return ret;
+void	statement::expr7::compile( CmCompiler* cm )
+{
+	cm_compile(expr6);
 }
-
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::expr6::test( CmCompiler* cm )
-{
 // 	OvBool ret = cm_statoption(expr5);
 // 	while ( ret && cm_tokoption('|') )
 // 	{
 // 		if ( cm_tokmatch('|') ) { cm_tokprev(); break; }
 // 		ret = ret && cm_statmust(expr5);
 // 	}
-	// 	return ret;
-	return true;
-}
+// 	return ret;
 
+void	statement::expr6::compile( CmCompiler* cm )
+{
+	cm_compile(expr5);
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::expr5::test( CmCompiler* cm )
-{
 // 	OvBool ret = cm_statoption(expr4);
 // 	while ( ret && (cm_tokoption('^')) )
 // 	{
 // 		ret = ret && cm_statmust(expr4);
 // 	}
-	// 	return ret;
-	return true;
-}
+// 	return ret;
 
+void	statement::expr5::compile( CmCompiler* cm )
+{
+	cm_compile(expr4);
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::expr4::test( CmCompiler* cm )
-{
 // 	OvBool ret = cm_statoption(expr3);
 // 	while ( ret && cm_tokoption('&') )
 // 	{
 // 		if ( cm_tokmatch('&') ) { cm_tokprev(); break; }
 // 		ret = ret && cm_statmust(expr3);
 // 	}
-	// 	return ret;
-	return true;
-}
+// 	return ret;
 
+void	statement::expr4::compile( CmCompiler* cm )
+{
+	cm_compile(expr3);
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::expr3::test( CmCompiler* cm )
-{
 // 	OvBool ret = cm_statoption(expr2);
 // 	while ( ret && (cm_tokmatch('>') && cm_lahmatch('>')) || (cm_tokmatch('<') && cm_lahmatch('<')) )
 // 	{
 // 		cm_toknext();cm_toknext();
 // 		ret = ret && cm_statmust(expr2);
 // 	}
-	// 	return ret;
-	return true;
-}
+// 	return ret;
 
+void	statement::expr3::compile( CmCompiler* cm )
+{
+	cm_compile(expr2);
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::expr2::test( CmCompiler* cm )
-{
 // 	OvBool ret = cm_statoption(expr1);
 // 	while ( ret && (cm_tokoption('+') || cm_tokoption('-')) )
 // 	{
 // 		ret = ret && cm_statmust(expr1);
 // 	}
-	// 	return ret;
-	return true;
-}
+// 	return ret;
 
+void	statement::expr2::compile( CmCompiler* cm )
+{
+	cm_compile(expr1);
+}
 //////////////////////////////////////////////////////////////////////////
 
 void	statement::expr1::compile( CmCompiler* cm )
@@ -349,11 +346,6 @@ void	statement::expr1::compile( CmCompiler* cm )
 
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::term::test( CmCompiler* cm )
-{
-	return true;
-}
-
 void	statement::term::compile( CmCompiler* cm )
 {
 	return cm_compile(postexpr);
@@ -361,8 +353,6 @@ void	statement::term::compile( CmCompiler* cm )
 
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::postexpr::test( CmCompiler* cm )
-{
 // 	if ( cm_statoption(primary) )
 // 	{
 // 		while ( true )
@@ -379,76 +369,53 @@ OvBool	statement::postexpr::test( CmCompiler* cm )
 // 		}
 // 		return true;
 // 	}
-	return false;
-}
 
 void	statement::postexpr::compile( CmCompiler* cm )
 {
-	return cm_compile(primary);
+	cm_compile(primary);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::primary::test( CmCompiler* cm )
+CmExprType	statement::primary::compile( CmCompiler* cm )
 {
-// 	if ( cm_statoption(funcdesc) ) return true;
-// 	else if ( cm_tokoption(tt_const) ) return true;
-// 	else if ( cm_tokoption(tt_identifier) ) return true;
-// 	else if ( cm_tokoption('(') )
-// 	{
-// 		return cm_statmust(expression) && cm_tokmust(')');
-// 	}
-	return false;
-}
-
-void	statement::primary::compile( CmCompiler* cm )
-{
-	if ( cm_tokoption(tt_const) )
+	if ( cm_tokoption(tt_number) )
 	{
-		CmExpression expr;
-		expr.type = et_const;
-		expr.idx  = cs_const( cm->fi->func->consts.size() );
-		cm->fi->func->consts.push_back( cm_tok.val );
-	}
-	else if ( cm_tokoption('(') )
-	{
-		cm_compile(expression);
-		cm_tokmust(')');
+		cm->fi->codestream << (OvByte)op_const_num << MnToNumber(cm_tok.val);
+		return et_const;
 	}
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::funcdesc::test( CmCompiler* cm )
-{
 // 	if ( cm_kwoption("function") )
 // 	{
 // 		cm_toknext();
 // 		cm_tokoption(tt_identifier);
 // 		return cm_statmust(funcargs) && cm_statmust(block);
 // 	}
-	return false;
-}
 
+void	statement::funcdesc::compile( CmCompiler* cm )
+{
+
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::funcargs::test( CmCompiler* cm )
-{
-	if ( cm_tokoption('(') )
-	{
-		while ( true )
-		{
-			if (cm_tokoption(tt_identifier) && cm_tokoption(',')) continue; else break;
-		}
-		return cm_tokmust(')');
-	}
-	return false;
-}
+// if ( cm_tokoption('(') )
+// {
+// 	while ( true )
+// 	{
+// 		if (cm_tokoption(tt_identifier) && cm_tokoption(',')) continue; else break;
+// 	}
+// 	return cm_tokmust(')');
+// }
 
+void	statement::funcargs::compile( CmCompiler* cm )
+{
+
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::callargs::test( CmCompiler* cm )
-{
 // 	if (cm_tokoption('('))
 // 	{
 // 		while ( true )
@@ -457,25 +424,26 @@ OvBool	statement::callargs::test( CmCompiler* cm )
 // 		}
 // 		return cm_tokmust(')');
 // 	}
-	return false;
-}
 
+void	statement::callargs::compile( CmCompiler* cm )
+{
+
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::returnstat::test( CmCompiler* cm )
-{
+
 // 	if (cm_kwoption("return"))
 // 	{
 // 		cm_toknext();
 // 		return cm_statoption(expression) && cm_tokmust(';');
 // 	}
-	return false;
-}
 
+void	statement::returnstat::compile( CmCompiler* cm )
+{
+
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::ifstat::test( CmCompiler* cm )
-{
 // 	if (cm_kwoption("if"))
 // 	{
 // 		cm_toknext();
@@ -486,13 +454,13 @@ OvBool	statement::ifstat::test( CmCompiler* cm )
 // 		ret = ret && cm_statmust(single_stat);
 // 		return ret;
 // 	}
-	return false;
-}
 
+void	statement::ifstat::compile( CmCompiler* cm )
+{
+
+}
 //////////////////////////////////////////////////////////////////////////
 
-OvBool	statement::whilestat::test( CmCompiler* cm )
-{
 // 	if (cm_kwoption("while"))
 // 	{
 // 		cm_toknext();
@@ -503,7 +471,9 @@ OvBool	statement::whilestat::test( CmCompiler* cm )
 // 		ret = ret && cm_statmust(single_stat);
 // 		return ret;
 // 	}
-	return false;
-}
 
+void	statement::whilestat::compile( CmCompiler* cm )
+{
+
+}
 //////////////////////////////////////////////////////////////////////////

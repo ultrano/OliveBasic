@@ -197,6 +197,10 @@ enum opcode
 
 	op_call,
 	op_return,
+
+	op_const_num,
+	op_const_char,
+	op_const,
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -261,7 +265,7 @@ public:
 	set_upval	 openeduv;
 
 	MnCallInfo*		ci;
-	MnInstruction*	pc;
+	OvByte*			pc;
 	MnClosure*		cls;
 	MnMFunction*	func;
 	OvUInt			accumid;
@@ -277,7 +281,7 @@ public:
 	MnIndex			top;
 	MnClosure*		cls;
 	MnMFunction*	func;
-	MnInstruction*	pc;
+	OvByte*			pc;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -486,17 +490,14 @@ class MnMFunction : public MnObject
 {
 public:
 	typedef OvVector<MnValue>		vec_value;
-	typedef OvVector<MnInstruction> vec_instruction;
 
 	MnMFunction( MnState* s );
 	~MnMFunction();
 
 	vec_value		consts;
-	vec_instruction	codes;
 	OvBufferSPtr	code;
 
 	OvUInt			nargs;
-	OvUInt			maxstack;
 
 	virtual void marking();
 };
@@ -739,7 +740,6 @@ void MnArray::marking()
 MnMFunction::MnMFunction( MnState* s )
 : MnObject(s)
 , nargs(0)
-, maxstack(0)
 , code( OvBuffer::CreateBuffer() )
 {
 }
@@ -747,7 +747,7 @@ MnMFunction::MnMFunction( MnState* s )
 MnMFunction::~MnMFunction()
 {
 	consts.clear();
-	codes.clear();
+	code = NULL;
 }
 
 void MnMFunction::marking()
@@ -1672,232 +1672,18 @@ MnValue ut_pair_param_method( MnState* s, const OvString& method, const MnValue&
 
 void ut_excute_func( MnState* s, MnMFunction* func )
 {
-
-#define iOP (cs_getop(i))
-
-#define oA ( cs_geta(i) )
-#define oB ( cs_getb(i) )
-#define oC ( cs_getc(i) )
-
-#define iA ( cs_index(oA) )
-#define iB ( cs_index(oB) )
-#define iC ( cs_index(oC) )
-
-#define sA ( *(s->base + 1 + iA) )
-#define sB ( *(s->base + 1 + iB) )
-#define sC ( *(s->base + 1 + iC) )
-
-#define cB ( s->func->consts[ iB ] )
-#define cC ( s->func->consts[ iC ] )
-
-#define vA sA
-#define vB (cs_isconst( cs_getb(i) )? cB : sB)
-#define vC (cs_isconst( cs_getc(i) )? cC : sC)
-
-	MnCallInfo* callinfo = s->ci;
+	MnCallInfo* entrycall = s->ci;
 	s->func	= func;
-	s->pc	= &(func->codes[0]);
-	mn_settop( s, func->maxstack );
+	s->pc	= func->code->Pointer();
 
 	while ( true )
 	{
-		MnInstruction i = *s->pc++;
-		MnIndex aidx = iA;
-		MnIndex bidx = oB;
-		switch ( iOP )
+		OvByte op = *s->pc++;
+		switch ( op )
 		{
-		case op_add :
-			if ( vB.type == MOT_NUMBER ) vA =  MnValue( MnToNumber(vB) + ut_tonumber(vC) );
-			else if ( vB.type == MOT_STRING ) vA =  MnValue( MOT_STRING, ut_newstring( s, MnToString(vB)->get_str() + ut_tostring( vC ) ) );
-			else vA = ut_pair_param_method( s, METHOD_ADD, vB, vC );
-			break;
-		case op_sub :
-			if ( vB.type == MOT_NUMBER ) vA =  MnValue( MnToNumber(vB) - ut_tonumber(vC) );
-			else vA = ut_pair_param_method( s, METHOD_SUB, vB, vC );
-			break;
-		case op_mul :
-			if ( vB.type == MOT_NUMBER ) vA =  MnValue( MnToNumber(vB) * ut_tonumber(vC) );
-			else vA = ut_pair_param_method( s, METHOD_MUL, vB, vC );
-			break;
-		case op_div :
-			if ( vB.type == MOT_NUMBER ) vA =  MnValue( MnToNumber(vB) / ut_tonumber(vC) );
-			else vA = ut_pair_param_method( s, METHOD_DIV, vB, vC );
-			break;
-		case op_mod :
-			if ( vB.type == MOT_NUMBER ) vA =  MnValue( (MnNumber)((OvInt)MnToNumber(vB) % (OvInt)ut_tonumber(vC)) );
-			else vA = ut_pair_param_method( s, METHOD_MOD, vB, vC );
-			break;
-
-		case op_push :
-			vA = (MnNumber)((OvInt)MnToNumber(vB) << (OvInt)MnToNumber(vC));
-			break;
-		case op_pull :
-			vA = (MnNumber)((OvInt)MnToNumber(vB) >> (OvInt)MnToNumber(vC));
-			break;
-
-		case op_bit_or :
-			vA = (MnNumber)((OvInt)MnToNumber(vB) | (OvInt)MnToNumber(vC));
-			break;
-		case op_bit_xor :
-			vA = (MnNumber)((OvInt)MnToNumber(vB) ^ (OvInt)MnToNumber(vC));
-			break;
-		case op_bit_and :
-			vA = (MnNumber)((OvInt)MnToNumber(vB) & (OvInt)MnToNumber(vC));
-			break;
-
-		case op_or :
-			vA = ut_toboolean(vB) || ut_toboolean(vC);
-			break;
-		case op_and :
-			vA = ut_toboolean(vB) && ut_toboolean(vC);
-			break;
-
-		case op_not :
-			vA = !ut_toboolean(vB);
-			break;
-		case op_eq :
-			if ( vB.type == MOT_NUMBER ) vA = (ut_tonumber(vB) == ut_tonumber(vC));
-			else if ( vB.type == MOT_STRING ) vA = (ut_tostring(vB) == ut_tostring(vC));
-			else vA = ut_pair_param_method( s, METHOD_EQ, vB, vC );
-			break;
-		case op_neq :
-			if ( vB.type == MOT_NUMBER ) vA = (ut_tonumber(vB) != ut_tonumber(vC));
-			else if ( vB.type == MOT_STRING ) vA = (ut_tostring(vB) != ut_tostring(vC));
-			else vA = ut_pair_param_method( s, METHOD_NEQ, vB, vC );
-			break;
-		case op_lt :
-			if ( vB.type == MOT_NUMBER ) vA = (ut_tonumber(vB) < ut_tonumber(vC));
-			else vA = ut_pair_param_method( s, METHOD_LT, vB, vC );
-			break;
-		case op_gt :
-			if ( vB.type == MOT_NUMBER ) vA = (ut_tonumber(vB) > ut_tonumber(vC));
-			else vA = ut_pair_param_method( s, METHOD_GT, vB, vC );
-			break;
-
-		case op_move :
-			vA = vB;
-			break;
-
-		case op_setupval :
-			ut_setupval( s, iB + 1, vC );
-			break;
-		case op_getupval :
-			vA = ut_getupval( s, iB + 1 );
-			break;
-
-		case op_setglobal :
-			ut_setglobal( s, vB, vC );
-			break;
-		case op_getglobal :
-			vA = ut_getglobal( s, vB );
-			break;
-
-		case op_setfield :
-			ut_setfield( s, vA, vB, vC );
-			break;
-		case op_getfield :
-			vA = ut_getfield( s, vB, vC );
-			break;
-
-		case op_newclosure :
-			{
-				MnClosure* cls = ut_newMclosure( s );
-				cls->u.m->func = vB;
-				vA = MnValue( MOT_CLOSURE, cls );
-				OvUInt links = oC;
-				while (links--)
-				{
-					i = *s->pc++;
-					MnUpval* upval = NULL;
-					switch ( iOP )
-					{
-					case op_getupval :
-						{
-							upval = ut_getupval_ptr(s, iA + 1 );
-						}
-						break;
-					case op_move :
-						{
-							upval = ut_newupval(s);
-							upval->link = ut_getstack_ptr( s, iA + 1 );
-							s->openeduv.insert( upval );
-						}
-						break;
-					}
-					cls->upvals.push_back( MnValue( MOT_UPVAL, upval ) );
-				}
-			}
-			break;
-
-		case op_close_upval :
-			ut_close_upval( s, s->base + oB );
-			break;
-
-		case op_fjp :
-			if ( !ut_toboolean(vC) ) s->pc += oB;
-			break;
-		case op_jmp :
-			s->pc += oB;
-			break;
-
-		case op_call :
-			{
-				if ( !MnIsClosure(vA) ) vA = ut_meta_call( s, vA );
-				if ( MnClosure* cls = MnToClosure(vA) )
-				{
-					MnCallInfo* ci = ( MnCallInfo* )ut_alloc( sizeof( MnCallInfo ) );
-					ci->prev = s->ci;
-					ci->pc	 = s->pc;
-					ci->cls  = s->cls;
-					ci->func = s->func;
-					ci->base = s->base - s->begin;
-					ci->top	 = s->top - s->begin;
-
-					s->ci	= ci;
-					s->cls	= cls;
-					s->base	= &vA;
-					s->pc	= NULL;
-					s->func	= NULL;
-
-					if ( cls->type == CCL )
-					{
-						ut_restore_ci(s, cls->u.c->func(s) );
-					}
-					else
-					{
-						s->func		= MnToFunction(s->cls->u.m->func);
-						s->pc		= &(s->func->codes[0]);
-						mn_settop( s, s->func->maxstack );
-					}
-				}
-
-			}
-			break;
-
 		case op_return :
-			{
-				OvBool isend = (callinfo == s->ci);
-				ut_restore_ci(s, oA);
-				if ( isend ) return; else break;
-			}
+			if ( s->ci == entrycall ) return; else break;
 		}
 	}
 
-	return ;
-#undef iOP
-
-#undef oA
-#undef oB
-#undef oC
-
-#undef sA
-#undef sB
-#undef sC
-
-#undef cB
-#undef cC
-
-#undef vA
-#undef vB
-#undef vC
 }

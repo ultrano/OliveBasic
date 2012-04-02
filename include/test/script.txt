@@ -1,2 +1,1 @@
-
-bb = tt * aa = aa > aa < aa == aa != aa >= aa <= aa | aa ^ aa & aa - aa + aa % aa / aa;
+1

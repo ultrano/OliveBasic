@@ -5,7 +5,9 @@ enum CmTokenType
 	tt_identifier = 256,
 	tt_eos		  = 257,
 	tt_unknown	  = 258,
-	tt_const	  = 259,
+	tt_number	  = 259,
+	tt_string	  = 260,
+	tt_char		  = 261,
 };
 
 class CmToken
@@ -36,7 +38,7 @@ public:
 	OvUInt		 level;
 	OvBufferOutputStream codestream;
 
-	CmFuncinfo() : last(NULL), func(NULL), level(0), codestream(func->code) {};
+	CmFuncinfo() : last(NULL), func(NULL), level(0), codestream(NULL) {};
 };
 
 enum CmExprType
@@ -70,7 +72,7 @@ public:
 	OvVector<OvUInt>	savepos;
 
 	OvVector<OvUInt>	level;
-	OvVector<CmSyminfo>	symbols;
+	OvVector<CmSyminfo>	locals;
 
 	CmFuncinfo*			fi;
 
@@ -86,19 +88,16 @@ namespace statement
 
 	namespace multi_stat
 	{
-		OvBool	test( CmCompiler* cm ){return true;};
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace single_stat
 	{
-		OvBool	test( CmCompiler* cm ){return true;};
-		OvBool	compile( CmCompiler* cm );
+		void	compile( CmCompiler* cm );
 	}
 
 	namespace local
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
@@ -108,127 +107,106 @@ namespace statement
 	}
 	namespace block
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace expression
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace expr10
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace expr9
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace expr8
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace expr7
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace expr6
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace expr5
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace expr4
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace expr3
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace expr2
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace expr1
 	{
-		OvBool	test( CmCompiler* cm ){return true;};
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace term
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace postexpr
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace primary
 	{
-		OvBool	test( CmCompiler* cm );
-		void	compile( CmCompiler* cm );
+		CmExprType	compile( CmCompiler* cm );
 	}
 
 	namespace funcdesc
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace funcargs
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace callargs
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace returnstat
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace ifstat
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 
 	namespace whilestat
 	{
-		OvBool	test( CmCompiler* cm );
 		void	compile( CmCompiler* cm );
 	}
 }
