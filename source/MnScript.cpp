@@ -116,6 +116,7 @@ void mn_remove( MnState* s, MnIndex idx )
 
 void mn_swap( MnState* s, MnIndex idx1, MnIndex idx2 )
 {
+	if ( idx1 == idx2 ) return;
 	MnValue* val1 = ut_getstack_ptr( s, idx1 );
 	MnValue* val2 = ut_getstack_ptr( s, idx2 );
 	if ( val1 && val2 )
@@ -128,6 +129,7 @@ void mn_swap( MnState* s, MnIndex idx1, MnIndex idx2 )
 
 void mn_replace( MnState* s, MnIndex dst, MnIndex src )
 {
+	if ( dst == src ) return;
 	MnValue* val = ut_getstack_ptr( s, src );
 	if ( val ) ut_setstack( s, dst, *val );
 }
@@ -457,7 +459,7 @@ void mn_compile_test( const OvString& file )
 	for each ( const CmToken& tok in cm->tokens )
 	{
 		printf( " type: %3d, row: %3d, col: %3d ", tok.type, tok.row, tok.col );
-		if ( MnIsString( tok.val ) ) printf( "val: %s", MnToString(tok.val)->get_str().c_str() );
+		if ( MnIsString( tok.val ) ) printf( "val: %s", MnToString(tok.val)->str().c_str() );
 		else if ( MnIsNumber( tok.val ) ) printf( "val: %d", MnToNumber(tok.val) );
 		printf( "\n" );
 	}

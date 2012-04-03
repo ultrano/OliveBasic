@@ -11,9 +11,9 @@
 #define cm_tokerror()		(printf( "token: %d, row: %d, col: %d\n", cm_tok.type, cm_tok.row, cm_tok.col ),false)
 #define cm_tokmatch(t)		( (cm_tok.type) == (t) )
 #define cm_tokoption(t)		( cm_tokmatch(t)? (cm_toknext(),true) : false )
-#define cm_tokmust(t)		( cm_tokoption(t)? true : cm_tokerror() )
+#define cm_tokmust(t)		( cm_tokmatch(t)? true : cm_tokerror() )
 
-#define cm_kwmatch(kw)		( cm_tokmatch(tt_identifier) && (MnToString(cm_tok.val)->get_str() == (kw)) )
+#define cm_kwmatch(kw)		( cm_tokmatch(tt_identifier) && (MnToString(cm_tok.val)->str() == (kw)) )
 #define cm_kwoption(kw)		( cm_kwmatch((kw))? (cm_toknext(),true) : false )
 #define cm_kwmust(kw)		( cm_kwoption(kw)?  true : cm_tokerror() )
 
@@ -22,6 +22,10 @@
 
 #define cm_compile(stat)   ( statement::stat::compile(cm) )
 
+#define cm_expr				(cm->exprinfo)
+#define cm_rvalue()			(statement::rvalue(cm))
+
+#define cm_code				(cm->fi->codestream)
 
 OvInt CmScaning( CmCompiler* cm, const OvString& file )
 {
@@ -126,9 +130,10 @@ void CmParsing( CmCompiler* cm )
 	ifi.codestream.Reset( ifi.func->code );
 
 	cm->fi = &ifi;
-	cm->level.push_back( cm->locals.size() );
 	cm_compile(multi_stat);
 	cm->fi->codestream << op_return;
+
+	ut_excute_func( cm->s, cm->fi->func );
 }
 
 void CmStatements( CmCompiler* cm )
@@ -151,6 +156,22 @@ OvBool	statement::match( CmCompiler* cm, statfunc func )
 	OvBool ret = func(cm);
 	cm_loadpos(saveidx);
 	return ret;
+}
+
+void	statement::rvalue( CmCompiler* cm )
+{
+	switch ( cm_expr.type )
+	{
+	case et_const : cm_code << op_const << cm_expr.idx ; break;
+	case et_number : cm_code << op_const_num << cm_expr.num ; break;
+	case et_boolean : cm_code << (cm_expr.blr? op_const_true : op_const_false); break;
+
+	case et_local : cm_code << op_getstack << cm_expr.idx; break;
+	case et_field : cm_code << op_getfield; break;
+	case et_upval : cm_code << op_getupval << cm_expr.idx; break;
+	case et_rvalue : return ;
+	}
+	cm_expr.type = et_rvalue;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -182,24 +203,17 @@ void	statement::single_stat::compile( CmCompiler* cm )
 
 void	statement::local::compile( CmCompiler* cm )
 {
-	cm_kwmust("local");
-	do cm_compile(addsymb); while ( cm_tokoption(',') );
+	if ( cm_kwmatch("local") ) cm_toknext(); else return ;
+	if ( !cm_tokmust(tt_identifier) ) return ;
+
+	cm->fi->locals.push_back( MnToString(cm_tok.val)->hash() );
+	cm_code << op_const_nil ;
 	cm_compile(expression);
 	cm_tokmust(';');
+	cm_toknext();
 }
 
 //////////////////////////////////////////////////////////////////////////
-
-void statement::addsymb::compile( CmCompiler* cm )
-{
-	if (!cm_tokmatch(tt_identifier)) return;
-	CmSyminfo symb;
-	symb.hash = MnToString(cm_tok.val)->get_hash();
-	symb.level = cm->fi->level;
-	symb.index = cm->locals.size() - cm->level[cm->fi->level];
-	cm->locals.push_back( symb );
-	cm_toknext();
-}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -224,6 +238,20 @@ void	statement::expression::compile( CmCompiler* cm )
 void	statement::expr10::compile( CmCompiler* cm )
 {
 	cm_compile(expr9);
+	CmExprInfo lexpr = cm_expr;
+	while ( cm_tokoption('=') )
+	{
+		cm_compile(expr9);
+		cm_rvalue();
+
+		switch ( lexpr.type )
+		{
+		case et_local : cm_code << op_setstack << lexpr.idx ; break;
+		case et_field : cm_code << op_setfield ; break;
+		case et_upval : cm_code << op_setupval << lexpr.idx ; break;
+		default: printf( "'=' : left operand must be l-value" );
+		}
+	}
 }
 //////////////////////////////////////////////////////////////////////////
 
@@ -323,24 +351,32 @@ void	statement::expr3::compile( CmCompiler* cm )
 }
 //////////////////////////////////////////////////////////////////////////
 
-// 	OvBool ret = cm_statoption(expr1);
-// 	while ( ret && (cm_tokoption('+') || cm_tokoption('-')) )
-// 	{
-// 		ret = ret && cm_statmust(expr1);
-// 	}
-// 	return ret;
-
 void	statement::expr2::compile( CmCompiler* cm )
 {
 	cm_compile(expr1);
+	while ( cm_tokmatch('+') || cm_tokmatch('-') )
+	{
+		cm_rvalue();
+		opcode op = cm_tokmatch('+')? op_add : op_sub;
+		cm_toknext();
+		cm_compile(expr1);
+		cm_rvalue();
+		cm_code << op;
+	}
 }
 //////////////////////////////////////////////////////////////////////////
 
 void	statement::expr1::compile( CmCompiler* cm )
 {
 	cm_compile(term);
-	while ( (cm_tokoption('*') || cm_tokoption('/') || cm_tokoption('%')) )
+	while ( (cm_tokmatch('*') || cm_tokmatch('/') || cm_tokmatch('%')) )
 	{
+		cm_rvalue();
+		opcode op = cm_tokmatch('*')? op_mul : cm_tokmatch('/')? op_div : op_mod;
+		cm_toknext();
+		cm_compile(term);
+		cm_rvalue();
+		cm_code << op;
 	}
 }
 
@@ -348,7 +384,7 @@ void	statement::expr1::compile( CmCompiler* cm )
 
 void	statement::term::compile( CmCompiler* cm )
 {
-	return cm_compile(postexpr);
+	cm_compile(postexpr);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -377,12 +413,23 @@ void	statement::postexpr::compile( CmCompiler* cm )
 
 //////////////////////////////////////////////////////////////////////////
 
-CmExprType	statement::primary::compile( CmCompiler* cm )
+void	statement::primary::compile( CmCompiler* cm )
 {
-	if ( cm_tokoption(tt_number) )
+	if ( cm_tokmatch(tt_number) )
 	{
-		cm->fi->codestream << (OvByte)op_const_num << MnToNumber(cm_tok.val);
-		return et_const;
+		cm_expr.type = et_number;
+		cm_expr.num = MnToNumber(cm_tok.val);
+		cm_toknext();
+	}
+	else if ( cm_tokmatch(tt_identifier) )
+	{
+		OvHash32 hash = MnToString(cm_tok.val)->hash();
+		MnIndex idx = cm->fi->locals.size();
+		while ( idx-- ) { if (cm->fi->locals[idx] == hash) break; }
+
+		cm_expr.type = et_local;
+		cm_expr.idx	 = idx + 1;
+		cm_toknext();
 	}
 }
 

@@ -20,45 +20,45 @@ public:
 	CmToken( OvInt t, OvUInt r, OvUInt c ) : type(t) , row(r), col(c) {};
 };
 
-class CmSyminfo
-{
-public:
-
-	OvHash32 hash;	//!< symbol name hash
-	OvUInt	 level; //!< where symb is
-	MnIndex	 index; //!< local stack index
-
-};
-
 class CmFuncinfo
 {
 public:
 	CmFuncinfo*  last;
 	MnMFunction* func;
-	OvUInt		 level;
+
+	OvVector<OvHash32>	 locals;
 	OvBufferOutputStream codestream;
 
-	CmFuncinfo() : last(NULL), func(NULL), level(0), codestream(NULL) {};
+	CmFuncinfo() : last(NULL), func(NULL), codestream(NULL) {};
 };
 
 enum CmExprType
 {
 	et_none,
-	et_temp,
+	et_nil,
 	et_const,
+	et_number,
+	et_boolean,
+	et_rvalue,
+	et_local,
 	et_field,
+	et_upval,
 	et_method,
-	et_variable,
 };
 
-class CmExpression
+class CmExprInfo
 {
 public:
 	CmExprType	  type;
-	MnIndex		  idx;
-	MnIndex		  extra;
+	
+	union
+	{
+		OvByte		  idx;
+		MnNumber	  num;
+		MnNumber	  blr;
+	};
 
-	CmExpression() : type(et_none), idx(0), extra(0) {};
+	CmExprInfo() : type(et_none), num(0) {};
 };
 
 class CmCompiler
@@ -71,10 +71,8 @@ public:
 	OvUInt				tokpos;
 	OvVector<OvUInt>	savepos;
 
-	OvVector<OvUInt>	level;
-	OvVector<CmSyminfo>	locals;
-
 	CmFuncinfo*			fi;
+	CmExprInfo			exprinfo;
 
 	CmCompiler( MnState* _s ) : s(_s), tokpos(0) {};
 };
@@ -85,6 +83,7 @@ namespace statement
 
 	OvBool option( CmCompiler* cm, statfunc func );
 	OvBool	match( CmCompiler* cm, statfunc func );
+	void	rvalue( CmCompiler* cm );
 
 	namespace multi_stat
 	{
@@ -101,10 +100,6 @@ namespace statement
 		void	compile( CmCompiler* cm );
 	}
 
-	namespace addsymb
-	{
-		void	compile( CmCompiler* cm );
-	}
 	namespace block
 	{
 		void	compile( CmCompiler* cm );
@@ -177,7 +172,7 @@ namespace statement
 
 	namespace primary
 	{
-		CmExprType	compile( CmCompiler* cm );
+		void	compile( CmCompiler* cm );
 	}
 
 	namespace funcdesc

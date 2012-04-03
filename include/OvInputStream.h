@@ -24,6 +24,9 @@ interface_class OvInputStream : public OvRefable
 		return ( size == ReadBytes( (OvByte*)&data[0], size ) );
 	};
 
+	template<typename T>
+	OvInputStream& operator >> ( T& data ) { Read(data); return *this; };
+
 };
 
 

@@ -109,100 +109,6 @@ const MnTypeStr g_type_str[] =
 #define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.func: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
 
-
-#define ut_bit1( n, p ) ((~((~((MnInstruction)0))<<(n)))<<(p))
-#define ut_bit0( n, p ) (~ut_bit1( n, p ))
-
-#define cs_getbit(i,n,p) ((ut_bit1( (n), (p) ) & (i) )>>(p))
-#define cs_setbit(i,n,p,b) (i = (ut_bit1( (n), (p) ) & ((b)<<(p))) | (ut_bit0( (n), (p) ) & (i)))
-
-#define opsize	(6)
-#define asize 	(8)
-#define bsize 	(9)
-#define csize 	(9)
-#define isize	(opsize+asize+bsize+csize)
-
-#define oppos	(0)
-#define apos	(oppos + opsize)
-#define bpos  	(apos  + asize)
-#define cpos  	(bpos  + bsize)
-
-#define cs_getop(i)		(cs_getbit( i, opsize, oppos ))
-#define cs_setop(i,op)	(cs_setbit( i, opsize, oppos, op ))
-
-#define cs_geta(i)		(cs_getbit( i, asize, apos ))
-#define cs_seta(i,a)	(cs_setbit( i, asize, apos, a ))
-
-#define cs_getb(i)		(cs_getbit( i, bsize, bpos ) | ((-cs_getbit( i, 1, bpos + bsize - 1 ))<<bsize) )
-#define cs_setb(i,b)	(cs_setbit( i, bsize, bpos, b ))
-
-#define cs_getc(i)		(cs_getbit( i, csize, cpos ) | ((-cs_getbit( i, 1, cpos + csize - 1 ))<<csize) )
-#define cs_setc(i,c)	(cs_setbit( i, csize, cpos, c ))
-
-#define cs_isconst(v)	(!!(ut_bit1(1,asize)&(v)))
-#define cs_index(v)		(ut_bit1(asize,0)&(v))
-#define cs_const(idx)	(ut_bit1(1,asize) | (ut_bit1(asize,0) & cs_index((idx))))
-
-#define cs_code(op,a,b,c) ( (ut_bit1(opsize,oppos)&((op)<<oppos)) | (ut_bit1(asize,apos)&((a)<<apos)) | (ut_bit1(bsize,bpos)&((b)<<bpos)) | (ut_bit1(csize,cpos)&((c)<<cpos)) )
-
-/*
-op : 6
-a : 8
-b:  9
-c : 9
-*/
-
-enum opcode
-{
-	op_none = 0,
-	op_add,
-	op_sub,
-	op_mul,
-	op_div,
-	op_mod,
-
-	op_push,
-	op_pull,
-
-	op_bit_or,
-	op_bit_xor,
-	op_bit_and,
-
-	op_or,
-	op_and,
-
-	op_move,
-
-	op_getupval,
-	op_setupval,
-
-	op_getfield,
-	op_setfield,
-
-	op_getglobal,
-	op_setglobal,
-
-	op_newclosure,
-
-	op_close_upval,
-
-	op_jmp,
-	op_fjp,
-
-	op_eq,
-	op_neq,
-	op_not,
-	op_lt,
-	op_gt,
-
-	op_call,
-	op_return,
-
-	op_const_num,
-	op_const_char,
-	op_const,
-};
-
 //////////////////////////////////////////////////////////////////////////
 
 OvBool ut_str2num( const OvString& str, MnNumber &num ) 
@@ -438,8 +344,8 @@ public:
 	MnString( MnState* s, OvHash32 hash, const OvString& sstr );
 	~MnString();
 
-	OvHash32		get_hash() { return m_hash; };
-	const OvString& get_str() { return m_str; };
+	OvHash32		hash() { return m_hash; };
+	const OvString& str() { return m_str; };
 
 	virtual void marking();
 private:
@@ -850,7 +756,7 @@ OvInt ut_str2type( const char* str )
 
 OvInt ut_str2type( const MnValue& val )
 {
-	return ut_str2type( MnIsString(val)? MnToString(val)->get_str().c_str() : "unknown" );
+	return ut_str2type( MnIsString(val)? MnToString(val)->str().c_str() : "unknown" );
 }
 
 
@@ -894,7 +800,7 @@ void ut_setglobal( MnState* s, MnValue& n, const MnValue& val )
 {
 	if ( MnIsString(n) )
 	{
-		OvHash32 hash = MnToString(n)->get_hash();
+		OvHash32 hash = MnToString(n)->hash();
 		if ( MnIsNil(val) )
 		{
 			s->global.erase( hash );
@@ -910,7 +816,7 @@ MnValue ut_getglobal( MnState* s, MnValue& n )
 {
 	if ( MnIsString(n) )
 	{
-		OvHash32 hash = MnToString(n)->get_hash();
+		OvHash32 hash = MnToString(n)->hash();
 		MnState::map_hash_val::iterator itor = s->global.find( hash );
 		if ( itor != s->global.end() )
 		{
@@ -1003,7 +909,7 @@ void ut_settable( MnState* s, MnValue& t, MnValue& n, MnValue& v )
 		MnTable* tbl = MnToTable(t);
 		if ( MnIsString(n) )
 		{
-			OvHash32 hash = MnToString(n)->get_hash();
+			OvHash32 hash = MnToString(n)->hash();
 			MnTable::map_hash_pair::iterator itor = tbl->table.find( hash );
 			if ( itor !=  tbl->table.end() )
 			{
@@ -1048,7 +954,7 @@ MnValue ut_gettable( MnState* s, MnValue& t, MnValue& n )
 		MnTable* tbl = MnToTable(t);
 		if ( MnIsString(n) )
 		{
-			OvHash32 hash = MnToString(n)->get_hash();
+			OvHash32 hash = MnToString(n)->hash();
 			MnTable::map_hash_pair::iterator itor = tbl->table.find( hash );
 
 			if ( itor !=  tbl->table.end() )
@@ -1318,7 +1224,7 @@ MnNumber ut_tonumber( const MnValue& val )
 	else if ( MnIsString(val) )
 	{
 		MnNumber num; 
-		if (ut_str2num( MnToString(val)->get_str(), num ) ) return num;;
+		if (ut_str2num( MnToString(val)->str(), num ) ) return num;;
 	}
 	else if ( MnIsBoolean(val) )
 	{
@@ -1331,7 +1237,7 @@ OvString ut_tostring( const MnValue& val )
 {
 	if ( MnIsString(val) )
 	{
-		return MnToString(val)->get_str();
+		return MnToString(val)->str();
 	}
 	else if ( MnIsNumber(val) )
 	{
@@ -1473,143 +1379,6 @@ OvInt ex_setmeta( MnState* s )
 	ut_setmeta( ut_getstack(s,1), ut_getstack(s,2) );
 	return 0;
 }
-//////////////////////////////////////////////////////////////////////////
-struct MnOpCodeABC : public OvMemObject
-{
-	OvByte op;
-	OvChar a;
-	union
-	{
-		struct { OvChar b; OvChar c; };
-		OvShort bx;
-	};
-};
-
-enum MnOperate
-{
-	MOP_NONEOP = 0, 
-	MOP_NEWTABLE,
-	MOP_NEWARRAY,
-	MOP_NEWCLOSURE,
-
-	MOP_LINK_UPVAL,
-	MOP_LINK_STACK,
-
-	MOP_SET_STACK,
-	MOP_GET_STACK,
-
-	MOP_REMOVE,
-	MOP_INSERT,
-	MOP_SWAP,
-	MOP_REPLACE,
-
-	MOP_SET_FIELD,
-	MOP_GET_FIELD,
-
-	MOP_SET_GLOBAL,
-	MOP_GET_GLOBAL,
-
-	MOP_SET_META,
-	MOP_GET_META,
-
-	MOP_SET_UPVAL,
-	MOP_GET_UPVAL,
-
-	MOP_PUSH,
-	MOP_POP,
-
-	MOP_AND,
-	MOP_OR,
-	MOP_XOR,
-
-	MOP_EQ,
-	MOP_LT,
-	MOP_GT,
-
-	MOP_NOT,
-	MOP_CMP,
-	MOP_JMP,
-	MOP_RET,
-
-	MOP_ADD,
-	MOP_SUB,
-	MOP_MUL,
-	MOP_DIV,
-
-	MOP_CALL,
-
-	MOP_LOG,
-};
-//////////////////////////////////////////////////////////////////////////
-
-MnValue ut_method_arith( MnState* s, MnOperate op, const MnValue& a, const MnValue& b )
-{
-	if ( MnIsNumber(a) )
-	{
-		MnNumber ret = MnToNumber(a);
-		if ( op == MOP_ADD ) ret += ut_tonumber(b);
-		else if ( op == MOP_SUB ) ret -= ut_tonumber(b);
-		else if ( op == MOP_MUL ) ret *= ut_tonumber(b);
-		else if ( op == MOP_DIV ) ret /= ut_tonumber(b);
-		return MnValue( ret );
-	}
-	else if ( MnIsString(a) )
-	{
-		OvString ret = MnToString(a)->get_str();
-		if ( op == MOP_ADD ) ret += ut_tostring(b);
-		return MnValue( MOT_STRING, ut_newstring( s, ret ) );
-	}
-	else
-	{
-		OvString method =	(op == MOP_ADD)? METHOD_ADD : (op == MOP_SUB)? METHOD_SUB : (op == MOP_MUL)? METHOD_MUL : (op == MOP_DIV)? METHOD_DIV : "";
-		ut_pushvalue( s, ut_getmeta( a ) );
-		mn_pushstring(s,method);
-		mn_getfield(s,-2);
-
-		ut_pushvalue( s, a );
-		ut_pushvalue( s, b );
-		mn_call(s,2,1);
-
-		MnValue ret = ut_getstack( s, -1 );
-		mn_pop(s,2);
-
-		return ret;
-	}
-	return MnValue();
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-MnValue ut_method_logical( MnState* s,MnOperate op, MnValue& a, MnValue& b )
-{
-	if ( MnIsNumber(a) && MnIsNumber(b) )
-	{
-		if ( op == MOP_EQ ) return MnValue((OvBool)(ut_tonumber(a) == ut_tonumber(b)));
-		else if ( op == MOP_LT ) return MnValue((OvBool)(ut_tonumber(a) < ut_tonumber(b)));
-		else if ( op == MOP_GT ) return MnValue((OvBool)(ut_tonumber(a) > ut_tonumber(b)));
-	}
-	else if ( MnIsString(a) && MnIsString(b) )
-	{
-		if ( op == MOP_EQ ) return MnValue( (OvBool)( ut_tostring(a) == ut_tostring(b) ) );
-	}
-	else
-	{
-		OvString method =	(op == MOP_EQ)? METHOD_EQ : (op == MOP_LT)? METHOD_LT : (op == MOP_GT)? METHOD_GT : "";
-		ut_pushvalue( s, ut_getmeta( a ) );
-		mn_pushstring(s,method);
-		mn_getfield(s,-2);
-
-		ut_pushvalue( s, a );
-		ut_pushvalue( s, b );
-		mn_call(s,2,1);
-
-		MnValue ret = ut_getstack( s, -1 );
-		mn_pop(s,2);
-
-		return ret;
-	}
-	return MnValue();
-}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -1655,35 +1424,140 @@ void ut_restore_ci( MnState* s, OvInt nret )
 	ut_free(ci);
 }
 
-MnValue ut_pair_param_method( MnState* s, const OvString& method, const MnValue& a, const MnValue b )
-{
-	ut_pushvalue( s, ut_getmeta(a) );
-	mn_pushstring( s, method );
-	mn_getfield( s, -2 );
-	if ( mn_isnil( s, -1 ) ) { mn_pop(s,1); return MnValue(); }
+// MnValue ut_pair_param_method( MnState* s, const OvString& method, const MnValue& a, const MnValue b )
+// {
+// 	ut_pushvalue( s, ut_getmeta(a) );
+// 	mn_pushstring( s, method );
+// 	mn_getfield( s, -2 );
+// 	if ( mn_isnil( s, -1 ) ) { mn_pop(s,1); return MnValue(); }
+// 
+// 	ut_pushvalue( s, a );
+// 	ut_pushvalue( s, b );
+// 	mn_call( s, 2, 1 );
+// 	MnValue ret = ut_getstack( s, -1 );
+// 	mn_pop(s,1);
+// 	return ret;
+// }
 
-	ut_pushvalue( s, a );
-	ut_pushvalue( s, b );
-	mn_call( s, 2, 1 );
-	MnValue ret = ut_getstack( s, -1 );
-	mn_pop(s,1);
-	return ret;
-}
+
+/*
+op_push,
+op_pull,
+
+op_bit_or,
+op_bit_xor,
+op_bit_and,
+
+op_or,
+op_and,
+
+op_move,
+
+op_getupval,
+op_setupval,
+
+op_getfield,
+op_setfield,
+
+op_getglobal,
+op_setglobal,
+
+op_newclosure,
+
+op_close_upval,
+
+op_jmp,
+op_fjp,
+
+op_eq,
+op_neq,
+op_not,
+op_lt,
+op_gt,
+
+op_call,
+op_return,
+*/
+enum opcode : OvByte
+{
+	op_none = 0,
+	op_add,
+	op_sub,
+	op_mul,
+	op_div,
+	op_mod,
+
+	op_setstack,
+	op_getstack,
+
+	op_setfield,
+	op_getfield,
+
+	op_setupval,
+	op_getupval,
+
+	op_const_true,
+	op_const_false,
+	op_const_nil,
+	op_const_num,
+	op_const_char,
+	op_const,
+
+	op_return,
+};
+
+struct MnCodeReader
+{
+	MnState* state;
+	MnCodeReader( MnState* s ) : state(s) {}
+
+	template<typename T>
+	MnCodeReader& operator >> ( T& data ) { data = *((T*)state->pc); state->pc += sizeof(T); return *this; }
+};
 
 void ut_excute_func( MnState* s, MnMFunction* func )
 {
 	MnCallInfo* entrycall = s->ci;
 	s->func	= func;
 	s->pc	= func->code->Pointer();
-
+	MnCodeReader emcee(s);
 	while ( true )
 	{
-		OvByte op = *s->pc++;
+		OvByte op;
+		emcee >> op;
 		switch ( op )
 		{
-		case op_return :
-			if ( s->ci == entrycall ) return; else break;
+		case op_add : case op_sub : case op_mul : case op_div : case op_mod :
+			{
+				MnValue left  = ut_getstack(s,-2);
+				MnValue right = ut_getstack(s,-1);
+				mn_pop(s,2);
+				
+				if (op==op_add) mn_pushnumber( s, MnToNumber(left) + MnToNumber(right) );
+				else if (op==op_sub) mn_pushnumber( s, MnToNumber(left) - MnToNumber(right) );
+				else if (op==op_mul) mn_pushnumber( s, MnToNumber(left) * MnToNumber(right) );
+				else if (op==op_div) mn_pushnumber( s, MnToNumber(left) / MnToNumber(right) );
+				else if (op==op_mod) mn_pushnumber( s, (OvInt)MnToNumber(left) % (OvInt)MnToNumber(right) );
+			}
+			break;
+
+		case op_setstack :
+		case op_getstack :
+			OvByte idx;
+			emcee >> idx;
+			if (op==op_setstack) mn_setstack(s,idx); else mn_getstack(s,idx);
+			break;
+
+		case op_const_nil : mn_pushnil(s); break;
+
+		case op_const_num :
+			{
+				MnNumber num;
+				emcee >> num;
+				ut_pushvalue( s, MnValue(num) );
+			}
+			break;
+		case op_return : if ( s->ci == entrycall ) return; else break;
 		}
 	}
-
 }
