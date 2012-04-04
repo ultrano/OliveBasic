@@ -40,10 +40,11 @@ enum CmExprType
 	et_number,
 	et_boolean,
 	et_rvalue,
+	et_global,
 	et_local,
-	et_field,
 	et_upval,
-	et_method,
+	et_field,
+	et_call,
 };
 
 class CmExprInfo
@@ -59,6 +60,13 @@ public:
 	};
 
 	CmExprInfo() : type(et_none), num(0) {};
+};
+
+class CmCompileException
+{
+public:
+	CmCompileException( const OvString& _msg ) : msg(_msg) {};
+	OvString msg;
 };
 
 class CmCompiler
@@ -84,6 +92,7 @@ namespace statement
 	OvBool option( CmCompiler* cm, statfunc func );
 	OvBool	match( CmCompiler* cm, statfunc func );
 	void	rvalue( CmCompiler* cm );
+	void	free_expr( CmCompiler* cm );
 
 	namespace multi_stat
 	{

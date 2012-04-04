@@ -1,5 +1,8 @@
 #pragma once
 
+#define cm_throw(msg)		(throw CmCompileException(msg))
+#define cm_error(msg)		(cm_throw( OU::string::format("[row:%d,col:%d] %s",cm_tok.row,cm_tok.col,OvString(msg).c_str()) ) )
+
 #define cm_tok				( ( cm->tokpos<cm->tokens.size() )? cm->tokens[cm->tokpos] : CmToken() )
 #define cm_lah/*lookahead*/	( ((cm->tokpos+1)<(cm->tokens.size()))? cm->tokens[cm->tokpos+1] : CmToken() )
 #define cm_savepos()		( cm->savepos.push_back( cm->tokpos ), (cm->savepos.size()-1) )
@@ -8,7 +11,7 @@
 
 #define cm_lahmatch(t)		( (cm_lah.type) == (t) )
 
-#define cm_tokerror()		(printf( "token: %d, row: %d, col: %d\n", cm_tok.type, cm_tok.row, cm_tok.col ),false)
+#define cm_tokerror()		( cm_error("unexpected token\n"),false)
 #define cm_tokmatch(t)		( (cm_tok.type) == (t) )
 #define cm_tokoption(t)		( cm_tokmatch(t)? (cm_toknext(),true) : false )
 #define cm_tokmust(t)		( cm_tokmatch(t)? true : cm_tokerror() )
@@ -24,7 +27,7 @@
 
 #define cm_expr				(cm->exprinfo)
 #define cm_rvalue()			(statement::rvalue(cm))
-
+#define cm_free_expr()		(statement::free_expr(cm))
 #define cm_code				(cm->fi->codestream)
 
 OvInt CmScaning( CmCompiler* cm, const OvString& file )
@@ -130,10 +133,20 @@ void CmParsing( CmCompiler* cm )
 	ifi.codestream.Reset( ifi.func->code );
 
 	cm->fi = &ifi;
-	cm_compile(multi_stat);
-	cm->fi->codestream << op_return;
+	try
+	{
+		cm_compile(multi_stat);
+		cm->fi->codestream << op_return << (OvByte)0 ;
 
-	ut_excute_func( cm->s, cm->fi->func );
+		MnClosure* cls = ut_newMclosure(cm->s);
+		cls->u.m->func = MnValue(MOT_FUNCPROTO,cm->fi->func);
+		ut_pushvalue(cm->s,MnValue(MOT_CLOSURE,cls));
+		mn_call(cm->s,0,0);
+	}
+	catch ( CmCompileException& e )
+	{
+		printf( e.msg.c_str() );
+	}
 }
 
 void CmStatements( CmCompiler* cm )
@@ -166,12 +179,25 @@ void	statement::rvalue( CmCompiler* cm )
 	case et_number : cm_code << op_const_num << cm_expr.num ; break;
 	case et_boolean : cm_code << (cm_expr.blr? op_const_true : op_const_false); break;
 
+	case et_global : cm_code << op_getglobal << cm_expr.idx; break;
 	case et_local : cm_code << op_getstack << cm_expr.idx; break;
-	case et_field : cm_code << op_getfield; break;
 	case et_upval : cm_code << op_getupval << cm_expr.idx; break;
+	case et_field : cm_code << op_getfield; break;
+	case et_call : cm_code << op_call << cm_expr.idx << (OvByte)1; break;
 	case et_rvalue : return ;
 	}
 	cm_expr.type = et_rvalue;
+}
+
+void	statement::free_expr( CmCompiler* cm )
+{
+	switch ( cm_expr.type )
+	{
+	case et_field : cm_code << op_popstack << (OvByte)2; break;
+	case et_rvalue : cm_code << op_popstack << (OvByte)1; break;
+	case et_call : cm_code << op_call << cm_expr.idx << (OvByte)0; break;
+	}
+	cm_expr.type = et_none;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -195,8 +221,9 @@ void	statement::single_stat::compile( CmCompiler* cm )
 // 	else if ( cm_statoption(ifstat) ) return true;
 // 	else if ( cm_statoption(whilestat) ) return true;
 // 	else if ( (cm_statoption(expression) && cm_tokmust(';')) ) return true;
-	else cm_compile(expression);
-	cm_tokoption(';');
+	else { cm_compile(expression); cm_free_expr(); if (cm_tokmust(';')) cm_toknext(); }
+
+	if (cm_tokmatch(';')) cm_toknext();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -209,8 +236,7 @@ void	statement::local::compile( CmCompiler* cm )
 	cm->fi->locals.push_back( MnToString(cm_tok.val)->hash() );
 	cm_code << op_const_nil ;
 	cm_compile(expression);
-	cm_tokmust(';');
-	cm_toknext();
+	if (cm_tokmust(';')) cm_toknext();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -246,11 +272,13 @@ void	statement::expr10::compile( CmCompiler* cm )
 
 		switch ( lexpr.type )
 		{
+		case et_global : cm_code << op_setglobal << lexpr.idx ; break;
 		case et_local : cm_code << op_setstack << lexpr.idx ; break;
-		case et_field : cm_code << op_setfield ; break;
 		case et_upval : cm_code << op_setupval << lexpr.idx ; break;
-		default: printf( "'=' : left operand must be l-value" );
+		case et_field : cm_code << op_setfield ; break;
+		default: cm_error( "'=' : left operand must be l-value\n" );
 		}
+		cm_expr = lexpr;
 	}
 }
 //////////////////////////////////////////////////////////////////////////
@@ -409,6 +437,38 @@ void	statement::term::compile( CmCompiler* cm )
 void	statement::postexpr::compile( CmCompiler* cm )
 {
 	cm_compile(primary);
+	while (1)
+	{
+		if ( cm_tokmatch('(') )
+		{
+			cm_rvalue();
+			cm_toknext();
+
+			OvByte nargs = 0;
+			while ( !cm_tokmatch(')') )
+			{
+				++nargs;
+				cm_compile(expression);
+				cm_rvalue();
+				if ( cm_tokmatch(',') ) cm_toknext();
+				else if ( cm_tokmatch(')') ) break;
+				else cm_tokerror();
+			}
+			cm_toknext(); 
+			cm_expr.type = et_call;
+			cm_expr.idx  = nargs;
+		}
+		else if ( cm_tokmatch('[') )
+		{
+			cm_rvalue();
+			cm_toknext();
+			cm_compile(expression);
+			cm_rvalue();
+			if (cm_tokmust(']')) cm_toknext();
+			cm_expr.type = et_field;
+		}
+		else break;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -421,14 +481,30 @@ void	statement::primary::compile( CmCompiler* cm )
 		cm_expr.num = MnToNumber(cm_tok.val);
 		cm_toknext();
 	}
+	else if ( cm_tokmatch(tt_string) )
+	{
+		cm->fi->func->consts.push_back(cm_tok.val);
+		cm_expr.type = et_const;
+		cm_expr.idx	 = cm->fi->func->consts.size();
+		cm_toknext();
+	}
 	else if ( cm_tokmatch(tt_identifier) )
 	{
 		OvHash32 hash = MnToString(cm_tok.val)->hash();
 		MnIndex idx = cm->fi->locals.size();
 		while ( idx-- ) { if (cm->fi->locals[idx] == hash) break; }
 
-		cm_expr.type = et_local;
-		cm_expr.idx	 = idx + 1;
+		if ( idx >= 0 )
+		{
+			cm_expr.type = et_local;
+			cm_expr.idx	 = idx + 1;
+		}
+		else
+		{
+			cm->fi->func->consts.push_back(cm_tok.val);
+			cm_expr.type = et_global;
+			cm_expr.idx	 = cm->fi->func->consts.size();
+		}
 		cm_toknext();
 	}
 }

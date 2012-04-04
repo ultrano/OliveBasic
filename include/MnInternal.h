@@ -1487,6 +1487,10 @@ enum opcode : OvByte
 	op_div,
 	op_mod,
 
+	op_setglobal,
+	op_getglobal,
+
+	op_popstack,
 	op_setstack,
 	op_getstack,
 
@@ -1502,6 +1506,8 @@ enum opcode : OvByte
 	op_const_num,
 	op_const_char,
 	op_const,
+
+	op_call,
 
 	op_return,
 };
@@ -1541,13 +1547,53 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 			}
 			break;
 
-		case op_setstack :
-		case op_getstack :
-			OvByte idx;
-			emcee >> idx;
-			if (op==op_setstack) mn_setstack(s,idx); else mn_getstack(s,idx);
+		case op_setglobal :
+		case op_getglobal :
+			{
+				OvByte idx;
+				emcee >> idx;
+				if (op==op_setglobal)
+				{
+					ut_insertstack( s, -1, ut_getconst(s->func,idx) );
+					mn_setglobal(s);
+				}
+				else
+				{
+					ut_pushvalue( s, ut_getconst(s->func,idx) );
+					mn_getglobal(s);
+				}
+			}
 			break;
 
+		case op_popstack :
+		case op_setstack :
+		case op_getstack :
+			{
+				OvByte idx;
+				emcee >> idx;
+				if (op==op_setstack) mn_setstack(s,idx);
+				else if (op==op_getstack)mn_getstack(s,idx);
+				else mn_pop(s,idx);
+			}
+			break;
+
+
+		case op_setfield :
+		case op_getfield :
+			{
+				if (op==op_setfield) 
+				{
+					ut_setfield(s,ut_getstack(s,-3),ut_getstack(s,-2),ut_getstack(s,-1));
+					mn_pop(s,1);
+				}
+				else
+				{
+					MnValue val =ut_getfield(s,ut_getstack(s,-2),ut_getstack(s,-1));
+					mn_pop(s,2);
+					ut_pushvalue(s,val);
+				}
+			}
+			break;
 		case op_const_nil : mn_pushnil(s); break;
 
 		case op_const_num :
@@ -1557,7 +1603,29 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				ut_pushvalue( s, MnValue(num) );
 			}
 			break;
-		case op_return : if ( s->ci == entrycall ) return; else break;
+		case op_const :
+			{
+				OvByte idx;
+				emcee >> idx;
+				ut_pushvalue( s, ut_getconst(s->func,idx) );
+			}
+			break;
+
+		case op_call :
+			{
+				OvByte nargs,nrets;
+				emcee >> nargs >> nrets;
+				mn_call( s, nargs, nrets );
+			}
+			break;
+		case op_return :
+			{
+				OvByte nrets;
+				emcee >> nrets;
+				OvBool isend = (entrycall == s->ci);
+				ut_restore_ci(s, nrets);
+				if ( isend ) return; else break;
+			}
 		}
 	}
 }

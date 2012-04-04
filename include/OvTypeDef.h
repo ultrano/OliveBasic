@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <string>
+#include <sstream>
 #include <vector>
 #include <list>
 #include <set>
@@ -11,6 +12,7 @@
 #include <queue>
 
 #define OvString			std::string
+#define OvStringStream		std::stringstream
 #define OvVector			std::vector
 #define OvList				std::list
 #define OvPair				std::pair

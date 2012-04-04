@@ -451,6 +451,7 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 void mn_compile_test( const OvString& file )
 {
 	MnState* s = mn_openstate();
+	mn_lib_default(s);
 	CmCompiler icm(s);
 	CmCompiler* cm = &icm;
 	CmScaning( cm, file );
