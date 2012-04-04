@@ -1503,11 +1503,14 @@ enum opcode : OvByte
 	op_const_true,
 	op_const_false,
 	op_const_nil,
+	op_const_zero,
+	op_const_one,
 	op_const_num,
 	op_const_char,
 	op_const,
 
 	op_call,
+	op_jump,
 
 	op_return,
 };
@@ -1611,7 +1614,11 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 			}
 			break;
 		case op_const_nil : mn_pushnil(s); break;
+		case op_const_true : mn_pushboolean(s,true); break;
+		case op_const_false : mn_pushboolean(s,false); break;
 
+		case op_const_zero : ut_pushvalue( s, MnValue(0.0) ); break;
+		case op_const_one : ut_pushvalue( s, MnValue(1.0) ); break;
 		case op_const_num :
 			{
 				MnNumber num;
@@ -1634,6 +1641,15 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				mn_call( s, nargs, nrets );
 			}
 			break;
+
+		case op_jump :
+			{
+				OvInt step = 0;
+				emcee >> step;
+				s->pc += step;
+			}
+			break;
+
 		case op_return :
 			{
 				OvByte nrets;

@@ -1,6 +1,8 @@
 
 local a = table();
-print( a.a = "aaa" );
-print( a["a"] );
-print(true);
-dump_stack();
+a.a = 0;
+again:
+
+print( a.a = a.a + 1 );
+
+goto again;

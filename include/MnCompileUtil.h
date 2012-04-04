@@ -28,8 +28,17 @@
 #define cm_expr				(cm->exprinfo)
 #define cm_rvalue()			(statement::rvalue(cm))
 #define cm_free_expr()		(statement::free_expr(cm))
+#define cm_resolve_goto(fi)	(statement::resolve_goto(cm,fi))
+
 #define cm_code				(cm->fi->codewriter)
+#define cm_codesize()		(cm->fi->func->code.size())
+#define cm_getcode(pos)		(&(cm->fi->func->code.at((pos))))
+#define cm_fixjump(codepos,tpos,opos) ( *(OvInt*)cm_getcode((codepos)) = ((tpos) - (opos)) )
+
 #define cm_addconst(val)	(statement::addconst(cm,(val)))
+#define cm_addlabel(l)	    (cm->fi->labels.push_back((l)))
+#define cm_addgoto(g)	    (cm->fi->gotos.push_back((g)))
+
 
 OvInt CmScaning( CmCompiler* cm, const OvString& file )
 {
@@ -127,6 +136,8 @@ OvInt CmScaning( CmCompiler* cm, const OvString& file )
 void CmParsing( CmCompiler* cm );
 void CmStatements( CmCompiler* cm );
 
+
+
 void CmParsing( CmCompiler* cm )
 {
 	CmFuncinfo ifi;
@@ -138,6 +149,11 @@ void CmParsing( CmCompiler* cm )
 	{
 		cm_compile(multi_stat);
 		cm_code << op_return << (OvByte)0 ;
+
+		//////////////////////////////////////////////////////////////////////////
+		cm_resolve_goto(cm->fi);
+
+		//////////////////////////////////////////////////////////////////////////
 
 		MnClosure* cls = ut_newMclosure(cm->s);
 		cls->u.m->func = MnValue(MOT_FUNCPROTO,cm->fi->func);
@@ -178,8 +194,14 @@ void	statement::rvalue( CmCompiler* cm )
 	{
 	case et_nil : cm_code << op_const_nil ; break;
 	case et_const : cm_code << op_const << cm_expr.idx ; break;
-	case et_number : cm_code << op_const_num << cm_expr.num ; break;
 	case et_boolean : cm_code << (cm_expr.blr? op_const_true : op_const_false); break;
+	case et_number : 
+		{
+			if ( cm_expr.num == 0.0 ) cm_code << op_const_zero ;
+			else if ( cm_expr.num == 1.0 ) cm_code << op_const_one ;
+			else cm_code << op_const_num << cm_expr.num ;
+		}
+		break;
 
 	case et_global : cm_code << op_getglobal << cm_expr.idx; break;
 	case et_local : cm_code << op_getstack << cm_expr.idx; break;
@@ -212,6 +234,19 @@ OvByte	statement::addconst( CmCompiler* cm, const MnValue& val )
 	cm->fi->func->consts.push_back(cm_tok.val);
 	return cm->fi->func->consts.size();
 }
+void statement::resolve_goto( CmCompiler* cm, CmFuncinfo* fi ) 
+{
+	for each ( const CmGotoInfo& igoto in fi->gotos )
+	{
+		for each ( const CmLabelInfo& ilabel in fi->labels )
+		{
+			if ( igoto.label.hash == ilabel.hash )
+			{
+				cm_fixjump( igoto.codepos, ilabel.pos, igoto.label.pos );
+			}
+		}
+	}
+}
 //////////////////////////////////////////////////////////////////////////
 
 void	statement::multi_stat::compile( CmCompiler* cm )
@@ -233,9 +268,42 @@ void	statement::single_stat::compile( CmCompiler* cm )
 // 	else if ( cm_statoption(ifstat) ) return true;
 // 	else if ( cm_statoption(whilestat) ) return true;
 // 	else if ( (cm_statoption(expression) && cm_tokmust(';')) ) return true;
-	else { cm_compile(expression); cm_free_expr(); if (cm_tokmust(';')) cm_toknext(); }
+
+	else if ( cm_tokmatch(tt_identifier) && cm_lahmatch(':') ) { cm_compile(label_stat); }
+	else if ( cm_kwmatch("goto") ) { cm_compile(goto_stat); }
+	else
+	{
+		cm_compile(expression);
+		cm_free_expr();
+		if (cm_tokmust(';')) cm_toknext();
+	}
 
 	if (cm_tokmatch(';')) cm_toknext();
+}
+//////////////////////////////////////////////////////////////////////////
+
+void	statement::label_stat::compile( CmCompiler* cm )
+{
+	cm_addlabel( CmLabelInfo( MnToString(cm_tok.val)->hash(), cm_codesize() ) );
+	cm_toknext();cm_toknext();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void	statement::goto_stat::compile( CmCompiler* cm )
+{
+	cm_toknext();
+	cm_tokmust(tt_identifier);
+
+	cm_code << op_jump ;
+	CmGotoInfo igoto;
+	igoto.codepos = cm_codesize();
+	cm_code << OvInt(0);
+	igoto.label.hash = MnToString(cm_tok.val)->hash();
+	igoto.label.pos  = cm_codesize();
+	cm_addgoto(igoto);
+	cm_toknext();
+	if (cm_tokmust(';')) cm_toknext();
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -20,13 +20,29 @@ public:
 	CmToken( OvInt t, OvUInt r, OvUInt c ) : type(t) , row(r), col(c) {};
 };
 
+struct CmLabelInfo
+{
+	OvHash32 hash;
+	OvUInt	 pos;
+	CmLabelInfo( OvHash32 h, OvUInt p ) : hash(h), pos(p) {};
+	CmLabelInfo() {};
+};
+
+struct CmGotoInfo
+{
+	OvUInt		codepos;
+	CmLabelInfo label;
+};
+
 class CmFuncinfo
 {
 public:
 	CmFuncinfo*  last;
 	MnMFunction* func;
 
-	OvVector<OvHash32>	locals;
+	OvVector<OvHash32>		locals;
+	OvVector<CmLabelInfo>	labels;
+	OvVector<CmGotoInfo>	gotos;
 	MnCodeWriter		codewriter;
 
 	CmFuncinfo() : last(NULL), func(NULL), codewriter(NULL) {};
@@ -37,8 +53,8 @@ enum CmExprType
 	et_none,
 	et_nil,
 	et_const,
-	et_number,
 	et_boolean,
+	et_number,
 	et_rvalue,
 	et_global,
 	et_local,
@@ -93,6 +109,7 @@ namespace statement
 	OvBool	match( CmCompiler* cm, statfunc func );
 	void	rvalue( CmCompiler* cm );
 	void	free_expr( CmCompiler* cm );
+	void	resolve_goto( CmCompiler* cm, CmFuncinfo* fi );
 	OvByte	addconst( CmCompiler* cm, const MnValue& val );
 
 	namespace multi_stat
@@ -101,6 +118,16 @@ namespace statement
 	}
 
 	namespace single_stat
+	{
+		void	compile( CmCompiler* cm );
+	}
+
+	namespace label_stat
+	{
+		void	compile( CmCompiler* cm );
+	}
+
+	namespace goto_stat
 	{
 		void	compile( CmCompiler* cm );
 	}
