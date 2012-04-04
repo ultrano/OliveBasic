@@ -28,7 +28,8 @@
 #define cm_expr				(cm->exprinfo)
 #define cm_rvalue()			(statement::rvalue(cm))
 #define cm_free_expr()		(statement::free_expr(cm))
-#define cm_code				(cm->fi->codestream)
+#define cm_code				(cm->fi->codewriter)
+#define cm_addconst(val)	(statement::addconst(cm,(val)))
 
 OvInt CmScaning( CmCompiler* cm, const OvString& file )
 {
@@ -130,13 +131,13 @@ void CmParsing( CmCompiler* cm )
 {
 	CmFuncinfo ifi;
 	ifi.func = ut_newfunction(cm->s);
-	ifi.codestream.Reset( ifi.func->code );
+	ifi.codewriter.func = ifi.func;
 
 	cm->fi = &ifi;
 	try
 	{
 		cm_compile(multi_stat);
-		cm->fi->codestream << op_return << (OvByte)0 ;
+		cm_code << op_return << (OvByte)0 ;
 
 		MnClosure* cls = ut_newMclosure(cm->s);
 		cls->u.m->func = MnValue(MOT_FUNCPROTO,cm->fi->func);
@@ -175,6 +176,7 @@ void	statement::rvalue( CmCompiler* cm )
 {
 	switch ( cm_expr.type )
 	{
+	case et_nil : cm_code << op_const_nil ; break;
 	case et_const : cm_code << op_const << cm_expr.idx ; break;
 	case et_number : cm_code << op_const_num << cm_expr.num ; break;
 	case et_boolean : cm_code << (cm_expr.blr? op_const_true : op_const_false); break;
@@ -199,7 +201,17 @@ void	statement::free_expr( CmCompiler* cm )
 	}
 	cm_expr.type = et_none;
 }
-
+OvByte	statement::addconst( CmCompiler* cm, const MnValue& val )
+{
+	MnIndex idx = cm->fi->func->consts.size();
+	while ( idx-- )
+	{
+		const MnValue& cst = cm->fi->func->consts[idx];
+		if ( MnToObject(val) == MnToObject(cst) ) return idx+1;
+	}
+	cm->fi->func->consts.push_back(cm_tok.val);
+	return cm->fi->func->consts.size();
+}
 //////////////////////////////////////////////////////////////////////////
 
 void	statement::multi_stat::compile( CmCompiler* cm )
@@ -417,23 +429,6 @@ void	statement::term::compile( CmCompiler* cm )
 
 //////////////////////////////////////////////////////////////////////////
 
-// 	if ( cm_statoption(primary) )
-// 	{
-// 		while ( true )
-// 		{
-// 			if (cm_statoption(callargs)) continue;
-// 			else if ( cm_tokmatch('.') && cm_lahmatch(tt_identifier) ) {cm_toknext();cm_toknext(); continue; }
-// 			else if ( cm_tokoption('[') )
-// 			{
-// 				cm_statmust(expression);
-// 				cm_tokmust(']');
-// 				continue;
-// 			}
-// 			else break;
-// 		}
-// 		return true;
-// 	}
-
 void	statement::postexpr::compile( CmCompiler* cm )
 {
 	cm_compile(primary);
@@ -467,6 +462,18 @@ void	statement::postexpr::compile( CmCompiler* cm )
 			if (cm_tokmust(']')) cm_toknext();
 			cm_expr.type = et_field;
 		}
+		else if ( cm_tokmatch('.') )
+		{
+			cm_rvalue();
+			cm_toknext();
+			if ( !cm_tokmatch(tt_identifier) ) cm_error("'.' right must be field name\n");
+
+			cm_expr.type = et_const;
+			cm_expr.idx	 = cm_addconst(cm_tok.val);
+			cm_rvalue();
+			cm_toknext();
+			cm_expr.type = et_field;
+		}
 		else break;
 	}
 }
@@ -483,9 +490,14 @@ void	statement::primary::compile( CmCompiler* cm )
 	}
 	else if ( cm_tokmatch(tt_string) )
 	{
-		cm->fi->func->consts.push_back(cm_tok.val);
 		cm_expr.type = et_const;
-		cm_expr.idx	 = cm->fi->func->consts.size();
+		cm_expr.idx	 = cm_addconst(cm_tok.val);
+		cm_toknext();
+	}
+	else if ( cm_kwmatch("nil") || cm_kwmatch("true") || cm_kwmatch("false") )
+	{
+		cm_expr.type = cm_kwmatch("nil")? et_nil : et_boolean;
+		cm_expr.blr  = cm_kwmatch("true");
 		cm_toknext();
 	}
 	else if ( cm_tokmatch(tt_identifier) )
@@ -501,9 +513,8 @@ void	statement::primary::compile( CmCompiler* cm )
 		}
 		else
 		{
-			cm->fi->func->consts.push_back(cm_tok.val);
 			cm_expr.type = et_global;
-			cm_expr.idx	 = cm->fi->func->consts.size();
+			cm_expr.idx	 = cm_addconst(cm_tok.val);
 		}
 		cm_toknext();
 	}

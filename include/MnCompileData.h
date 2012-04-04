@@ -26,10 +26,10 @@ public:
 	CmFuncinfo*  last;
 	MnMFunction* func;
 
-	OvVector<OvHash32>	 locals;
-	OvBufferOutputStream codestream;
+	OvVector<OvHash32>	locals;
+	MnCodeWriter		codewriter;
 
-	CmFuncinfo() : last(NULL), func(NULL), codestream(NULL) {};
+	CmFuncinfo() : last(NULL), func(NULL), codewriter(NULL) {};
 };
 
 enum CmExprType
@@ -89,10 +89,11 @@ namespace statement
 {
 	typedef OvBool (*statfunc)(CmCompiler*);
 
-	OvBool option( CmCompiler* cm, statfunc func );
+	OvBool	option( CmCompiler* cm, statfunc func );
 	OvBool	match( CmCompiler* cm, statfunc func );
 	void	rvalue( CmCompiler* cm );
 	void	free_expr( CmCompiler* cm );
+	OvByte	addconst( CmCompiler* cm, const MnValue& val );
 
 	namespace multi_stat
 	{

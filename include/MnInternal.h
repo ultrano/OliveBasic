@@ -395,13 +395,14 @@ public:
 class MnMFunction : public MnObject
 {
 public:
-	typedef OvVector<MnValue>		vec_value;
+	typedef OvVector<MnValue> vec_value;
+	typedef OvVector<OvByte>  vec_byte;
 
 	MnMFunction( MnState* s );
 	~MnMFunction();
 
 	vec_value		consts;
-	OvBufferSPtr	code;
+	vec_byte		code;
 
 	OvUInt			nargs;
 
@@ -646,14 +647,13 @@ void MnArray::marking()
 MnMFunction::MnMFunction( MnState* s )
 : MnObject(s)
 , nargs(0)
-, code( OvBuffer::CreateBuffer() )
 {
 }
 
 MnMFunction::~MnMFunction()
 {
 	consts.clear();
-	code = NULL;
+	code.clear();
 }
 
 void MnMFunction::marking()
@@ -1512,6 +1512,22 @@ enum opcode : OvByte
 	op_return,
 };
 
+
+struct MnCodeWriter
+{
+	MnMFunction* func;
+	MnCodeWriter( MnMFunction* f ) : func(f) {};
+
+	template<typename T>
+	MnCodeWriter& operator << ( const T& data )
+	{
+		OvUInt pos = func->code.size();
+		func->code.resize( func->code.size() + sizeof(T) );
+		memcpy( &(func->code[pos]), &data, sizeof(T) );
+		return *this;
+	}
+};
+
 struct MnCodeReader
 {
 	MnState* state;
@@ -1525,7 +1541,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 {
 	MnCallInfo* entrycall = s->ci;
 	s->func	= func;
-	s->pc	= func->code->Pointer();
+	s->pc	= &(func->code[0]);
 	MnCodeReader emcee(s);
 	while ( true )
 	{

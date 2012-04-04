@@ -1,4 +1,6 @@
 
 local a = table();
-a["a"] = 1;
-print(a["a"]);
+print( a.a = "aaa" );
+print( a["a"] );
+print(true);
+dump_stack();
