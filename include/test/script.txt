@@ -1,8 +1,17 @@
 
-local a = table();
-a.a = 0;
-again:
+local flag = 1;
 
-print( a.a = a.a + 1 );
+retry:
 
-goto again;
+print(flag);
+flag = flag + 1;
+if ( flag < 100 )
+{
+	print("gogogo");
+	goto retry;
+}
+else
+{
+	print("end");
+}
+dump_stack();

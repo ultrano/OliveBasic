@@ -263,6 +263,8 @@ void	statement::multi_stat::compile( CmCompiler* cm )
 void	statement::single_stat::compile( CmCompiler* cm )
 {
 	if ( cm_kwmatch("local") ) { cm_compile(local); }
+	else if ( cm_kwmatch("if") ) { cm_compile(if_stat); }
+	else if ( cm_tokmatch('{') ) { cm_compile(block); }
 // 	else if ( cm_statoption(block) ) return true;
 // 	else if ( cm_statoption(returnstat) ) return true;
 // 	else if ( cm_statoption(ifstat) ) return true;
@@ -325,7 +327,9 @@ void	statement::local::compile( CmCompiler* cm )
 
 void	statement::block::compile( CmCompiler* cm )
 {
-	cm_tokmatch(tt_identifier);
+	if (cm_tokmust('{')) cm_toknext();
+	cm_compile(multi_stat);
+	if (cm_tokmust('}')) cm_toknext();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -345,7 +349,7 @@ void	statement::expr10::compile( CmCompiler* cm )
 {
 	cm_compile(expr9);
 	CmExprInfo lexpr = cm_expr;
-	while ( cm_tokoption('=') )
+	while ( cm_tokoption('=') && !cm_lahmatch('=') )
 	{
 		cm_compile(expr9);
 		cm_rvalue();
@@ -376,86 +380,131 @@ void	statement::expr10::compile( CmCompiler* cm )
 void	statement::expr9::compile( CmCompiler* cm )
 {
 	cm_compile(expr8);
+	while ( 1 )
+	{
+		if ( cm_tokmatch('=') && cm_lahmatch('=') )
+		{
+			cm_toknext();cm_toknext();
+			cm_rvalue();
+			cm_compile(expr8);
+			cm_rvalue();
+			cm_code << op_eq << op_eq;
+		}
+		else if ( cm_tokmatch('!') && cm_lahmatch('=') )
+		{
+			cm_toknext();cm_toknext();
+			cm_rvalue();
+			cm_compile(expr8);
+			cm_rvalue();
+			cm_code << op_eq << op_not;
+		}
+		else if ( (cm_tokmatch('>')||cm_tokmatch('<')) && !(cm_lahmatch('>')||cm_lahmatch('<')) )
+		{
+			opcode op = cm_tokmatch('>')? op_gt : op_lt;
+			if ( cm_lahmatch('=') )
+			{
+				cm_toknext();cm_toknext();
+				cm_rvalue();
+				cm_compile(expr8);
+				cm_rvalue();
+				cm_code << op_eq << op;
+			}
+			else
+			{
+				cm_toknext();
+				cm_rvalue();
+				cm_compile(expr8);
+				cm_rvalue();
+				cm_code << op;				
+			}
+		}
+		else break;
+	}
 }
 //////////////////////////////////////////////////////////////////////////
-
-// 	OvBool ret = cm_statoption(expr7);
-// 	while ( ret && (cm_tokoption('|') && cm_tokoption('|')) )
-// 	{
-// 		ret = ret && cm_statmust(expr7);
-// 	}
-// 	return ret;
 
 void	statement::expr8::compile( CmCompiler* cm )
 {
 	cm_compile(expr7);
+	while ( cm_tokmatch('|') && cm_lahmatch('|') )
+	{
+		cm_rvalue();
+		cm_toknext();cm_toknext();
+		cm_compile(expr7);
+		cm_rvalue();
+		cm_code << op_or;
+	}
 }
 //////////////////////////////////////////////////////////////////////////
 
-// 	OvBool ret = cm_statoption(expr6);
-// 	while ( ret && (cm_tokoption('&') && cm_tokoption('&')) )
-// 	{
-// 		ret = ret && cm_statmust(expr6);
-// 	}
-// 	return ret;
 void	statement::expr7::compile( CmCompiler* cm )
 {
 	cm_compile(expr6);
+	while ( cm_tokmatch('&') && cm_lahmatch('&') )
+	{
+		cm_rvalue();
+		cm_toknext();cm_toknext();
+		cm_compile(expr6);
+		cm_rvalue();
+		cm_code << op_and;
+	}
 }
 //////////////////////////////////////////////////////////////////////////
-
-// 	OvBool ret = cm_statoption(expr5);
-// 	while ( ret && cm_tokoption('|') )
-// 	{
-// 		if ( cm_tokmatch('|') ) { cm_tokprev(); break; }
-// 		ret = ret && cm_statmust(expr5);
-// 	}
-// 	return ret;
 
 void	statement::expr6::compile( CmCompiler* cm )
 {
 	cm_compile(expr5);
+	while ( cm_tokmatch('|') && !cm_lahmatch('|') )
+	{
+		cm_rvalue();
+		cm_toknext();
+		cm_compile(expr5);
+		cm_rvalue();
+		cm_code << op_bit_or;
+	}
 }
 //////////////////////////////////////////////////////////////////////////
-
-// 	OvBool ret = cm_statoption(expr4);
-// 	while ( ret && (cm_tokoption('^')) )
-// 	{
-// 		ret = ret && cm_statmust(expr4);
-// 	}
-// 	return ret;
 
 void	statement::expr5::compile( CmCompiler* cm )
 {
 	cm_compile(expr4);
+	while ( cm_tokmatch('^') )
+	{
+		cm_rvalue();
+		cm_toknext();
+		cm_compile(expr4);
+		cm_rvalue();
+		cm_code << op_bit_xor;
+	}
 }
 //////////////////////////////////////////////////////////////////////////
-
-// 	OvBool ret = cm_statoption(expr3);
-// 	while ( ret && cm_tokoption('&') )
-// 	{
-// 		if ( cm_tokmatch('&') ) { cm_tokprev(); break; }
-// 		ret = ret && cm_statmust(expr3);
-// 	}
-// 	return ret;
 
 void	statement::expr4::compile( CmCompiler* cm )
 {
 	cm_compile(expr3);
+	while ( cm_tokmatch('&') && !cm_lahmatch('&') )
+	{
+		cm_rvalue();
+		cm_toknext();
+		cm_compile(expr3);
+		cm_rvalue();
+		cm_code << op_bit_and;
+	}
 }
 //////////////////////////////////////////////////////////////////////////
-
-// 	OvBool ret = cm_statoption(expr2);
-// 	while ( ret && (cm_tokmatch('>') && cm_lahmatch('>')) || (cm_tokmatch('<') && cm_lahmatch('<')) )
-// 	{
-// 		cm_toknext();cm_toknext();
-// 		ret = ret && cm_statmust(expr2);
-// 	}
-// 	return ret;
 
 void	statement::expr3::compile( CmCompiler* cm )
 {
 	cm_compile(expr2);
+	while ( (cm_tokmatch('>') && cm_lahmatch('>')) || (cm_tokmatch('<') && cm_lahmatch('<')) )
+	{
+		cm_rvalue();
+		opcode op = cm_tokmatch('>')? op_pull : op_push;
+		cm_toknext();cm_toknext();
+		cm_compile(expr2);
+		cm_rvalue();
+		cm_code << op;
+	}
 }
 //////////////////////////////////////////////////////////////////////////
 
@@ -657,8 +706,42 @@ void	statement::returnstat::compile( CmCompiler* cm )
 // 		return ret;
 // 	}
 
-void	statement::ifstat::compile( CmCompiler* cm )
+void	statement::if_stat::compile( CmCompiler* cm )
 {
+	OvUInt jump1 = 0;
+	OvInt  opos1 = 0;
+	OvInt  tpos1 = 0;
+
+	cm_toknext();
+	if ( cm_tokmust('(') ) cm_toknext();
+	cm_compile(expression); cm_rvalue();
+	if ( cm_tokmust(')') ) cm_toknext();
+
+	cm_code << op_fjump;
+	jump1 = cm_codesize();
+	cm_code << OvInt(0);
+	opos1 = cm_codesize();
+	cm_compile(single_stat);
+	tpos1 = cm_codesize();
+
+	if ( cm_kwmatch("else") )
+	{
+
+		OvUInt jump2 = 0;
+		OvInt  opos2 = 0;
+		OvInt  tpos2 = 0;
+
+		cm_toknext();
+		cm_code << op_jump;
+		jump2 = cm_codesize();
+		cm_code << OvInt(0);
+		tpos1 = opos2 = cm_codesize();
+		cm_compile(single_stat);
+		tpos2 = cm_codesize();
+		cm_fixjump(jump2,tpos2,opos2);
+	}
+
+	cm_fixjump(jump1,tpos1,opos1);
 
 }
 //////////////////////////////////////////////////////////////////////////

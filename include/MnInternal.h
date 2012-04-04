@@ -1441,15 +1441,10 @@ void ut_restore_ci( MnState* s, OvInt nret )
 
 
 /*
-op_push,
-op_pull,
+,
+,
 
-op_bit_or,
-op_bit_xor,
-op_bit_and,
 
-op_or,
-op_and,
 
 op_move,
 
@@ -1466,14 +1461,7 @@ op_newclosure,
 
 op_close_upval,
 
-op_jmp,
-op_fjp,
 
-op_eq,
-op_neq,
-op_not,
-op_lt,
-op_gt,
 
 op_call,
 op_return,
@@ -1486,6 +1474,21 @@ enum opcode : OvByte
 	op_mul,
 	op_div,
 	op_mod,
+
+	op_push,
+	op_pull,
+
+	op_bit_or,
+	op_bit_xor,
+	op_bit_and,
+
+	op_or,
+	op_and,
+
+	op_eq,
+	op_not,
+	op_lt,
+	op_gt,
 
 	op_setglobal,
 	op_getglobal,
@@ -1511,6 +1514,7 @@ enum opcode : OvByte
 
 	op_call,
 	op_jump,
+	op_fjump,
 
 	op_return,
 };
@@ -1552,7 +1556,10 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		emcee >> op;
 		switch ( op )
 		{
-		case op_add : case op_sub : case op_mul : case op_div : case op_mod :
+		case op_add : case op_sub : case op_mul : case op_div : case op_mod : 
+		case op_push : case op_pull :
+		case op_bit_or : case op_bit_xor : case op_bit_and :
+		case op_and : case op_or : 
 			{
 				MnValue left  = ut_getstack(s,-2);
 				MnValue right = ut_getstack(s,-1);
@@ -1563,6 +1570,46 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				else if (op==op_mul) mn_pushnumber( s, MnToNumber(left) * MnToNumber(right) );
 				else if (op==op_div) mn_pushnumber( s, MnToNumber(left) / MnToNumber(right) );
 				else if (op==op_mod) mn_pushnumber( s, (OvInt)MnToNumber(left) % (OvInt)MnToNumber(right) );
+				else if (op==op_push) mn_pushnumber( s, (OvInt)MnToNumber(left) << (OvInt)MnToNumber(right) );
+				else if (op==op_pull) mn_pushnumber( s, (OvInt)MnToNumber(left) >> (OvInt)MnToNumber(right) );
+				else if (op==op_bit_or) mn_pushnumber( s, (OvInt)MnToNumber(left) | (OvInt)MnToNumber(right) );
+				else if (op==op_bit_xor) mn_pushnumber( s, (OvInt)MnToNumber(left) ^ (OvInt)MnToNumber(right) );
+				else if (op==op_bit_and) mn_pushnumber( s, (OvInt)MnToNumber(left) & (OvInt)MnToNumber(right) );
+				else if (op==op_and) mn_pushboolean( s, ut_toboolean(left) && ut_toboolean(right) );
+				else if (op==op_or) mn_pushboolean( s, ut_toboolean(left) || ut_toboolean(right) );
+			}
+			break;
+
+		case op_eq :
+			{
+				MnValue left  = ut_getstack(s,-2);
+				MnValue right = ut_getstack(s,-1);
+				mn_pop(s,2);
+
+				opcode addop;
+				emcee >> addop;
+				if (addop==op_eq) mn_pushboolean( s, MnToNumber(left) == MnToNumber(right) );
+				else if (addop==op_not) mn_pushboolean( s, MnToNumber(left) != MnToNumber(right) );
+				else if (addop==op_gt) mn_pushboolean( s, MnToNumber(left) >= MnToNumber(right) );
+				else if (addop==op_lt) mn_pushboolean( s, MnToNumber(left) <= MnToNumber(right) );
+			}
+			break;
+
+		case op_not :
+			{
+				OvBool ret = mn_toboolean(s,-1);
+				mn_pop(s,1);
+				mn_pushboolean(s,!ret);
+			}
+			break;
+
+		case op_gt : case op_lt :
+			{
+				MnValue left  = ut_getstack(s,-2);
+				MnValue right = ut_getstack(s,-1);
+				mn_pop(s,2);
+				if (op==op_gt) mn_pushboolean( s, MnToNumber(left) > MnToNumber(right) );
+				else if (op==op_lt) mn_pushboolean( s, MnToNumber(left) < MnToNumber(right) );
 			}
 			break;
 
@@ -1647,6 +1694,15 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				OvInt step = 0;
 				emcee >> step;
 				s->pc += step;
+			}
+			break;
+
+		case op_fjump :
+			{
+				OvInt step = 0;
+				emcee >> step;
+				if ( !mn_toboolean(s,-1) ) s->pc += step;
+				mn_pop(s,1);
 			}
 			break;
 

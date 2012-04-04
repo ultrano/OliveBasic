@@ -232,7 +232,7 @@ namespace statement
 		void	compile( CmCompiler* cm );
 	}
 
-	namespace ifstat
+	namespace if_stat
 	{
 		void	compile( CmCompiler* cm );
 	}
