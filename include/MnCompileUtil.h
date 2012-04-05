@@ -143,27 +143,21 @@ void CmParsing( CmCompiler* cm )
 	CmFuncinfo ifi;
 	ifi.func = ut_newfunction(cm->s);
 	ifi.codewriter.func = ifi.func;
-
 	cm->fi = &ifi;
+
 	try
 	{
-		cm_compile(multi_stat);
-		cm_code << op_return << (OvByte)0 ;
-
-		//////////////////////////////////////////////////////////////////////////
-		cm_resolve_goto(cm->fi);
-
-		//////////////////////////////////////////////////////////////////////////
-
-		MnClosure* cls = ut_newMclosure(cm->s);
-		cls->u.m->func = MnValue(MOT_FUNCPROTO,cm->fi->func);
-		ut_pushvalue(cm->s,MnValue(MOT_CLOSURE,cls));
-		mn_call(cm->s,0,0);
+		cm_compile(funcbody);
 	}
 	catch ( CmCompileException& e )
 	{
 		printf( e.msg.c_str() );
 	}
+
+	MnClosure* cls = ut_newMclosure(cm->s);
+	cls->u.m->func = MnValue(MOT_FUNCPROTO,cm->fi->func);
+	ut_pushvalue(cm->s,MnValue(MOT_CLOSURE,cls));
+	mn_call(cm->s,0,0);
 }
 
 void CmStatements( CmCompiler* cm )
@@ -644,6 +638,20 @@ void	statement::primary::compile( CmCompiler* cm )
 
 void	statement::funcdesc::compile( CmCompiler* cm )
 {
+	CmFuncinfo ifi;
+	ifi.func = ut_newfunction(cm->s);
+	ifi.codewriter.func = ifi.func;
+	ifi.last = cm->fi;
+	cm->fi = &ifi;
+
+	if (cm_tokmust('(')) cm_toknext();
+	if (cm_tokmust(')')) cm_toknext();
+
+	if (cm_tokmust('{')) cm_toknext();
+	cm_compile(funcbody);
+	if (cm_tokmust('}')) cm_toknext();
+
+	cm->fi = ifi.last;
 
 }
 //////////////////////////////////////////////////////////////////////////
@@ -661,6 +669,16 @@ void	statement::funcargs::compile( CmCompiler* cm )
 {
 
 }
+
+//////////////////////////////////////////////////////////////////////////
+
+void statement::funcbody::compile( CmCompiler* cm ) 
+{
+	cm_compile(multi_stat);
+	cm_code << op_return << (OvByte)0 ;
+	cm_resolve_goto(cm->fi);
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 // 	if (cm_tokoption('('))

@@ -223,6 +223,11 @@ namespace statement
 		void	compile( CmCompiler* cm );
 	}
 
+	namespace funcbody
+	{
+		void	compile( CmCompiler* cm );
+	}
+
 	namespace callargs
 	{
 		void	compile( CmCompiler* cm );
