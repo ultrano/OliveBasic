@@ -1514,6 +1514,8 @@ enum opcode : OvByte
 	op_const_char,
 	op_const,
 
+	op_newclosure,
+
 	op_call,
 	op_jump,
 	op_fjump,
@@ -1680,6 +1682,16 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				OvByte idx;
 				emcee >> idx;
 				ut_pushvalue( s, ut_getconst(s->func,idx) );
+			}
+			break;
+
+		case op_newclosure :
+			{
+				OvByte funcidx, nupvals;
+				emcee >> funcidx >> nupvals;
+				MnClosure* cls = ut_newMclosure(s);
+				cls->u.m->func = ut_getconst(s->func,funcidx);
+				ut_pushvalue( s, MnValue( MOT_CLOSURE, cls ) );
 			}
 			break;
 

@@ -1,7 +1,3 @@
 
-local a = "this is local";
-::a = "this is global";
 
-print(a);
-print(a);
-
+local a = function (a,b) { print(a);print(b); };

@@ -52,6 +52,7 @@ enum CmExprType
 {
 	et_none,
 	et_nil,
+	et_closure,
 	et_const,
 	et_boolean,
 	et_number,
@@ -73,7 +74,8 @@ public:
 	{
 		OvByte		  idx;
 		MnNumber	  num;
-		MnNumber	  blr;
+		OvBool		  blr;
+		struct { OvByte func; OvByte nupvals; };
 	};
 
 	CmExprInfo() : type(et_none), num(0) {};

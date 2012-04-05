@@ -187,6 +187,7 @@ void	statement::rvalue( CmCompiler* cm )
 	switch ( cm_expr.type )
 	{
 	case et_nil : cm_code << op_const_nil ; break;
+	case et_closure : cm_code << op_newclosure << cm_expr.func << cm_expr.nupvals; break;
 	case et_const : cm_code << op_const << cm_expr.idx ; break;
 	case et_boolean : cm_code << (cm_expr.blr? op_const_true : op_const_false); break;
 	case et_number : 
@@ -225,7 +226,7 @@ OvByte	statement::addconst( CmCompiler* cm, const MnValue& val )
 		const MnValue& cst = cm->fi->func->consts[idx];
 		if ( MnToObject(val) == MnToObject(cst) ) return idx+1;
 	}
-	cm->fi->func->consts.push_back(cm_tok.val);
+	cm->fi->func->consts.push_back(val);
 	return cm->fi->func->consts.size();
 }
 void statement::resolve_goto( CmCompiler* cm, CmFuncinfo* fi ) 
@@ -593,6 +594,10 @@ void	statement::primary::compile( CmCompiler* cm )
 		cm_expr.idx	 = cm_addconst(cm_tok.val);
 		cm_toknext();
 	}
+	else if ( cm_kwmatch("function") )
+	{
+		cm_compile(funcdesc);
+	}
 	else if ( cm_kwmatch("nil") || cm_kwmatch("true") || cm_kwmatch("false") )
 	{
 		cm_expr.type = cm_kwmatch("nil")? et_nil : et_boolean;
@@ -638,14 +643,14 @@ void	statement::primary::compile( CmCompiler* cm )
 
 void	statement::funcdesc::compile( CmCompiler* cm )
 {
+	cm_toknext();
 	CmFuncinfo ifi;
 	ifi.func = ut_newfunction(cm->s);
 	ifi.codewriter.func = ifi.func;
 	ifi.last = cm->fi;
 	cm->fi = &ifi;
 
-	if (cm_tokmust('(')) cm_toknext();
-	if (cm_tokmust(')')) cm_toknext();
+	cm_compile(funcargs);
 
 	if (cm_tokmust('{')) cm_toknext();
 	cm_compile(funcbody);
@@ -653,6 +658,9 @@ void	statement::funcdesc::compile( CmCompiler* cm )
 
 	cm->fi = ifi.last;
 
+	cm_expr.type = et_closure;
+	cm_expr.func = cm_addconst( MnValue(MOT_FUNCPROTO,ifi.func) );
+	cm_expr.nupvals = 0;
 }
 //////////////////////////////////////////////////////////////////////////
 
@@ -667,7 +675,14 @@ void	statement::funcdesc::compile( CmCompiler* cm )
 
 void	statement::funcargs::compile( CmCompiler* cm )
 {
-
+	if (cm_tokmust('(')) cm_toknext();
+	while ( cm_tokmatch(tt_identifier) )
+	{
+		cm->fi->locals.push_back( MnToString(cm_tok.val)->hash() );
+		cm_toknext();
+		if ( cm_tokmatch(',') ) cm_toknext(); else break;
+	}
+	if (cm_tokmust(')')) cm_toknext();
 }
 
 //////////////////////////////////////////////////////////////////////////
