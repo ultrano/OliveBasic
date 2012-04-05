@@ -260,17 +260,17 @@ void	statement::multi_stat::compile( CmCompiler* cm )
 
 //////////////////////////////////////////////////////////////////////////
 
-void	statement::single_stat::compile( CmCompiler* cm )
-{
-	if ( cm_kwmatch("local") ) { cm_compile(local); }
-	else if ( cm_kwmatch("if") ) { cm_compile(if_stat); }
-	else if ( cm_tokmatch('{') ) { cm_compile(block); }
 // 	else if ( cm_statoption(block) ) return true;
 // 	else if ( cm_statoption(returnstat) ) return true;
 // 	else if ( cm_statoption(ifstat) ) return true;
 // 	else if ( cm_statoption(whilestat) ) return true;
 // 	else if ( (cm_statoption(expression) && cm_tokmust(';')) ) return true;
 
+void	statement::single_stat::compile( CmCompiler* cm )
+{
+	if ( cm_kwmatch("local") ) { cm_compile(local); }
+	else if ( cm_kwmatch("if") ) { cm_compile(if_stat); }
+	else if ( cm_tokmatch('{') ) { cm_compile(block); }
 	else if ( cm_tokmatch(tt_identifier) && cm_lahmatch(':') ) { cm_compile(label_stat); }
 	else if ( cm_kwmatch("goto") ) { cm_compile(goto_stat); }
 	else
@@ -323,8 +323,6 @@ void	statement::local::compile( CmCompiler* cm )
 
 //////////////////////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////////////////////
-
 void	statement::block::compile( CmCompiler* cm )
 {
 	if (cm_tokmust('{')) cm_toknext();
@@ -366,16 +364,6 @@ void	statement::expr10::compile( CmCompiler* cm )
 	}
 }
 //////////////////////////////////////////////////////////////////////////
-
-// 	OvBool ret = cm_statoption(expr8);
-// 	while ( ret )
-// 	{
-// 		if ( (cm_tokmatch('!') || cm_tokmatch('=')) && cm_lahmatch('=') ) {cm_toknext();cm_toknext();}
-// 		else if ( cm_tokoption('>') || cm_tokoption('<') ) cm_tokoption('=');
-// 		else break;
-// 		ret = ret && cm_statmust(expr8);
-// 	}
-// 	return ret;
 
 void	statement::expr9::compile( CmCompiler* cm )
 {
@@ -615,6 +603,14 @@ void	statement::primary::compile( CmCompiler* cm )
 	{
 		cm_expr.type = cm_kwmatch("nil")? et_nil : et_boolean;
 		cm_expr.blr  = cm_kwmatch("true");
+		cm_toknext();
+	}
+	else if ( cm_tokmatch(':') && cm_lahmatch(':') )
+	{
+		cm_toknext();cm_toknext();
+		cm_tokmust(tt_identifier);
+		cm_expr.type = et_global;
+		cm_expr.idx	 = cm_addconst(cm_tok.val);
 		cm_toknext();
 	}
 	else if ( cm_tokmatch(tt_identifier) )

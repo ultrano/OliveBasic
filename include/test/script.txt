@@ -1,17 +1,7 @@
 
-local flag = 1;
+local a = "this is local";
+::a = "this is global";
 
-retry:
+print(a);
+print(a);
 
-print(flag);
-flag = flag + 1;
-if ( flag < 100 )
-{
-	print("gogogo");
-	goto retry;
-}
-else
-{
-	print("end");
-}
-dump_stack();

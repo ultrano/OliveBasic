@@ -102,6 +102,7 @@ void mn_getstack( MnState* s, MnIndex idx )
 void mn_insert( MnState* s, MnIndex idx )
 {
 	ut_insertstack( s, idx, ut_getstack( s, -1 ) );
+	mn_pop(s,1);
 }
 
 void mn_remove( MnState* s, MnIndex idx )

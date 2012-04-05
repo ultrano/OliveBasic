@@ -1043,9 +1043,11 @@ OvBool ut_isglobal( MnState* s, OvHash32 hash )
 
 void ut_insertstack(MnState* s, MnIndex idx, MnValue& val )
 {
-	MnValue* itor = ut_getstack_ptr( s, idx );;
+	MnValue* itor = ut_getstack_ptr( s, idx );
 	if ( itor && itor < s->top )
 	{
+		mn_settop(s,mn_gettop(s)+1);
+		itor = ut_getstack_ptr( s, (idx>0)? idx:idx-1 );
 		MnValue temp = *itor;
 		*itor = val;
 		while ( ++itor < s->top )
