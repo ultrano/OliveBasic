@@ -33,7 +33,10 @@
 #define cm_code				(cm->fi->codewriter)
 #define cm_codesize()		(cm->fi->func->code.size())
 #define cm_getcode(pos)		(&(cm->fi->func->code.at((pos))))
-#define cm_fixjump(codepos,tpos,opos) ( *(OvInt*)cm_getcode((codepos)) = ((tpos) - (opos)) )
+
+#define cm_jumping()		(statement::jumping(cm,op_jump))
+#define cm_fjumping()		(statement::jumping(cm,op_fjump))
+#define cm_fixjump(pos,tpos) ( *(OvInt*)cm_getcode((pos)) = ((tpos) - (pos+sizeof(OvInt))) )
 
 #define cm_addconst(val)	(statement::addconst(cm,(val)))
 #define cm_addlabel(l)	    (cm->fi->labels.push_back((l)))
@@ -219,6 +222,7 @@ void	statement::free_expr( CmCompiler* cm )
 	}
 	cm_expr.type = et_none;
 }
+
 OvByte	statement::addconst( CmCompiler* cm, const MnValue& val )
 {
 	MnIndex idx = cm->fi->func->consts.size();
@@ -230,15 +234,25 @@ OvByte	statement::addconst( CmCompiler* cm, const MnValue& val )
 	cm->fi->func->consts.push_back(val);
 	return cm->fi->func->consts.size();
 }
+
+OvInt	statement::jumping( CmCompiler* cm, OvByte op )
+{
+	if ( op!=op_jump && op!=op_fjump ) cm_error("invalid jump operation");
+	cm_code << op ;
+	OvUInt jump = cm_codesize();
+	cm_code << OvInt(0);
+	return jump;
+}
+
 void statement::resolve_goto( CmCompiler* cm, CmFuncinfo* fi ) 
 {
 	for each ( const CmGotoInfo& igoto in fi->gotos )
 	{
 		for each ( const CmLabelInfo& ilabel in fi->labels )
 		{
-			if ( igoto.label.hash == ilabel.hash )
+			if ( igoto.label == ilabel.hash )
 			{
-				cm_fixjump( igoto.codepos, ilabel.pos, igoto.label.pos );
+				cm_fixjump( igoto.pos, ilabel.pos );
 			}
 		}
 	}
@@ -266,6 +280,8 @@ void	statement::single_stat::compile( CmCompiler* cm )
 {
 	if ( cm_kwmatch("local") ) { cm_compile(local); }
 	else if ( cm_kwmatch("if") ) { cm_compile(if_stat); }
+	else if ( cm_kwmatch("while") ) { cm_compile(whilestat); }
+	else if ( cm_kwmatch("break") ) { cm_compile(breakstat); }
 	else if ( cm_tokmatch('{') ) { cm_compile(block); }
 	else if ( cm_tokmatch(tt_identifier) && cm_lahmatch(':') ) { cm_compile(label_stat); }
 	else if ( cm_kwmatch("goto") ) { cm_compile(goto_stat); }
@@ -293,12 +309,9 @@ void	statement::goto_stat::compile( CmCompiler* cm )
 	cm_toknext();
 	cm_tokmust(tt_identifier);
 
-	cm_code << op_jump ;
 	CmGotoInfo igoto;
-	igoto.codepos = cm_codesize();
-	cm_code << OvInt(0);
-	igoto.label.hash = MnToString(cm_tok.val)->hash();
-	igoto.label.pos  = cm_codesize();
+	igoto.pos = cm_jumping();
+	igoto.label = MnToString(cm_tok.val)->hash();
 	cm_addgoto(igoto);
 	cm_toknext();
 	if (cm_tokmust(';')) cm_toknext();
@@ -738,40 +751,27 @@ void	statement::returnstat::compile( CmCompiler* cm )
 
 void	statement::if_stat::compile( CmCompiler* cm )
 {
-	OvUInt jump1 = 0;
-	OvInt  opos1 = 0;
-	OvInt  tpos1 = 0;
 
 	cm_toknext();
 	if ( cm_tokmust('(') ) cm_toknext();
 	cm_compile(expression); cm_rvalue();
 	if ( cm_tokmust(')') ) cm_toknext();
 
-	cm_code << op_fjump;
-	jump1 = cm_codesize();
-	cm_code << OvInt(0);
-	opos1 = cm_codesize();
+	OvInt  jump1 = cm_fjumping();
 	cm_compile(single_stat);
-	tpos1 = cm_codesize();
+	OvInt  tpos1 = cm_codesize();
 
 	if ( cm_kwmatch("else") )
 	{
-
-		OvUInt jump2 = 0;
-		OvInt  opos2 = 0;
-		OvInt  tpos2 = 0;
-
 		cm_toknext();
-		cm_code << op_jump;
-		jump2 = cm_codesize();
-		cm_code << OvInt(0);
-		tpos1 = opos2 = cm_codesize();
+		OvInt  jump2 = cm_jumping();
+		tpos1 = cm_codesize();
 		cm_compile(single_stat);
-		tpos2 = cm_codesize();
-		cm_fixjump(jump2,tpos2,opos2);
+		OvInt  tpos2 = cm_codesize();
+		cm_fixjump(jump2,tpos2);
 	}
 
-	cm_fixjump(jump1,tpos1,opos1);
+	cm_fixjump(jump1,tpos1);
 
 }
 //////////////////////////////////////////////////////////////////////////
@@ -789,6 +789,38 @@ void	statement::if_stat::compile( CmCompiler* cm )
 
 void	statement::whilestat::compile( CmCompiler* cm )
 {
+	cm_toknext();
 
+	OvInt tpos1 = cm_codesize();
+
+	if (cm_tokmust('(')) cm_toknext();
+	cm_compile(expression);
+	cm_rvalue();
+	if (cm_tokmust(')')) cm_toknext();
+
+	OvInt base = cm->fi->breaks.size();
+
+	OvInt cond = cm_fjumping();
+	cm_compile(single_stat);
+	OvInt repeat = cm_jumping();
+	OvInt tpos2 = cm_codesize();
+
+	cm_fixjump(repeat,tpos1);
+	cm_fixjump(cond,tpos2);
+	for ( OvInt i = base ; i < cm->fi->breaks.size() ; ++i )
+	{
+		OvInt jump = cm->fi->breaks[i];
+		cm_fixjump(jump,tpos2);
+	}
+
+	cm->fi->breaks.resize(base);
 }
+
 //////////////////////////////////////////////////////////////////////////
+
+void	statement::breakstat::compile( CmCompiler* cm )
+{
+	cm_toknext();
+	cm->fi->breaks.push_back( cm_jumping() );
+	if ( cm_tokmust(';') ) cm_toknext();
+}

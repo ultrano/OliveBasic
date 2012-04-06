@@ -30,8 +30,8 @@ struct CmLabelInfo
 
 struct CmGotoInfo
 {
-	OvUInt		codepos;
-	CmLabelInfo label;
+	OvUInt		pos;
+	OvHash32	label;
 };
 
 class CmFuncinfo
@@ -43,6 +43,7 @@ public:
 	OvVector<OvHash32>		locals;
 	OvVector<CmLabelInfo>	labels;
 	OvVector<CmGotoInfo>	gotos;
+	OvVector<OvInt>			breaks;
 	MnCodeWriter		codewriter;
 
 	CmFuncinfo() : last(NULL), func(NULL), codewriter(NULL) {};
@@ -114,6 +115,7 @@ namespace statement
 	void	free_expr( CmCompiler* cm );
 	void	resolve_goto( CmCompiler* cm, CmFuncinfo* fi );
 	OvByte	addconst( CmCompiler* cm, const MnValue& val );
+	OvInt	jumping( CmCompiler* cm, OvByte op );
 
 	namespace multi_stat
 	{
@@ -246,6 +248,11 @@ namespace statement
 	}
 
 	namespace whilestat
+	{
+		void	compile( CmCompiler* cm );
+	}
+
+	namespace breakstat
 	{
 		void	compile( CmCompiler* cm );
 	}
