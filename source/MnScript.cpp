@@ -44,12 +44,38 @@ void mn_closestate( MnState* s )
 	}
 }
 
+
+void mn_lib_array( MnState* s )
+{
+	mn_pushstring(s,"array");
+	mn_newtable(s);
+
+	mn_newtable(s);
+	mn_pushstring(s,METHOD_CALL);
+	mn_pushfunction(s,ex_array_new);
+	mn_setfield(s,-3);
+	mn_setmeta(s,-2);
+
+	mn_pushstring(s,"resize");
+	mn_pushfunction(s,ex_array_resize);
+	mn_setfield(s,-3);
+
+	mn_pushstring(s,"size");
+	mn_pushfunction(s,ex_array_size);
+	mn_setfield(s,-3);
+
+	mn_setglobal(s);
+
+}
+
 void mn_lib_default( MnState* s )
 {
 
 	mn_pushstring( s, "table" );
 	mn_pushfunction( s, ex_table );
 	mn_setglobal( s );
+
+	mn_lib_array(s);
 
 	mn_pushstring( s, "setmeta" );
 	mn_pushfunction( s, ex_setmeta );

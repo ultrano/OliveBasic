@@ -1376,6 +1376,38 @@ OvInt ex_table( MnState* s )
 	return 1;
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+OvInt ex_array_new( MnState* s )
+{
+	ut_pushvalue( s, MnValue( MOT_ARRAY,ut_newarray(s) ) );
+	mn_pushstring(s,"array");
+	mn_getglobal(s);
+	mn_setmeta(s,-2);
+	return 1;
+}
+
+OvInt ex_array_resize( MnState* s )
+{
+	if ( MnArray* arr = MnToArray(ut_getstack(s,1)) )
+	{
+		MnNumber sz = mn_tonumber(s,2);
+		arr->array.resize(sz);
+	}
+	return 0;
+}
+
+OvInt ex_array_size( MnState* s )
+{
+	if ( MnArray* arr = MnToArray(ut_getstack(s,1)) )
+	{
+		mn_pushnumber(s,arr->array.size());
+	}
+	return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 OvInt ex_setmeta( MnState* s )
 {
 	ut_setmeta( ut_getstack(s,1), ut_getstack(s,2) );

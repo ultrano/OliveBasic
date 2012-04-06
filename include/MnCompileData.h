@@ -34,6 +34,11 @@ struct CmGotoInfo
 	OvHash32	label;
 };
 
+struct CmBreakInfo
+{
+	OvInt	out;
+	OvVector<OvInt>			breaks;
+};
 class CmFuncinfo
 {
 public:
@@ -43,7 +48,6 @@ public:
 	OvVector<OvHash32>		locals;
 	OvVector<CmLabelInfo>	labels;
 	OvVector<CmGotoInfo>	gotos;
-	OvVector<OvInt>			breaks;
 	MnCodeWriter		codewriter;
 
 	CmFuncinfo() : last(NULL), func(NULL), codewriter(NULL) {};
@@ -100,9 +104,10 @@ public:
 	OvVector<OvUInt>	savepos;
 
 	CmFuncinfo*			fi;
+	CmBreakInfo*		bi;
 	CmExprInfo			exprinfo;
 
-	CmCompiler( MnState* _s ) : s(_s), tokpos(0) {};
+	CmCompiler( MnState* _s ) : s(_s), tokpos(0), bi(NULL) {};
 };
 
 namespace statement
@@ -114,6 +119,7 @@ namespace statement
 	void	rvalue( CmCompiler* cm );
 	void	free_expr( CmCompiler* cm );
 	void	resolve_goto( CmCompiler* cm, CmFuncinfo* fi );
+	void	resolve_break( CmCompiler* cm, CmBreakInfo* bi );
 	OvByte	addconst( CmCompiler* cm, const MnValue& val );
 	OvInt	jumping( CmCompiler* cm, OvByte op );
 
@@ -253,6 +259,11 @@ namespace statement
 	}
 
 	namespace block
+	{
+		void	compile( CmCompiler* cm );
+	}
+
+	namespace bodystat
 	{
 		void	compile( CmCompiler* cm );
 	}

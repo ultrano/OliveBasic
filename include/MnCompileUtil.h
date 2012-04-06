@@ -29,6 +29,7 @@
 #define cm_rvalue()			(statement::rvalue(cm))
 #define cm_free_expr()		(statement::free_expr(cm))
 #define cm_resolve_goto(fi)	(statement::resolve_goto(cm,fi))
+#define cm_resolve_break(bi) (statement::resolve_break(cm,bi))
 
 #define cm_code				(cm->fi->codewriter)
 #define cm_codesize()		(cm->fi->func->code.size())
@@ -256,6 +257,12 @@ void statement::resolve_goto( CmCompiler* cm, CmFuncinfo* fi )
 			}
 		}
 	}
+}
+void statement::resolve_break( CmCompiler* cm, CmBreakInfo* bi )
+{
+	if ( !bi ) return;
+	for each ( OvInt brk in bi->breaks ) cm_fixjump(brk,bi->out);
+	bi->breaks.clear();
 }
 //////////////////////////////////////////////////////////////////////////
 
@@ -558,6 +565,18 @@ void	statement::postexpr::compile( CmCompiler* cm )
 			cm_expr.type = et_call;
 			cm_expr.idx  = nargs;
 		}
+		else if ( cm_tokmatch(':') )
+		{
+			cm_rvalue();
+			cm_toknext();
+			if ( !cm_tokmatch(tt_identifier) ) cm_error("'.' right must be field name\n");
+			cm_expr.type = et_const;
+			cm_expr.idx	 = cm_addconst(cm_tok.val);
+			cm_rvalue();
+			cm_toknext();
+			cm_expr.type = et_field;
+			cm_rvalue();
+		}
 		else if ( cm_tokmatch('[') )
 		{
 			cm_rvalue();
@@ -749,10 +768,7 @@ void	statement::if_stat::compile( CmCompiler* cm )
 	if ( cm_tokmust(')') ) cm_toknext();
 
 	OvInt  jump1 = cm_fjumping();
-	OvInt nlocals = cm->fi->locals.size();
-	cm_compile(single_stat);
-	cm_code << op_settop << nlocals;
-	cm->fi->locals.resize(nlocals);
+	cm_compile(bodystat);
 	OvInt  tpos1 = cm_codesize();
 
 	if ( cm_kwmatch("else") )
@@ -760,10 +776,7 @@ void	statement::if_stat::compile( CmCompiler* cm )
 		cm_toknext();
 		OvInt  jump2 = cm_jumping();
 		tpos1 = cm_codesize();
-		OvInt nlocals = cm->fi->locals.size();
-		cm_compile(single_stat);
-		cm_code << op_settop << nlocals;
-		cm->fi->locals.resize(nlocals);
+		cm_compile(bodystat);
 		OvInt  tpos2 = cm_codesize();
 		cm_fixjump(jump2,tpos2);
 	}
@@ -795,29 +808,33 @@ void	statement::whilestat::compile( CmCompiler* cm )
 	cm_rvalue();
 	if (cm_tokmust(')')) cm_toknext();
 
-	OvInt nlocals = cm->fi->locals.size();
-	OvInt nbreaks = cm->fi->breaks.size();
+	CmBreakInfo bi;
+	CmBreakInfo* last = cm->bi;
+	cm->bi = &bi;
 
 	OvInt cond = cm_fjumping();
-	cm_compile(single_stat);
+
+	OvInt nlocals = cm->fi->locals.size();
+	cm_compile(bodystat);
 	OvInt repeat = cm_jumping();
-	OvInt tpos2 = cm_codesize();
+	cm->bi->out = cm_codesize();
 	cm_code << op_settop << nlocals;
+	OvInt tpos2 = cm_codesize();
 
 	cm_fixjump(repeat,tpos1);
 	cm_fixjump(cond,tpos2);
-	for ( OvInt i = nbreaks ; i < cm->fi->breaks.size() ; ++i ) cm_fixjump(cm->fi->breaks[i],tpos2);
+	cm_resolve_break(cm->bi);
 
-	cm->fi->breaks.resize(nbreaks);
-	cm->fi->locals.resize(nlocals);
+	cm->bi = last;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void	statement::breakstat::compile( CmCompiler* cm )
 {
+	if (!cm->bi) cm_error("invalid break");
 	cm_toknext();
-	cm->fi->breaks.push_back( cm_jumping() );
+	cm->bi->breaks.push_back( cm_jumping() );
 	if ( cm_tokmust(';') ) cm_toknext();
 }
 
@@ -829,8 +846,23 @@ void	statement::block::compile( CmCompiler* cm )
 
 	OvInt nlocals = cm->fi->locals.size();
 	cm_compile(multi_stat);
-	cm_code << op_settop << nlocals;
-	cm->fi->locals.resize(nlocals);
-
+	if ( nlocals < cm->fi->locals.size() )
+	{
+		cm_code << op_settop << nlocals;
+		cm->fi->locals.resize(nlocals);
+	}
 	if (cm_tokmust('}')) cm_toknext();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void	statement::bodystat::compile( CmCompiler* cm )
+{
+	OvInt nlocals = cm->fi->locals.size();
+	cm_compile(single_stat);
+	if ( nlocals < cm->fi->locals.size() )
+	{
+		cm_code << op_settop << nlocals;
+		cm->fi->locals.resize(nlocals);
+	}
 }
