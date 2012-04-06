@@ -915,9 +915,8 @@ void ut_settable( MnState* s, MnValue& t, MnValue& n, MnValue& v )
 			{
 				if ( MnIsNil(v) )	tbl->table.erase( itor );
 				else				itor->second = make_pair(n,v);
-				return;
 			}
-			else if ( !ut_meta_newindex(s, t, n, v) )
+			else // if ( !ut_meta_newindex(s, t, n, v) )
 			{
 				tbl->table.insert( make_pair(hash,make_pair(n,v)) );
 			}
@@ -927,9 +926,10 @@ void ut_settable( MnState* s, MnValue& t, MnValue& n, MnValue& v )
 
 MnValue ut_meta_index( MnState* s, MnValue& c, MnValue& n ) 
 {
-	if ( !MnIsNil(ut_getmeta( c )) )
+	MnValue meta = ut_getmeta( c );
+	if ( !MnIsNil(meta) )
 	{
-		ut_pushvalue( s, ut_getmeta( c ) );
+		ut_pushvalue( s, meta );
 		mn_pushstring( s, METHOD_INDEX );
 		mn_getfield( s, -2 );
 		if ( mn_isfunction( s, -1 ) )
@@ -942,7 +942,11 @@ MnValue ut_meta_index( MnState* s, MnValue& c, MnValue& n )
 			mn_pop( s, 2 );
 			return ret;
 		}
-		mn_pop(s,2);
+		else
+		{
+			mn_pop(s,2);
+			ut_pushvalue( s, ut_gettable( s, meta, n ) );
+		}
 	}
 	return MnValue();
 }
@@ -961,8 +965,11 @@ MnValue ut_gettable( MnState* s, MnValue& t, MnValue& n )
 			{
 				return itor->second.second;
 			}
+			else
+			{
+				return ut_gettable( s, ut_getmeta(t), n );
+			}
 		}
-		return ut_meta_index(s, t, n);
 	}
 	return MnValue();
 }
@@ -979,7 +986,6 @@ void ut_setarray( MnState* s, MnValue& a, MnValue& n, MnValue& v )
 			{
 				arr->array[idx] = v;
 			}
-			else ut_meta_newindex(s, a, n, v);
 		}
 	}
 }
@@ -997,9 +1003,8 @@ MnValue ut_getarray( MnState* s, MnValue& a, MnValue& n )
 				return arr->array.at(idx);
 			}
 		}
-		return ut_meta_index( s, a, n );
 	}
-	return MnValue();
+	return ut_gettable( s, ut_getmeta(a), n );
 }
 
 void ut_setupval( MnState* s, MnIndex upvalidx, MnValue& v )
@@ -1243,9 +1248,9 @@ OvString ut_tostring( const MnValue& val )
 	}
 	else if ( MnIsNumber(val) )
 	{
-		OvString str;
-		ut_num2str( MnToNumber(val), str );
-		return str;
+		OvStringStream strm;
+		strm << MnToNumber(val);
+		return strm.str();
 	}
 	else if ( MnIsBoolean(val) )
 	{
@@ -1392,7 +1397,7 @@ OvInt ex_array_resize( MnState* s )
 	if ( MnArray* arr = MnToArray(ut_getstack(s,1)) )
 	{
 		MnNumber sz = mn_tonumber(s,2);
-		arr->array.resize(sz);
+		arr->array.resize((OvUInt)sz);
 	}
 	return 0;
 }
@@ -1524,18 +1529,19 @@ enum opcode : OvByte
 	op_lt,
 	op_gt,
 
-	op_setglobal,
-	op_getglobal,
+	op_setglobal, //< + byte
+	op_getglobal, //< + byte
 
-	op_popstack,
-	op_setstack,
-	op_getstack,
+	op_popstack, //< + short
+	op_setstack, //< + short
+	op_getstack, //< + short
+	op_insertstack, //< + short
 
 	op_setfield,
 	op_getfield,
 
-	op_setupval,
-	op_getupval,
+	op_setupval, //< + byte
+	op_getupval, //< + byte
 
 	op_const_true,
 	op_const_false,
@@ -1544,16 +1550,17 @@ enum opcode : OvByte
 	op_const_one,
 	op_const_num,
 	op_const_char,
-	op_const,
+	op_const,		//< + byte
 
-	op_newclosure,
-	op_settop,
+	op_newclosure,	//< + byte + byte
+	op_settop,		//< + integer
 
-	op_call,
-	op_jump,
-	op_fjump,
+	op_call,		//< + byte + byte
+	op_methodcall,	//< + byte + byte
+	op_jump,		//< + integer
+	op_fjump,		//< + integer
 
-	op_return,
+	op_return,		//< + byte
 };
 
 
@@ -1602,7 +1609,15 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				MnValue right = ut_getstack(s,-1);
 				mn_pop(s,2);
 				
-				if (op==op_add) mn_pushnumber( s, MnToNumber(left) + MnToNumber(right) );
+				if (op==op_add)
+				{
+					if ( MnIsNumber(left) ) mn_pushnumber( s, MnToNumber(left) + MnToNumber(right) );
+					else if ( MnIsString(left) )
+					{
+						MnString* str = ut_newstring( s, MnToString(left)->str() + ut_tostring(right) );
+						ut_pushvalue( s, MnValue( MOT_STRING, str ) );
+					}
+				}
 				else if (op==op_sub) mn_pushnumber( s, MnToNumber(left) - MnToNumber(right) );
 				else if (op==op_mul) mn_pushnumber( s, MnToNumber(left) * MnToNumber(right) );
 				else if (op==op_div) mn_pushnumber( s, MnToNumber(left) / MnToNumber(right) );
@@ -1671,11 +1686,13 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		case op_popstack :
 		case op_setstack :
 		case op_getstack :
+		case op_insertstack :
 			{
-				OvByte idx;
+				OvShort idx;
 				emcee >> idx;
 				if (op==op_setstack) mn_setstack(s,idx);
-				else if (op==op_getstack)mn_getstack(s,idx);
+				else if (op==op_getstack) mn_getstack(s,idx);
+				else if (op==op_insertstack) mn_insert(s,idx);
 				else mn_pop(s,idx);
 			}
 			break;

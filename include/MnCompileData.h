@@ -77,7 +77,8 @@ public:
 	
 	union
 	{
-		OvByte		  idx;
+		OvShort		  i16; //< integer 16
+		OvByte		  ui8; //< unsigned integer 8
 		MnNumber	  num;
 		OvBool		  blr;
 		struct { OvByte func; OvByte nupvals; };
@@ -117,6 +118,7 @@ namespace statement
 	OvBool	option( CmCompiler* cm, statfunc func );
 	OvBool	match( CmCompiler* cm, statfunc func );
 	void	rvalue( CmCompiler* cm );
+	void	assign( CmCompiler* cm, const CmExprInfo& lexpr );
 	void	free_expr( CmCompiler* cm );
 	void	resolve_goto( CmCompiler* cm, CmFuncinfo* fi );
 	void	resolve_break( CmCompiler* cm, CmBreakInfo* bi );
@@ -214,6 +216,11 @@ namespace statement
 	}
 
 	namespace primary
+	{
+		void	compile( CmCompiler* cm );
+	}
+
+	namespace variable
 	{
 		void	compile( CmCompiler* cm );
 	}

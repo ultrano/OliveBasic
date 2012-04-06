@@ -27,6 +27,7 @@
 
 #define cm_expr				(cm->exprinfo)
 #define cm_rvalue()			(statement::rvalue(cm))
+#define cm_assign(lexpr)	(statement::assign(cm,lexpr))
 #define cm_free_expr()		(statement::free_expr(cm))
 #define cm_resolve_goto(fi)	(statement::resolve_goto(cm,fi))
 #define cm_resolve_break(bi) (statement::resolve_break(cm,bi))
@@ -193,7 +194,7 @@ void	statement::rvalue( CmCompiler* cm )
 	{
 	case et_nil : cm_code << op_const_nil ; break;
 	case et_closure : cm_code << op_newclosure << cm_expr.func << cm_expr.nupvals; break;
-	case et_const : cm_code << op_const << cm_expr.idx ; break;
+	case et_const : cm_code << op_const << cm_expr.ui8 ; break;
 	case et_boolean : cm_code << (cm_expr.blr? op_const_true : op_const_false); break;
 	case et_number : 
 		{
@@ -203,23 +204,37 @@ void	statement::rvalue( CmCompiler* cm )
 		}
 		break;
 
-	case et_global : cm_code << op_getglobal << cm_expr.idx; break;
-	case et_local : cm_code << op_getstack << cm_expr.idx; break;
-	case et_upval : cm_code << op_getupval << cm_expr.idx; break;
+	case et_global : cm_code << op_getglobal << cm_expr.ui8; break;
+	case et_local : cm_code << op_getstack << cm_expr.i16; break;
+	case et_upval : cm_code << op_getupval << cm_expr.ui8; break;
 	case et_field : cm_code << op_getfield; break;
-	case et_call : cm_code << op_call << cm_expr.idx << (OvByte)1; break;
+	case et_call : cm_code << op_call << cm_expr.ui8 << (OvByte)1; break;
+	case et_methodcall : cm_code << op_methodcall << cm_expr.ui8 << (OvByte)1; break;
 	case et_rvalue : return ;
 	}
 	cm_expr.type = et_rvalue;
+}
+
+void	statement::assign( CmCompiler* cm, const CmExprInfo& lexpr )
+{
+	switch ( lexpr.type )
+	{
+	case et_global : cm_code << op_setglobal << lexpr.ui8 ; break;
+	case et_local : cm_code << op_setstack << lexpr.i16 ; break;
+	case et_upval : cm_code << op_setupval << lexpr.ui8 ; break;
+	case et_field : cm_code << op_setfield ; break;
+	default: cm_error( "'=' : left operand must be l-value\n" );
+	}
+	cm_expr = lexpr;
 }
 
 void	statement::free_expr( CmCompiler* cm )
 {
 	switch ( cm_expr.type )
 	{
-	case et_field : cm_code << op_popstack << (OvByte)2; break;
-	case et_rvalue : cm_code << op_popstack << (OvByte)1; break;
-	case et_call : cm_code << op_call << cm_expr.idx << (OvByte)0; break;
+	case et_field : cm_code << op_popstack << (OvShort)2; break;
+	case et_rvalue : cm_code << op_popstack << (OvShort)1; break;
+	case et_call : cm_code << op_call << cm_expr.ui8 << (OvByte)0; break;
 	}
 	cm_expr.type = et_none;
 }
@@ -289,9 +304,9 @@ void	statement::single_stat::compile( CmCompiler* cm )
 	else if ( cm_kwmatch("if") ) { cm_compile(if_stat); }
 	else if ( cm_kwmatch("while") ) { cm_compile(whilestat); }
 	else if ( cm_kwmatch("break") ) { cm_compile(breakstat); }
-	else if ( cm_tokmatch('{') ) { cm_compile(block); }
-	else if ( cm_tokmatch(tt_identifier) && cm_lahmatch(':') ) { cm_compile(label_stat); }
+	else if ( cm_kwmatch("label") ) { cm_compile(label_stat); }
 	else if ( cm_kwmatch("goto") ) { cm_compile(goto_stat); }
+	else if ( cm_tokmatch('{') ) { cm_compile(block); }
 	else
 	{
 		cm_compile(expression);
@@ -305,8 +320,9 @@ void	statement::single_stat::compile( CmCompiler* cm )
 
 void	statement::label_stat::compile( CmCompiler* cm )
 {
+	cm_toknext();
 	cm_addlabel( CmLabelInfo( MnToString(cm_tok.val)->hash(), cm_codesize() ) );
-	cm_toknext();cm_toknext();
+	cm_toknext();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -358,16 +374,7 @@ void	statement::expr10::compile( CmCompiler* cm )
 	{
 		cm_compile(expr9);
 		cm_rvalue();
-
-		switch ( lexpr.type )
-		{
-		case et_global : cm_code << op_setglobal << lexpr.idx ; break;
-		case et_local : cm_code << op_setstack << lexpr.idx ; break;
-		case et_upval : cm_code << op_setupval << lexpr.idx ; break;
-		case et_field : cm_code << op_setfield ; break;
-		default: cm_error( "'=' : left operand must be l-value\n" );
-		}
-		cm_expr = lexpr;
+		cm_assign(lexpr);
 	}
 }
 //////////////////////////////////////////////////////////////////////////
@@ -563,19 +570,34 @@ void	statement::postexpr::compile( CmCompiler* cm )
 			}
 			cm_toknext(); 
 			cm_expr.type = et_call;
-			cm_expr.idx  = nargs;
+			cm_expr.ui8  = nargs;
 		}
 		else if ( cm_tokmatch(':') )
 		{
-			cm_rvalue();
 			cm_toknext();
+			cm_rvalue();
+			cm_code << op_getstack << (OvShort)-1 ;
 			if ( !cm_tokmatch(tt_identifier) ) cm_error("'.' right must be field name\n");
-			cm_expr.type = et_const;
-			cm_expr.idx	 = cm_addconst(cm_tok.val);
-			cm_rvalue();
+			cm_code << op_const << cm_addconst(cm_tok.val);
 			cm_toknext();
-			cm_expr.type = et_field;
-			cm_rvalue();
+			
+			cm_code << op_getfield ;
+			cm_code << op_insertstack << (OvShort)-2;
+			if ( cm_tokmust('(') ) cm_toknext();
+			OvByte nargs = 0;
+			while ( !cm_tokmatch(')') )
+			{
+				++nargs;
+				cm_compile(expression);
+				cm_rvalue();
+				if ( cm_tokmatch(',') ) cm_toknext();
+				else if ( cm_tokmatch(')') ) break;
+				else cm_tokerror();
+			}
+			cm_toknext(); 
+
+			cm_expr.type = et_call;
+			cm_expr.ui8  = nargs + 1;
 		}
 		else if ( cm_tokmatch('[') )
 		{
@@ -591,10 +613,7 @@ void	statement::postexpr::compile( CmCompiler* cm )
 			cm_rvalue();
 			cm_toknext();
 			if ( !cm_tokmatch(tt_identifier) ) cm_error("'.' right must be field name\n");
-
-			cm_expr.type = et_const;
-			cm_expr.idx	 = cm_addconst(cm_tok.val);
-			cm_rvalue();
+			cm_code << op_const << cm_addconst(cm_tok.val);
 			cm_toknext();
 			cm_expr.type = et_field;
 		}
@@ -615,7 +634,7 @@ void	statement::primary::compile( CmCompiler* cm )
 	else if ( cm_tokmatch(tt_string) )
 	{
 		cm_expr.type = et_const;
-		cm_expr.idx	 = cm_addconst(cm_tok.val);
+		cm_expr.ui8	 = cm_addconst(cm_tok.val);
 		cm_toknext();
 	}
 	else if ( cm_kwmatch("function") )
@@ -628,15 +647,21 @@ void	statement::primary::compile( CmCompiler* cm )
 		cm_expr.blr  = cm_kwmatch("true");
 		cm_toknext();
 	}
-	else if ( cm_tokmatch(':') && cm_lahmatch(':') )
+	else if ( cm_tokmatch(tt_identifier) || (cm_tokmatch(':') && cm_lahmatch(':')) )
 	{
-		cm_toknext();cm_toknext();
-		cm_tokmust(tt_identifier);
-		cm_expr.type = et_global;
-		cm_expr.idx	 = cm_addconst(cm_tok.val);
-		cm_toknext();
+		cm_compile(variable);
 	}
-	else if ( cm_tokmatch(tt_identifier) )
+	else if ( cm_tokmatch('(') )
+	{
+		cm_toknext();
+		cm_compile(expression);
+		if ( cm_tokmust(')') ) cm_toknext();
+	}
+}
+
+void	statement::variable::compile( CmCompiler* cm )
+{
+	if ( cm_tokmatch(tt_identifier) )
 	{
 		OvHash32 hash = MnToString(cm_tok.val)->hash();
 		MnIndex idx = cm->fi->locals.size();
@@ -645,17 +670,28 @@ void	statement::primary::compile( CmCompiler* cm )
 		if ( idx >= 0 )
 		{
 			cm_expr.type = et_local;
-			cm_expr.idx	 = idx + 1;
+			cm_expr.i16	 = idx + 1;
 		}
 		else
 		{
 			cm_expr.type = et_global;
-			cm_expr.idx	 = cm_addconst(cm_tok.val);
+			cm_expr.ui8	 = cm_addconst(cm_tok.val);
 		}
 		cm_toknext();
 	}
+	else if (cm_tokmatch(':') && cm_lahmatch(':'))
+	{
+		cm_toknext();cm_toknext();
+		cm_tokmust(tt_identifier);
+		cm_expr.type = et_global;
+		cm_expr.ui8	 = cm_addconst(cm_tok.val);
+		cm_toknext();
+	}
+	else
+	{
+		cm_expr.type = et_none;
+	}
 }
-
 //////////////////////////////////////////////////////////////////////////
 
 // 	if ( cm_kwoption("function") )
@@ -668,12 +704,28 @@ void	statement::primary::compile( CmCompiler* cm )
 void	statement::funcdesc::compile( CmCompiler* cm )
 {
 	cm_toknext();
+
+	OvBool needthis = false;
+	cm_compile(variable);
+	if ( cm_expr.type != et_none && cm_tokmatch(':') )
+	{
+		cm_toknext();
+		cm_tokmust(tt_identifier);
+		cm_rvalue();
+		cm_code << op_const << cm_addconst(cm_tok.val);
+		cm_toknext();
+		needthis = true;
+		cm_expr.type = et_field;
+	}
+	CmExprInfo name = cm_expr;
+
 	CmFuncinfo ifi;
 	ifi.func = ut_newfunction(cm->s);
 	ifi.codewriter.func = ifi.func;
 	ifi.last = cm->fi;
 	cm->fi = &ifi;
 
+	if (needthis) cm->fi->locals.push_back( OU::string::rs_hash( "this" ) );
 	cm_compile(funcargs);
 
 	if (cm_tokmust('{')) cm_toknext();
@@ -685,7 +737,14 @@ void	statement::funcdesc::compile( CmCompiler* cm )
 	cm_expr.type = et_closure;
 	cm_expr.func = cm_addconst( MnValue(MOT_FUNCPROTO,ifi.func) );
 	cm_expr.nupvals = 0;
+
+	if ( name.type != et_none )
+	{
+		cm_rvalue();
+		cm_assign(name);
+	}
 }
+
 //////////////////////////////////////////////////////////////////////////
 
 // if ( cm_tokoption('(') )

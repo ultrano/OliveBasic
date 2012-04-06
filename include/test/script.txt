@@ -1,12 +1,10 @@
 
-local arr = array();
-array.resize(arr,100);
-local i = 0;
-while ( i < 100 )
+local test = table();
+test.msg = "fuck you dick";
+
+function test:print()
 {
-	i = i+1;
-	arr[i] = i;
-}
-print(array.size(arr));
-print(arr[1]);
-dump_stack();
+	print(this.msg);
+};
+
+test:print();

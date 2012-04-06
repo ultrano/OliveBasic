@@ -475,9 +475,8 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 
 }
 
-void mn_compile_test( const OvString& file )
+void mn_compile_test( MnState* s, const OvString& file )
 {
-	MnState* s = mn_openstate();
 	mn_lib_default(s);
 	CmCompiler icm(s);
 	CmCompiler* cm = &icm;
@@ -496,5 +495,4 @@ void mn_compile_test( const OvString& file )
 	printf( "================start parsing test================\n" );
 	CmParsing(cm);
 	printf( "================end parsing test================\n" );
-	mn_closestate(s);
 }
