@@ -3,3 +3,20 @@
 local a = function (a,b) { print(a);print(b); };
 local t = table();
 local i = 0;
+while ( 1 )
+{
+	print(i);
+	i = i+1;
+	if ( i > 100 )
+	{
+		local j = 0;
+		while (1)
+		{
+			j = j + 1;
+			print(j);
+			if (j>10) break;
+		}
+		break;
+	}
+}
+dump_stack();

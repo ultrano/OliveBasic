@@ -1515,6 +1515,7 @@ enum opcode : OvByte
 	op_const,
 
 	op_newclosure,
+	op_settop,
 
 	op_call,
 	op_jump,
@@ -1692,6 +1693,14 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				MnClosure* cls = ut_newMclosure(s);
 				cls->u.m->func = ut_getconst(s->func,funcidx);
 				ut_pushvalue( s, MnValue( MOT_CLOSURE, cls ) );
+			}
+			break;
+
+		case op_settop :
+			{
+				OvInt top;
+				emcee >> top;
+				mn_settop(s,top);
 			}
 			break;
 

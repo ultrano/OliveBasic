@@ -332,15 +332,6 @@ void	statement::local::compile( CmCompiler* cm )
 
 //////////////////////////////////////////////////////////////////////////
 
-void	statement::block::compile( CmCompiler* cm )
-{
-	if (cm_tokmust('{')) cm_toknext();
-	cm_compile(multi_stat);
-	if (cm_tokmust('}')) cm_toknext();
-}
-
-//////////////////////////////////////////////////////////////////////////
-
 void	statement::expression::compile( CmCompiler* cm )
 {
 	cm_compile(expr10);
@@ -758,7 +749,10 @@ void	statement::if_stat::compile( CmCompiler* cm )
 	if ( cm_tokmust(')') ) cm_toknext();
 
 	OvInt  jump1 = cm_fjumping();
+	OvInt nlocals = cm->fi->locals.size();
 	cm_compile(single_stat);
+	cm_code << op_settop << nlocals;
+	cm->fi->locals.resize(nlocals);
 	OvInt  tpos1 = cm_codesize();
 
 	if ( cm_kwmatch("else") )
@@ -766,7 +760,10 @@ void	statement::if_stat::compile( CmCompiler* cm )
 		cm_toknext();
 		OvInt  jump2 = cm_jumping();
 		tpos1 = cm_codesize();
+		OvInt nlocals = cm->fi->locals.size();
 		cm_compile(single_stat);
+		cm_code << op_settop << nlocals;
+		cm->fi->locals.resize(nlocals);
 		OvInt  tpos2 = cm_codesize();
 		cm_fixjump(jump2,tpos2);
 	}
@@ -798,22 +795,21 @@ void	statement::whilestat::compile( CmCompiler* cm )
 	cm_rvalue();
 	if (cm_tokmust(')')) cm_toknext();
 
-	OvInt base = cm->fi->breaks.size();
+	OvInt nlocals = cm->fi->locals.size();
+	OvInt nbreaks = cm->fi->breaks.size();
 
 	OvInt cond = cm_fjumping();
 	cm_compile(single_stat);
 	OvInt repeat = cm_jumping();
 	OvInt tpos2 = cm_codesize();
+	cm_code << op_settop << nlocals;
 
 	cm_fixjump(repeat,tpos1);
 	cm_fixjump(cond,tpos2);
-	for ( OvInt i = base ; i < cm->fi->breaks.size() ; ++i )
-	{
-		OvInt jump = cm->fi->breaks[i];
-		cm_fixjump(jump,tpos2);
-	}
+	for ( OvInt i = nbreaks ; i < cm->fi->breaks.size() ; ++i ) cm_fixjump(cm->fi->breaks[i],tpos2);
 
-	cm->fi->breaks.resize(base);
+	cm->fi->breaks.resize(nbreaks);
+	cm->fi->locals.resize(nlocals);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -823,4 +819,18 @@ void	statement::breakstat::compile( CmCompiler* cm )
 	cm_toknext();
 	cm->fi->breaks.push_back( cm_jumping() );
 	if ( cm_tokmust(';') ) cm_toknext();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void	statement::block::compile( CmCompiler* cm )
+{
+	if (cm_tokmust('{')) cm_toknext();
+
+	OvInt nlocals = cm->fi->locals.size();
+	cm_compile(multi_stat);
+	cm_code << op_settop << nlocals;
+	cm->fi->locals.resize(nlocals);
+
+	if (cm_tokmust('}')) cm_toknext();
 }

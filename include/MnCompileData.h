@@ -142,11 +142,6 @@ namespace statement
 		void	compile( CmCompiler* cm );
 	}
 
-	namespace block
-	{
-		void	compile( CmCompiler* cm );
-	}
-
 	namespace expression
 	{
 		void	compile( CmCompiler* cm );
@@ -253,6 +248,11 @@ namespace statement
 	}
 
 	namespace breakstat
+	{
+		void	compile( CmCompiler* cm );
+	}
+
+	namespace block
 	{
 		void	compile( CmCompiler* cm );
 	}
