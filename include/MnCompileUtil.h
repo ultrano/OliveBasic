@@ -152,6 +152,7 @@ void CmParsing( CmCompiler* cm )
 	catch ( CmCompileException& e )
 	{
 		printf( e.msg.c_str() );
+		return;
 	}
 
 	MnClosure* cls = ut_newMclosure(cm->s);

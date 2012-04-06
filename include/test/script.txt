@@ -1,3 +1,3 @@
 
 
-local a = function (a,b) { print(a);print(b); };
+local a = function (a,b) { print(a);print(b); }
