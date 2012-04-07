@@ -1,15 +1,10 @@
 
-
-function f()
+function ::outer()
 {
-	local test = "hello";
-	return function ()
-	{
-		print(test);
-	};
+	print("hello");
 };
 
-local f2 = f();
-f2();
+outer();
 
-dump_stack();
+
+1++;

@@ -623,7 +623,11 @@ void	statement::preexpr::compile( CmCompiler* cm )
 				cm_code << op_getfield ;
 			}
 			break;
-		default: cm_error( OvString((op==op_inc)? "'++'":"'--'") + " - is need l-value");
+		default:
+			{
+				if (op==op_inc) cm_error( "pre '++' operator needs l-value\n" );
+				else cm_error( "pre '--' operator needs l-value\n" );
+			}
 		}
 		cm_code << op ;
 		cm_assign(cm_expr);
@@ -701,7 +705,12 @@ void	statement::postexpr::compile( CmCompiler* cm )
 			cm_toknext();
 			cm_expr.type = et_field;
 		}
-		else break;
+		else
+		{
+			if ( cm_tokmatch('+') && cm_lahmatch('+') ) cm_error("post '++' operator isn't supported\n");
+			if ( cm_tokmatch('-') && cm_lahmatch('-') ) cm_error("post '--' operator isn't supported\n");
+			break;
+		}
 	}
 }
 
