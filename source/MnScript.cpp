@@ -215,12 +215,13 @@ void mn_getmeta( MnState* s, MnIndex idx )
 
 void mn_setupval( MnState* s, MnIndex upvalidx )
 {
-	ut_setupval(s, upvalidx, ut_getstack(s,-1));
+	ut_setupvallink(s, upvalidx, ut_getstack(s,-1));
+	mn_pop(s,1);
 }
 
 void mn_getupval( MnState* s, MnIndex upvalidx )
 {
-	ut_pushvalue(s, ut_getupval(s, upvalidx ) );
+	ut_pushvalue(s, ut_getupvallink(s, upvalidx ) );
 }
 ///////////////////////* get/set top *///////////////////////
 
@@ -252,32 +253,33 @@ MnIndex mn_gettop( MnState* s )
 
 void mn_newtable( MnState* s )
 {
-	ut_pushvalue( s, MnValue( MOT_TABLE, ut_newtable(s) ) );
+	ut_pushvalue( s, ut_newtable(s) );
 }
 
 void mn_newarray( MnState* s )
 {
-	ut_pushvalue( s, MnValue( MOT_ARRAY, ut_newarray(s) ) );
+	ut_pushvalue( s, ut_newarray(s) );
 }
 
 void* mn_newminidata( MnState* s, OvInt sz )
 {
-	MnMiniData* mini = ut_newminidata(s,sz);
-	ut_pushvalue( s, MnValue( MOT_MINIDATA, mini ) );
-	return mini->ptr;
+	MnValue val = ut_newminidata(s,sz);
+	ut_pushvalue( s, val );
+	return MnToMiniData(val)->ptr;
 }
 
 void mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals )
 {
-	MnClosure* cl = ut_newCclosure(s);
-	cl->u.c->func = proto;
-	cl->upvals.reserve(nupvals);
+	MnValue val = ut_newCclosure(s);
+	MnClosure* cls = MnToClosure(val);
+	cls->u.c->func = proto;
+	cls->upvals.reserve(nupvals);
 	for ( OvInt i = 0 ; i < nupvals ; ++i )
 	{
-		cl->upvals.push_back( ut_getstack(s, i - nupvals ) );
+		cls->upvals.push_back( ut_getstack(s, i - nupvals ) );
 	}
 	mn_pop(s,nupvals);
-	ut_pushvalue( s, MnValue(MOT_CLOSURE,cl) );
+	ut_pushvalue( s, val );
 }
 
 void mn_pushfunction( MnState* s, MnCFunction proto )
@@ -302,12 +304,12 @@ void mn_pushnumber( MnState* s, MnNumber v )
 
 void mn_pushstring( MnState* s, const OvString& v )
 {
-	ut_pushvalue( s, MnValue( MOT_STRING, ut_newstring( s, v ) ) );
+	ut_pushvalue( s, ut_newstring( s, v ) );
 }
 
 void mn_pushuserdata( MnState* s, void* v )
 {
-	ut_pushvalue( s, MnValue( MOT_USERDATA, ut_newuserdata(s,v) ) );
+	ut_pushvalue( s, ut_newuserdata(s,v) );
 }
 
 void mn_pushstack( MnState* s, MnIndex idx )

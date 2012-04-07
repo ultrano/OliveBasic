@@ -146,6 +146,11 @@ namespace statement
 		void	compile( CmCompiler* cm );
 	}
 
+	namespace return_stat
+	{
+		void	compile( CmCompiler* cm );
+	}
+
 	namespace local
 	{
 		void	compile( CmCompiler* cm );

@@ -13,7 +13,7 @@
 
 #define VERSION_MAJOR	(1)
 #define VERSION_MINOR	(0)
-#define VERSION_PATCH	(1)
+#define VERSION_PATCH	(2)
 
 class MnCallInfo;
 class MnObject;
@@ -196,14 +196,15 @@ void			ut_free( void* p ) { OvMemFree(p); };
 
 void			ut_ensure_stack( MnState* s, OvInt sz );
 
-MnString*		ut_newstring( MnState* s, const OvString& str );
-MnTable*		ut_newtable( MnState* s );
-MnArray*		ut_newarray( MnState* s );
-MnClosure*		ut_newCclosure( MnState* s, MnCLType t );
-MnClosure*		ut_newMclosure( MnState* s );
-MnMFunction*	ut_newfunction( MnState* s );
-MnUserData*		ut_newuserdata( MnState* s, void* p );
-MnMiniData*		ut_newminidata( MnState* s, OvInt sz );
+MnValue			ut_newstring( MnState* s, const OvString& str );
+MnValue			ut_newtable( MnState* s );
+MnValue			ut_newarray( MnState* s );
+MnValue			ut_newCclosure( MnState* s, MnCLType t );
+MnValue			ut_newMclosure( MnState* s );
+MnValue			ut_newfunction( MnState* s );
+MnValue			ut_newuserdata( MnState* s, void* p );
+MnValue			ut_newminidata( MnState* s, OvInt sz );
+MnValue			ut_newupval( MnState* s, OvInt idx );
 
 void			ut_delete_object( MnObject* o );
 void			ut_delete_garbage( MnObject* o );
@@ -229,9 +230,9 @@ MnValue			ut_getfield( MnState* s, MnValue& c, MnValue& n );
 MnValue			ut_getmeta( const MnValue& c );
 void			ut_setmeta( MnValue& c, const MnValue& m );
 
-void			ut_setupval( MnState* s, MnIndex upvalidx,MnValue& v );
+void			ut_setupvallink( MnState* s, MnIndex upvalidx,MnValue& v );
+MnValue			ut_getupvallink( MnState* s, MnIndex upvalidx );
 MnValue			ut_getupval( MnState* s, MnIndex upvalidx );
-MnUpval*		ut_getupval_ptr( MnState* s, MnIndex upvalidx );
 
 void			ut_pushvalue( MnState* s, const MnValue& v );
 
@@ -1007,7 +1008,7 @@ MnValue ut_getarray( MnState* s, MnValue& a, MnValue& n )
 	return ut_gettable( s, ut_getmeta(a), n );
 }
 
-void ut_setupval( MnState* s, MnIndex upvalidx, MnValue& v )
+void ut_setupvallink( MnState* s, MnIndex upvalidx, MnValue& v )
 {
 	if ( s->cls )
 	{
@@ -1021,24 +1022,23 @@ void ut_setupval( MnState* s, MnIndex upvalidx, MnValue& v )
 	}
 }
 
-MnValue ut_getupval( MnState* s, MnIndex upvalidx )
+MnValue ut_getupvallink( MnState* s, MnIndex upvalidx )
 {
-	MnUpval* upval = ut_getupval_ptr( s, upvalidx );
-	return (upval? *(upval->link) : MnValue());
+	MnValue val = ut_getupval( s, upvalidx );
+	return (MnIsUpval(val)? *(MnToUpval(val)->link) : MnValue());
 }
 
-MnUpval* ut_getupval_ptr( MnState* s, MnIndex upvalidx )
+MnValue ut_getupval( MnState* s, MnIndex upvalidx )
 {
 	if ( s->cls )
 	{
 		MnClosure* cls = s->cls;
 		if ( upvalidx > 0 && upvalidx <= cls->upvals.size() )
 		{
-			MnValue val = cls->upvals[upvalidx - 1];
-			return MnToUpval(val);
+			return cls->upvals[upvalidx - 1];
 		}
 	}
-	return NULL;
+	return MnValue();
 }
 
 OvBool ut_isglobal( MnState* s, OvHash32 hash )
@@ -1096,7 +1096,7 @@ MnValue ut_getmeta( const MnValue& c )
 	return MnValue();
 }
 
-MnString* ut_newstring( MnState* s, const OvString& str )
+MnValue ut_newstring( MnState* s, const OvString& str )
 {
 	MnString* ret;
 	OvHash32 hash = OU::string::rs_hash(str);
@@ -1108,47 +1108,53 @@ MnString* ut_newstring( MnState* s, const OvString& str )
 		itor = s->strtable.insert( make_pair( hash, ret ) ).first;
 	}
 	ret = itor->second;
-	return ret;
+	return MnValue( MOT_STRING, ret );
 }
 
-MnUserData* ut_newuserdata( MnState* s, void* p )
+MnValue ut_newuserdata( MnState* s, void* p )
 {
-	return new(ut_alloc(sizeof(MnUserData))) MnUserData(s,p);
+	return MnValue( MOT_USERDATA, new(ut_alloc(sizeof(MnUserData))) MnUserData(s,p) ) ;
 }
 
-MnMiniData* ut_newminidata( MnState* s, OvInt sz )
+MnValue ut_newminidata( MnState* s, OvInt sz )
 {
-	return new(ut_alloc(sizeof(MnMiniData))) MnMiniData(s,sz);
+	return MnValue( MOT_MINIDATA, new(ut_alloc(sizeof(MnMiniData))) MnMiniData(s,sz) );
 }
 
-MnTable* ut_newtable( MnState* s )
+MnValue ut_newtable( MnState* s )
 {
-	return new(ut_alloc(sizeof(MnTable))) MnTable(s);
+	return MnValue( MOT_TABLE, new(ut_alloc(sizeof(MnTable))) MnTable(s) );
 }
 
-MnArray* ut_newarray( MnState* s )
+MnValue ut_newarray( MnState* s )
 {
-	return new(ut_alloc(sizeof(MnArray))) MnArray(s);
+	return MnValue( MOT_ARRAY, new(ut_alloc(sizeof(MnArray))) MnArray(s) );
 }
 
-MnClosure* ut_newCclosure( MnState* s )
+MnValue ut_newCclosure( MnState* s )
 {
-	return new(ut_alloc(sizeof(MnClosure))) MnClosure(s,CCL);
+	return MnValue( MOT_CLOSURE, new(ut_alloc(sizeof(MnClosure))) MnClosure(s,CCL) );
 }
 
-MnClosure* ut_newMclosure( MnState* s )
+MnValue ut_newMclosure( MnState* s )
 {
-	return new(ut_alloc(sizeof(MnClosure))) MnClosure(s,MCL);
+	return MnValue( MOT_CLOSURE, new(ut_alloc(sizeof(MnClosure))) MnClosure(s,MCL) );
 }
 
-MnUpval*  ut_newupval( MnState* s )
+MnValue ut_newfunction( MnState* s )
 {
-	return new(ut_alloc(sizeof(MnUpval))) MnUpval(s);
+	return MnValue( MOT_FUNCPROTO, new(ut_alloc(sizeof(MnMFunction))) MnMFunction(s) );
 }
 
-MnMFunction* ut_newfunction( MnState* s )
+MnValue	ut_newupval( MnState* s, OvInt idx )
 {
-	return new(ut_alloc(sizeof(MnMFunction))) MnMFunction(s);
+	if ( MnValue* link = ut_getstack_ptr( s, idx ) )
+	{
+		MnUpval* upval	= new(ut_alloc(sizeof(MnUpval))) MnUpval(s);
+		upval->link		= link;
+		s->openeduv.insert( upval );
+	}
+	return MnValue();
 }
 
 void ut_delete_object( MnObject* o )
@@ -1377,7 +1383,7 @@ OvInt ex_dump_stack( MnState* s )
 
 OvInt ex_table( MnState* s )
 {
-	ut_pushvalue( s, MnValue( MOT_TABLE,ut_newtable(s) ) );
+	ut_pushvalue( s, ut_newtable(s) );
 	return 1;
 }
 
@@ -1385,7 +1391,7 @@ OvInt ex_table( MnState* s )
 
 OvInt ex_array_new( MnState* s )
 {
-	ut_pushvalue( s, MnValue( MOT_ARRAY,ut_newarray(s) ) );
+	ut_pushvalue( s, ut_newarray(s) );
 	mn_pushstring(s,"array");
 	mn_getglobal(s);
 	mn_setmeta(s,-2);
@@ -1590,8 +1596,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 					if ( MnIsNumber(left) ) mn_pushnumber( s, MnToNumber(left) + MnToNumber(right) );
 					else if ( MnIsString(left) )
 					{
-						MnString* str = ut_newstring( s, MnToString(left)->str() + ut_tostring(right) );
-						ut_pushvalue( s, MnValue( MOT_STRING, str ) );
+						ut_pushvalue( s, ut_newstring( s, MnToString(left)->str() + ut_tostring(right) ) );
 					}
 				}
 				else if (op==op_sub) mn_pushnumber( s, MnToNumber(left) - MnToNumber(right) );
@@ -1699,6 +1704,17 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				}
 			}
 			break;
+
+		case op_setupval :
+		case op_getupval :
+			{
+				OvByte idx;
+				code >> idx;
+				if ( op == op_setupval ) mn_setupval( s, idx );
+				else mn_getupval( s, idx );
+			}
+			break;
+
 		case op_const_nil : mn_pushnil(s); break;
 		case op_const_true : mn_pushboolean(s,true); break;
 		case op_const_false : mn_pushboolean(s,false); break;
@@ -1724,9 +1740,9 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 			{
 				OvByte funcidx, nupvals;
 				code >> funcidx >> nupvals;
-				MnClosure* cls = ut_newMclosure(s);
-				cls->u.m->func = ut_getconst(s->func,funcidx);
-				ut_pushvalue( s, MnValue( MOT_CLOSURE, cls ) );
+				MnValue val = ut_newMclosure(s);
+				MnToClosure(val)->u.m->func = ut_getconst(s->func,funcidx);
+				ut_pushvalue( s, val );
 			}
 			break;
 

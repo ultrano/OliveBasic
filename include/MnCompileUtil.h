@@ -18,7 +18,7 @@
 
 #define cm_kwmatch(kw)		( cm_tokmatch(tt_identifier) && (MnToString(cm_tok.val)->str() == (kw)) )
 #define cm_kwoption(kw)		( cm_kwmatch((kw))? (cm_toknext(),true) : false )
-#define cm_kwmust(kw)		( cm_kwoption(kw)?  true : cm_tokerror() )
+#define cm_kwmust(kw)		( cm_kwmatch(kw)?  true : cm_tokerror() )
 
 #define cm_toknext()		( ++cm->tokpos )
 #define cm_tokprev()		( --cm->tokpos )
@@ -98,7 +98,7 @@ OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 			} while ( (c != '"') && (c != EOF) );
 			cp_read();
 
-			tok.val = MnValue( MOT_STRING, ut_newstring( cm->s, str) );
+			tok.val = ut_newstring( cm->s, str);
 			cm->tokens.push_back( tok );
 		}
 		else if ( c == '\'' )
@@ -118,7 +118,7 @@ OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 				cp_read();
 			} while ( (isalnum(c) || c == '_') );
 
-			tok.val = MnValue( MOT_STRING, ut_newstring( cm->s, str) );
+			tok.val = ut_newstring( cm->s, str);
 			cm->tokens.push_back( tok );
 		}
 		else if ( isspace( c ) )
@@ -147,8 +147,9 @@ void CmCompile( MnState* s, const OvString& file )
 	OvFileInputStream fis( file );
 	CmScaning( cm, &fis );
 
+	MnValue func = ut_newfunction(cm->s);
 	CmFuncinfo ifi;
-	ifi.func = ut_newfunction(cm->s);
+	ifi.func = MnToFunction(func);
 	ifi.codewriter.func = ifi.func;
 	cm->fi = &ifi;
 
@@ -162,9 +163,9 @@ void CmCompile( MnState* s, const OvString& file )
 		return;
 	}
 
-	MnClosure* cls = ut_newMclosure(cm->s);
-	cls->u.m->func = MnValue(MOT_FUNCPROTO,cm->fi->func);
-	ut_pushvalue(cm->s,MnValue(MOT_CLOSURE,cls));
+	MnValue val = ut_newMclosure(cm->s);
+	MnToClosure(val)->u.m->func = func;
+	ut_pushvalue( cm->s, val );
 	mn_call(cm->s,0,0);
 }
 
@@ -313,6 +314,7 @@ void	statement::single_stat::compile( CmCompiler* cm )
 	else if ( cm_kwmatch("break") ) { cm_compile(breakstat); }
 	else if ( cm_kwmatch("label") ) { cm_compile(label_stat); }
 	else if ( cm_kwmatch("goto") ) { cm_compile(goto_stat); }
+	else if ( cm_kwmatch("return") ) { cm_compile(return_stat); }
 	else if ( cm_tokmatch('{') ) { cm_compile(block); }
 	else
 	{
@@ -347,6 +349,17 @@ void	statement::goto_stat::compile( CmCompiler* cm )
 	cm_addgoto(igoto);
 	cm_toknext();
 	if (cm_tokmust(';')) cm_toknext();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void	statement::return_stat::compile( CmCompiler* cm )
+{
+	if ( cm_kwmust("return") ) cm_toknext();
+	cm_compile(expression);
+	cm_rvalue();
+	cm_code << op_return << (OvByte)1;
+	if ( cm_tokmust(';') ) cm_toknext();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -757,8 +770,9 @@ void	statement::funcdesc::compile( CmCompiler* cm )
 	}
 	CmExprInfo name = cm_expr;
 
+	MnValue func = ut_newfunction(cm->s);
 	CmFuncinfo ifi;
-	ifi.func = ut_newfunction(cm->s);
+	ifi.func = MnToFunction(func);
 	ifi.codewriter.func = ifi.func;
 	ifi.last = cm->fi;
 	cm->fi = &ifi;
@@ -773,7 +787,7 @@ void	statement::funcdesc::compile( CmCompiler* cm )
 	cm->fi = ifi.last;
 
 	cm_expr.type = et_closure;
-	cm_expr.func = cm_addconst( MnValue(MOT_FUNCPROTO,ifi.func) );
+	cm_expr.func = cm_addconst( func );
 	cm_expr.nupvals = 0;
 
 	if ( name.type != et_none )

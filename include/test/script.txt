@@ -1,13 +1,11 @@
 
 
-local i = 0;
-local t = table();
-t.i = 100;
-
-while (--t.i)
+function f()
 {
-	print(t.i);
-	if ( t.i == 50 ) goto a;
-}
-goto b;
-label a:
+	return function(){print("hello");};
+};
+
+local f2 = f();
+f2();
+
+print( "test: " + f() );
