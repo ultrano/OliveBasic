@@ -196,7 +196,6 @@ void	statement::rvalue( CmCompiler* cm )
 	switch ( cm_expr.type )
 	{
 	case et_nil : cm_code << op_const_nil ; break;
-	case et_closure : cm_code << op_newclosure << cm_expr.func << cm_expr.nupvals; break;
 	case et_const : cm_code << op_const << cm_expr.ui8 ; break;
 	case et_boolean : cm_code << (cm_expr.blr? op_const_true : op_const_false); break;
 	case et_number : 
@@ -235,6 +234,7 @@ void	statement::free_expr( CmCompiler* cm )
 {
 	switch ( cm_expr.type )
 	{
+	case et_closure : cm_code << op_popstack << (OvShort)1; break;
 	case et_field : cm_code << op_popstack << (OvShort)2; break;
 	case et_rvalue : cm_code << op_popstack << (OvShort)1; break;
 	case et_call : cm_code << op_call << cm_expr.ui8 << (OvByte)0; break;
@@ -264,6 +264,40 @@ OvInt	statement::jumping( CmCompiler* cm, OvByte op )
 	return jump;
 }
 
+void	statement::var_search( CmCompiler* cm, CmFuncinfo* fi, const MnValue& name )
+{
+	if ( fi )
+	{
+		OvHash32 hash = MnToString(name)->hash();
+		MnIndex idx = fi->locals.size();
+		while ( idx-- ) { if (fi->locals[idx] == hash) break; }
+
+		if ( idx >= 0 )
+		{
+			cm_expr.type = et_local;
+			cm_expr.i16	 = idx + 1;
+			return;
+		}
+		else
+		{
+			var_search( cm, fi->last, name );
+			if ( cm_expr.type != et_global )
+			{
+				CmUpvalInfo info;
+				info.isupval = (cm_expr.type == et_upval);
+				info.idx	 = info.isupval? cm_expr.ui8:cm_expr.i16;
+
+				fi->upvals.push_back( info );
+				cm_expr.type = et_upval;
+				cm_expr.ui8  = fi->upvals.size();
+			}
+			return;
+		}
+	}
+	cm_expr.type = et_global;
+	cm_expr.ui8	 = cm_addconst(name);
+}
+
 void statement::resolve_goto( CmCompiler* cm, CmFuncinfo* fi ) 
 {
 	for each ( const CmGotoInfo& igoto in fi->gotos )
@@ -291,10 +325,9 @@ void statement::resolve_break( CmCompiler* cm, CmBreakInfo* bi )
 
 void	statement::multi_stat::compile( CmCompiler* cm )
 {
-	while ( true )
+	while ( !cm_tokmatch(tt_eos) && !cm_tokmatch('}') )
 	{
 		cm_compile(single_stat);
-		if ( cm_tokmatch(tt_eos) || cm_tokmatch('}')) return;
 	}
 }
 
@@ -712,30 +745,17 @@ void	statement::primary::compile( CmCompiler* cm )
 
 void	statement::variable::compile( CmCompiler* cm )
 {
-	if ( cm_tokmatch(tt_identifier) )
-	{
-		OvHash32 hash = MnToString(cm_tok.val)->hash();
-		MnIndex idx = cm->fi->locals.size();
-		while ( idx-- ) { if (cm->fi->locals[idx] == hash) break; }
-
-		if ( idx >= 0 )
-		{
-			cm_expr.type = et_local;
-			cm_expr.i16	 = idx + 1;
-		}
-		else
-		{
-			cm_expr.type = et_global;
-			cm_expr.ui8	 = cm_addconst(cm_tok.val);
-		}
-		cm_toknext();
-	}
-	else if (cm_tokmatch(':') && cm_lahmatch(':'))
+	if (cm_tokmatch(':') && cm_lahmatch(':'))
 	{
 		cm_toknext();cm_toknext();
 		cm_tokmust(tt_identifier);
 		cm_expr.type = et_global;
 		cm_expr.ui8	 = cm_addconst(cm_tok.val);
+		cm_toknext();
+	}
+	else if ( cm_tokmatch(tt_identifier) )
+	{
+		var_search( cm, cm->fi, cm_tok.val );
 		cm_toknext();
 	}
 	else
@@ -786,15 +806,16 @@ void	statement::funcdesc::compile( CmCompiler* cm )
 
 	cm->fi = ifi.last;
 
-	cm_expr.type = et_closure;
-	cm_expr.func = cm_addconst( func );
-	cm_expr.nupvals = 0;
-
-	if ( name.type != et_none )
+	cm_code << op_newclosure << cm_addconst( func ) << (OvByte)ifi.upvals.size();
+	for each ( const CmUpvalInfo& info in ifi.upvals )
 	{
-		cm_rvalue();
-		cm_assign(name);
+		cm_code << (info.isupval? op_getupval:op_getstack);
+		if ( info.isupval ) cm_code << (OvByte)info.idx;
+		else cm_code << info.idx;
 	}
+
+	cm_expr.type = et_closure;
+	if ( name.type != et_none ) cm_assign(name);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -949,6 +970,7 @@ void	statement::block::compile( CmCompiler* cm )
 	cm_compile(multi_stat);
 	if ( nlocals < cm->fi->locals.size() )
 	{
+		cm_code << op_close_upval << OvShort(nlocals+1) ;
 		cm_code << op_settop << nlocals;
 		cm->fi->locals.resize(nlocals);
 	}
@@ -963,6 +985,7 @@ void	statement::bodystat::compile( CmCompiler* cm )
 	cm_compile(single_stat);
 	if ( nlocals < cm->fi->locals.size() )
 	{
+		cm_code << op_close_upval << OvShort(nlocals+1) ;
 		cm_code << op_settop << nlocals;
 		cm->fi->locals.resize(nlocals);
 	}

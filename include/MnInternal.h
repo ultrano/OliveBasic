@@ -1153,6 +1153,7 @@ MnValue	ut_newupval( MnState* s, OvInt idx )
 		MnUpval* upval	= new(ut_alloc(sizeof(MnUpval))) MnUpval(s);
 		upval->link		= link;
 		s->openeduv.insert( upval );
+		return MnValue( MOT_UPVAL, upval );
 	}
 	return MnValue();
 }
@@ -1535,6 +1536,7 @@ enum opcode : OvByte
 	op_const_char,
 	op_const,		//< + byte
 
+	op_close_upval, //< + byte
 	op_newclosure,	//< + byte + byte
 	op_settop,		//< + integer
 
@@ -1736,12 +1738,38 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 			}
 			break;
 
+		case op_close_upval :
+			{
+				OvByte level;
+				code >> level;
+				ut_close_upval( s, ut_getstack_ptr( s, level ) );
+			}
+			break;
+
 		case op_newclosure :
 			{
 				OvByte funcidx, nupvals;
 				code >> funcidx >> nupvals;
 				MnValue val = ut_newMclosure(s);
-				MnToClosure(val)->u.m->func = ut_getconst(s->func,funcidx);
+				MnClosure* cls = MnToClosure(val);
+				cls->u.m->func = ut_getconst(s->func,funcidx);
+				while ( nupvals-- )
+				{
+					opcode addop;
+					code >> addop;
+					if ( addop == op_getstack )
+					{
+						OvShort idx;
+						code >> idx;
+						cls->upvals.push_back( ut_newupval( s, idx ) );
+					}
+					else
+					{
+						OvByte idx;
+						code >> idx;
+						cls->upvals.push_back( ut_getupval( s, idx ) );
+					}
+				}
 				ut_pushvalue( s, val );
 			}
 			break;

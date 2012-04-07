@@ -40,6 +40,13 @@ struct CmBreakInfo
 	OvInt	out;
 	OvVector<OvInt>			breaks;
 };
+
+struct CmUpvalInfo
+{
+	OvBool isupval;
+	OvShort idx;
+};
+
 class CmFuncinfo
 {
 public:
@@ -49,6 +56,7 @@ public:
 	OvVector<OvHash32>		locals;
 	OvVector<CmLabelInfo>	labels;
 	OvVector<CmGotoInfo>	gotos;
+	OvVector<CmUpvalInfo>	upvals;
 	MnCodeWriter		codewriter;
 
 	CmFuncinfo() : last(NULL), func(NULL), codewriter(NULL) {};
@@ -82,7 +90,6 @@ public:
 		OvByte		  ui8; //< unsigned integer 8
 		MnNumber	  num;
 		OvBool		  blr;
-		struct { OvByte func; OvByte nupvals; };
 	};
 
 	CmExprInfo() : type(et_none), num(0) {};
@@ -125,6 +132,7 @@ namespace statement
 	void	resolve_break( CmCompiler* cm, CmBreakInfo* bi );
 	OvByte	addconst( CmCompiler* cm, const MnValue& val );
 	OvInt	jumping( CmCompiler* cm, OvByte op );
+	void	var_search( CmCompiler* cm, CmFuncinfo* fi, const MnValue& name );
 
 	namespace multi_stat
 	{

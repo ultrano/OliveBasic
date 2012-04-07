@@ -2,10 +2,14 @@
 
 function f()
 {
-	return function(){print("hello");};
+	local test = "hello";
+	return function ()
+	{
+		print(test);
+	};
 };
 
 local f2 = f();
 f2();
 
-print( "test: " + f() );
+dump_stack();
