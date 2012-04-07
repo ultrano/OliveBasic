@@ -22,16 +22,17 @@ public:
 
 struct CmLabelInfo
 {
+	MnString* name;
 	OvHash32 hash;
 	OvUInt	 pos;
-	CmLabelInfo( OvHash32 h, OvUInt p ) : hash(h), pos(p) {};
+	CmLabelInfo( MnString* n, OvUInt p ) : name(n), pos(p) {};
 	CmLabelInfo() {};
 };
 
 struct CmGotoInfo
 {
 	OvUInt		pos;
-	OvHash32	label;
+	MnString*	name;
 };
 
 struct CmBreakInfo
@@ -124,7 +125,6 @@ namespace statement
 	void	resolve_break( CmCompiler* cm, CmBreakInfo* bi );
 	OvByte	addconst( CmCompiler* cm, const MnValue& val );
 	OvInt	jumping( CmCompiler* cm, OvByte op );
-	OvInt	steping( CmCompiler* cm, OvByte op );
 
 	namespace multi_stat
 	{

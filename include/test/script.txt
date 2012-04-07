@@ -7,4 +7,7 @@ t.i = 100;
 while (--t.i)
 {
 	print(t.i);
+	if ( t.i == 50 ) goto a;
 }
+goto b;
+label a:

@@ -267,13 +267,17 @@ void statement::resolve_goto( CmCompiler* cm, CmFuncinfo* fi )
 {
 	for each ( const CmGotoInfo& igoto in fi->gotos )
 	{
+		OvBool solved = false;
 		for each ( const CmLabelInfo& ilabel in fi->labels )
 		{
-			if ( igoto.label == ilabel.hash )
+			if ( igoto.name->hash() == ilabel.name->hash() )
 			{
 				cm_fixjump( igoto.pos, ilabel.pos );
+				solved = true;
+				break;
 			}
 		}
+		if ( !solved ) cm_error( igoto.name->str() + " - undefined label\n" );
 	}
 }
 void statement::resolve_break( CmCompiler* cm, CmBreakInfo* bi )
@@ -324,8 +328,10 @@ void	statement::single_stat::compile( CmCompiler* cm )
 void	statement::label_stat::compile( CmCompiler* cm )
 {
 	cm_toknext();
-	cm_addlabel( CmLabelInfo( MnToString(cm_tok.val)->hash(), cm_codesize() ) );
+	cm_tokmust(tt_identifier);
+	cm_addlabel( CmLabelInfo( MnToString(cm_tok.val), cm_codesize() ) );
 	cm_toknext();
+	if (cm_tokmust(':')) cm_toknext();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -337,7 +343,7 @@ void	statement::goto_stat::compile( CmCompiler* cm )
 
 	CmGotoInfo igoto;
 	igoto.pos = cm_jumping();
-	igoto.label = MnToString(cm_tok.val)->hash();
+	igoto.name = MnToString(cm_tok.val);
 	cm_addgoto(igoto);
 	cm_toknext();
 	if (cm_tokmust(';')) cm_toknext();
