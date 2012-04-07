@@ -56,17 +56,18 @@ public:
 enum CmExprType
 {
 	et_none,
-	et_nil,
-	et_closure,
-	et_const,
-	et_boolean,
-	et_number,
-	et_rvalue,
-	et_global,
-	et_local,
-	et_upval,
-	et_field,
-	et_call,
+	et_nil,		//< r-value
+	et_closure,	//< r-value
+	et_const,	//< r-value
+	et_boolean,	//< r-value
+	et_number,	//< r-value
+	et_call,	//< r-value
+	et_rvalue,	//< r-value
+
+	et_global,	//< l-value
+	et_local,	//< l-value
+	et_upval,	//< l-value
+	et_field,	//< l-value
 };
 
 class CmExprInfo
@@ -123,6 +124,7 @@ namespace statement
 	void	resolve_break( CmCompiler* cm, CmBreakInfo* bi );
 	OvByte	addconst( CmCompiler* cm, const MnValue& val );
 	OvInt	jumping( CmCompiler* cm, OvByte op );
+	OvInt	steping( CmCompiler* cm, OvByte op );
 
 	namespace multi_stat
 	{
@@ -205,6 +207,11 @@ namespace statement
 	}
 
 	namespace term
+	{
+		void	compile( CmCompiler* cm );
+	}
+
+	namespace preexpr
 	{
 		void	compile( CmCompiler* cm );
 	}

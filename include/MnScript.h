@@ -83,7 +83,7 @@ void			mn_call( MnState* s, OvInt nargs, OvInt nrets );
 
 OvInt			mn_collect_garbage( MnState* s );
 
-void			mn_compile_test( MnState* s, const OvString& file );
+void			mn_dofile( MnState* s, const OvString& file );
 
 //////////////////////////////////////////////////////////////////////////
 

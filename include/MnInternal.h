@@ -13,7 +13,7 @@
 
 #define VERSION_MAJOR	(1)
 #define VERSION_MINOR	(0)
-#define VERSION_PATCH	(0)
+#define VERSION_PATCH	(1)
 
 class MnCallInfo;
 class MnObject;
@@ -1488,6 +1488,9 @@ enum opcode : OvByte
 	op_div,
 	op_mod,
 
+	op_inc,
+	op_dec,
+
 	op_push,
 	op_pull,
 
@@ -1602,6 +1605,15 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				else if (op==op_bit_and) mn_pushnumber( s, (OvInt)MnToNumber(left) & (OvInt)MnToNumber(right) );
 				else if (op==op_and) mn_pushboolean( s, ut_toboolean(left) && ut_toboolean(right) );
 				else if (op==op_or) mn_pushboolean( s, ut_toboolean(left) || ut_toboolean(right) );
+			}
+			break;
+
+		case op_inc :
+		case op_dec :
+			{
+				MnValue val = ut_getstack(s,-1);
+				mn_pop(s,1);
+				if ( MnIsNumber(val) ) mn_pushnumber(s,MnToNumber(val)+((op==op_inc)? +1:-1));
 			}
 			break;
 

@@ -1,16 +1,10 @@
 
-local test = table();
-test.msg = "fuck you dick";
 
-function test:print( f )
+local i = 0;
+local t = table();
+t.i = 100;
+
+while (--t.i)
 {
-	print(this.msg);
-	f();
-};
-
-function f()
-{
-	dump_stack();
-};
-
-test:print( f );
+	print(t.i);
+}

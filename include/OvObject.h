@@ -25,7 +25,7 @@ private:
 public:
 
 	OvObject();
-	virtual ~OvObject(); 
+	virtual ~OvObject();
 
 	//! Stream
 	virtual void Serialize( OvObjectOutputStream & output );

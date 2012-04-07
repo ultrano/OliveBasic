@@ -475,7 +475,7 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 
 }
 
-void mn_compile_test( MnState* s, const OvString& file )
+void mn_dofile( MnState* s, const OvString& file )
 {
 	CmCompile( s, file );
 }

@@ -45,15 +45,14 @@
 #define cm_addgoto(g)	    (cm->fi->gotos.push_back((g)))
 
 
-OvInt CmScaning( CmCompiler* cm, const OvString& file )
+OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 {
-	OvFileInputStream fis( file );
 	OvChar c;
-	fis.Read(c);
+	is->Read(c);
 	OvUInt row = 1;
 	OvUInt col = 1;
 
-#define cp_read() {fis.Read(c); ++col; if(c=='\n') { col=0; ++row; };}
+#define cp_read() {is->Read(c); ++col; if(c=='\n') { col=0; ++row; };}
 
 	while ( true )
 	{
@@ -141,14 +140,12 @@ OvInt CmScaning( CmCompiler* cm, const OvString& file )
 void CmCompile( MnState* s, const OvString& file );
 void CmStatements( CmCompiler* cm );
 
-
-
 void CmCompile( MnState* s, const OvString& file )
 {
 	CmCompiler icm(s);
 	CmCompiler* cm = &icm;
-
-	CmScaning( cm, file );
+	OvFileInputStream fis( file );
+	CmScaning( cm, &fis );
 
 	CmFuncinfo ifi;
 	ifi.func = ut_newfunction(cm->s);
@@ -213,6 +210,7 @@ void	statement::rvalue( CmCompiler* cm )
 	case et_local : cm_code << op_getstack << cm_expr.i16; break;
 	case et_upval : cm_code << op_getupval << cm_expr.ui8; break;
 	case et_field : cm_code << op_getfield; break;
+
 	case et_call : cm_code << op_call << cm_expr.ui8 << (OvByte)1; break;
 	case et_rvalue : return ;
 	}
@@ -548,7 +546,36 @@ void	statement::expr1::compile( CmCompiler* cm )
 
 void	statement::term::compile( CmCompiler* cm )
 {
+	cm_compile(preexpr);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void	statement::preexpr::compile( CmCompiler* cm )
+{
+	opcode op = op_none;
+	if ( cm_tokmatch('+') && cm_lahmatch('+') ) { op = op_inc; cm_toknext();cm_toknext(); }
+	else if ( cm_tokmatch('-') && cm_lahmatch('-') ) { op = op_dec; cm_toknext();cm_toknext(); }
 	cm_compile(postexpr);
+	if ( op != op_none )
+	{
+		switch ( cm_expr.type )
+		{
+		case et_local : cm_code << op_getstack << cm_expr.i16; break;
+		case et_global : cm_code << op_getglobal << cm_expr.ui8; break;
+		case et_upval : cm_code << op_getupval << cm_expr.ui8; break;
+		case et_field :
+			{
+				cm_code << op_getstack << (OvShort)-2;
+				cm_code << op_getstack << (OvShort)-2;
+				cm_code << op_getfield ;
+			}
+			break;
+		default: cm_error( OvString((op==op_inc)? "'++'":"'--'") + " - is need l-value");
+		}
+		cm_code << op ;
+		cm_assign(cm_expr);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -752,15 +779,6 @@ void	statement::funcdesc::compile( CmCompiler* cm )
 
 //////////////////////////////////////////////////////////////////////////
 
-// if ( cm_tokoption('(') )
-// {
-// 	while ( true )
-// 	{
-// 		if (cm_tokoption(tt_identifier) && cm_tokoption(',')) continue; else break;
-// 	}
-// 	return cm_tokmust(')');
-// }
-
 void	statement::funcargs::compile( CmCompiler* cm )
 {
 	if (cm_tokmust('(')) cm_toknext();
@@ -775,7 +793,7 @@ void	statement::funcargs::compile( CmCompiler* cm )
 
 //////////////////////////////////////////////////////////////////////////
 
-void statement::funcbody::compile( CmCompiler* cm ) 
+void statement::funcbody::compile( CmCompiler* cm )
 {
 	cm_compile(multi_stat);
 	cm_code << op_return << (OvByte)0 ;
@@ -825,7 +843,6 @@ void	statement::returnstat::compile( CmCompiler* cm )
 
 void	statement::if_stat::compile( CmCompiler* cm )
 {
-
 	cm_toknext();
 	if ( cm_tokmust('(') ) cm_toknext();
 	cm_compile(expression); cm_rvalue();
