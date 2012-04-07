@@ -1463,29 +1463,7 @@ void ut_restore_ci( MnState* s, OvInt nret )
 	ut_free(ci);
 }
 
-// MnValue ut_pair_param_method( MnState* s, const OvString& method, const MnValue& a, const MnValue b )
-// {
-// 	ut_pushvalue( s, ut_getmeta(a) );
-// 	mn_pushstring( s, method );
-// 	mn_getfield( s, -2 );
-// 	if ( mn_isnil( s, -1 ) ) { mn_pop(s,1); return MnValue(); }
-// 
-// 	ut_pushvalue( s, a );
-// 	ut_pushvalue( s, b );
-// 	mn_call( s, 2, 1 );
-// 	MnValue ret = ut_getstack( s, -1 );
-// 	mn_pop(s,1);
-// 	return ret;
-// }
-
-
 /*
-,
-,
-
-
-
-op_move,
 
 op_getupval,
 op_setupval,
@@ -1500,10 +1478,6 @@ op_newclosure,
 
 op_close_upval,
 
-
-
-op_call,
-op_return,
 */
 enum opcode : OvByte
 {
@@ -1556,7 +1530,6 @@ enum opcode : OvByte
 	op_settop,		//< + integer
 
 	op_call,		//< + byte + byte
-	op_methodcall,	//< + byte + byte
 	op_jump,		//< + integer
 	op_fjump,		//< + integer
 
@@ -1593,11 +1566,11 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 	MnCallInfo* entrycall = s->ci;
 	s->func	= func;
 	s->pc	= &(func->code[0]);
-	MnCodeReader emcee(s);
+	MnCodeReader code(s);
 	while ( true )
 	{
 		OvByte op;
-		emcee >> op;
+		code >> op;
 		switch ( op )
 		{
 		case op_add : case op_sub : case op_mul : case op_div : case op_mod : 
@@ -1639,7 +1612,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				mn_pop(s,2);
 
 				opcode addop;
-				emcee >> addop;
+				code >> addop;
 				if (addop==op_eq) mn_pushboolean( s, MnToNumber(left) == MnToNumber(right) );
 				else if (addop==op_not) mn_pushboolean( s, MnToNumber(left) != MnToNumber(right) );
 				else if (addop==op_gt) mn_pushboolean( s, MnToNumber(left) >= MnToNumber(right) );
@@ -1669,7 +1642,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		case op_getglobal :
 			{
 				OvByte idx;
-				emcee >> idx;
+				code >> idx;
 				if (op==op_setglobal)
 				{
 					ut_insertstack( s, -1, ut_getconst(s->func,idx) );
@@ -1689,7 +1662,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		case op_insertstack :
 			{
 				OvShort idx;
-				emcee >> idx;
+				code >> idx;
 				if (op==op_setstack) mn_setstack(s,idx);
 				else if (op==op_getstack) mn_getstack(s,idx);
 				else if (op==op_insertstack) mn_insert(s,idx);
@@ -1723,14 +1696,14 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		case op_const_num :
 			{
 				MnNumber num;
-				emcee >> num;
+				code >> num;
 				ut_pushvalue( s, MnValue(num) );
 			}
 			break;
 		case op_const :
 			{
 				OvByte idx;
-				emcee >> idx;
+				code >> idx;
 				ut_pushvalue( s, ut_getconst(s->func,idx) );
 			}
 			break;
@@ -1738,7 +1711,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		case op_newclosure :
 			{
 				OvByte funcidx, nupvals;
-				emcee >> funcidx >> nupvals;
+				code >> funcidx >> nupvals;
 				MnClosure* cls = ut_newMclosure(s);
 				cls->u.m->func = ut_getconst(s->func,funcidx);
 				ut_pushvalue( s, MnValue( MOT_CLOSURE, cls ) );
@@ -1748,7 +1721,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		case op_settop :
 			{
 				OvInt top;
-				emcee >> top;
+				code >> top;
 				mn_settop(s,top);
 			}
 			break;
@@ -1756,7 +1729,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		case op_call :
 			{
 				OvByte nargs,nrets;
-				emcee >> nargs >> nrets;
+				code >> nargs >> nrets;
 				mn_call( s, nargs, nrets );
 			}
 			break;
@@ -1764,7 +1737,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		case op_jump :
 			{
 				OvInt step = 0;
-				emcee >> step;
+				code >> step;
 				s->pc += step;
 			}
 			break;
@@ -1772,7 +1745,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		case op_fjump :
 			{
 				OvInt step = 0;
-				emcee >> step;
+				code >> step;
 				if ( !mn_toboolean(s,-1) ) s->pc += step;
 				mn_pop(s,1);
 			}
@@ -1781,7 +1754,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		case op_return :
 			{
 				OvByte nrets;
-				emcee >> nrets;
+				code >> nrets;
 				OvBool isend = (entrycall == s->ci);
 				ut_restore_ci(s, nrets);
 				if ( isend ) return; else break;

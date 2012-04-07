@@ -477,22 +477,5 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 
 void mn_compile_test( MnState* s, const OvString& file )
 {
-	mn_lib_default(s);
-	CmCompiler icm(s);
-	CmCompiler* cm = &icm;
-	CmScaning( cm, file );
-
-	printf( "================start scaning test================\n" );
-	for each ( const CmToken& tok in cm->tokens )
-	{
-		printf( " type: %3d, row: %3d, col: %3d ", tok.type, tok.row, tok.col );
-		if ( MnIsString( tok.val ) ) printf( "val: %s", MnToString(tok.val)->str().c_str() );
-		else if ( MnIsNumber( tok.val ) ) printf( "val: %d", MnToNumber(tok.val) );
-		printf( "\n" );
-	}
-	printf( "================end scaning test================\n" );
-
-	printf( "================start parsing test================\n" );
-	CmParsing(cm);
-	printf( "================end parsing test================\n" );
+	CmCompile( s, file );
 }

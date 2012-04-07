@@ -2,9 +2,15 @@
 local test = table();
 test.msg = "fuck you dick";
 
-function test:print()
+function test:print( f )
 {
 	print(this.msg);
+	f();
 };
 
-test:print();
+function f()
+{
+	dump_stack();
+};
+
+test:print( f );

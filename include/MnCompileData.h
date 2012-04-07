@@ -67,7 +67,6 @@ enum CmExprType
 	et_upval,
 	et_field,
 	et_call,
-	et_methodcall,
 };
 
 class CmExprInfo

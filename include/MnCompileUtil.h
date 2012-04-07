@@ -138,13 +138,18 @@ OvInt CmScaning( CmCompiler* cm, const OvString& file )
 	return 0;
 }
 
-void CmParsing( CmCompiler* cm );
+void CmCompile( MnState* s, const OvString& file );
 void CmStatements( CmCompiler* cm );
 
 
 
-void CmParsing( CmCompiler* cm )
+void CmCompile( MnState* s, const OvString& file )
 {
+	CmCompiler icm(s);
+	CmCompiler* cm = &icm;
+
+	CmScaning( cm, file );
+
 	CmFuncinfo ifi;
 	ifi.func = ut_newfunction(cm->s);
 	ifi.codewriter.func = ifi.func;
@@ -209,7 +214,6 @@ void	statement::rvalue( CmCompiler* cm )
 	case et_upval : cm_code << op_getupval << cm_expr.ui8; break;
 	case et_field : cm_code << op_getfield; break;
 	case et_call : cm_code << op_call << cm_expr.ui8 << (OvByte)1; break;
-	case et_methodcall : cm_code << op_methodcall << cm_expr.ui8 << (OvByte)1; break;
 	case et_rvalue : return ;
 	}
 	cm_expr.type = et_rvalue;
@@ -247,6 +251,7 @@ OvByte	statement::addconst( CmCompiler* cm, const MnValue& val )
 		const MnValue& cst = cm->fi->func->consts[idx];
 		if ( MnToObject(val) == MnToObject(cst) ) return idx+1;
 	}
+	if ( cm->fi->func->consts.size() > 255 ) cm_error( "there is too many constancies\n" );
 	cm->fi->func->consts.push_back(val);
 	return cm->fi->func->consts.size();
 }
