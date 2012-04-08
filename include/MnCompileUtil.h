@@ -1,7 +1,8 @@
 #pragma once
 
 #define cm_throw(msg)		(throw CmCompileException(msg))
-#define cm_error(msg)		(cm_throw( OU::string::format("[row:%d,col:%d] %s",cm_tok.row,cm_tok.col,OvString(msg).c_str()) ) )
+#define cm_scan_error(msg)		(cm_throw( OU::string::format("scan error -> [row:%d,col:%d] %s",row,col,OvString(msg).c_str()) ) )
+#define cm_parse_error(msg)		(cm_throw( OU::string::format("parse error -> [row:%d,col:%d] %s",cm_tok.row,cm_tok.col,OvString(msg).c_str()) ) )
 
 #define cm_tok				( ( cm->tokpos<cm->tokens.size() )? cm->tokens[cm->tokpos] : CmToken() )
 #define cm_lah/*lookahead*/	( ((cm->tokpos+1)<(cm->tokens.size()))? cm->tokens[cm->tokpos+1] : CmToken() )
@@ -11,7 +12,7 @@
 
 #define cm_lahmatch(t)		( (cm_lah.type) == (t) )
 
-#define cm_tokerror()		( cm_error("unexpected token\n"),false)
+#define cm_tokerror()		( cm_parse_error("unexpected token\n"),false)
 #define cm_tokmatch(t)		( (cm_tok.type) == (t) )
 #define cm_tokoption(t)		( cm_tokmatch(t)? (cm_toknext(),true) : false )
 #define cm_tokmust(t)		( cm_tokmatch(t)? true : cm_tokerror() )
@@ -52,7 +53,8 @@ OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 	OvUInt row = 1;
 	OvUInt col = 1;
 
-#define cp_read() {is->Read(c); ++col; if(c=='\n') { col=0; ++row; };}
+#define cm_read() {is->Read(c); ++col; if(c=='\n') { col=0; ++row; };}
+#define cm_check_escape_char() (c = (c=='a')? '\a':(c=='b')? '\b':(c=='r')? '\r':(c=='"')? '\"':(c=='f')? '\f':(c=='t')? '\t':(c=='n')? '\n':(c=='0')? '\0':(c=='v')? '\v':(c=='\'')? '\'':(c=='\\')? '\\': c)
 
 	while ( true )
 	{
@@ -69,18 +71,18 @@ OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 			if ( c == '0' )
 			{
 				mult = 8;
-				cp_read();
+				cm_read();
 				if ( c == 'x' || c == 'X' )
 				{
 					mult = 16;
-					cp_read();
+					cm_read();
 				}
 			}
 			bool under = false;
 			while ( true )
 			{
 				if ( isdigit(c) ) num = (num * mult) + (c-'0'); else break;
-				cp_read();
+				cm_read();
 			}
 
 			tok.val = MnValue( num );
@@ -90,23 +92,29 @@ OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 		{
 			CmToken tok( tt_string, row, col );
 			OvString str;
-			cp_read();
+			cm_read();
 			do
 			{
+				if ( c == '\n' ) cm_scan_error( "abnormal string termination\n  " );
+				if ( c == '\\') { cm_read(); cm_check_escape_char(); }
 				str.push_back(c);
-				cp_read();
+				cm_read();
 			} while ( (c != '"') && (c != EOF) );
-			cp_read();
+			cm_read();
 
 			tok.val = ut_newstring( cm->s, str);
 			cm->tokens.push_back( tok );
 		}
 		else if ( c == '\'' )
 		{
-			CmToken tok( tt_char, row, col );
+			cm_read();
+			if ( c == '\\') { cm_read(); cm_check_escape_char(); }
+			CmToken tok( tt_number, row, col );
 			tok.val = MnValue( (MnNumber)c );
 			cm->tokens.push_back( tok );
-			cp_read();
+			cm_read();
+			if ( c != '\'' ) cm_scan_error( "abnormal character termination\n" );
+			cm_read();
 		}
 		else if ( isalpha(c) || c == '_' )
 		{
@@ -115,7 +123,7 @@ OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 			do
 			{
 				str.push_back(c);
-				cp_read();
+				cm_read();
 			} while ( (isalnum(c) || c == '_') );
 
 			tok.val = ut_newstring( cm->s, str);
@@ -123,17 +131,17 @@ OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 		}
 		else if ( isspace( c ) )
 		{
-			while ( isspace( c ) ) cp_read();
+			while ( isspace( c ) ) cm_read();
 		}
 		else
 		{
 			OvChar ret = c;
 			CmToken tok( (CmTokenType)ret, row, col );
-			cp_read();
+			cm_read();
 			cm->tokens.push_back( tok );
 		}
 	}
-#undef cp_read
+#undef cm_read
 	return 0;
 }
 
@@ -145,7 +153,6 @@ void CmCompile( MnState* s, const OvString& file )
 	CmCompiler icm(s);
 	CmCompiler* cm = &icm;
 	OvFileInputStream fis( file );
-	CmScaning( cm, &fis );
 
 	MnValue func = ut_newfunction(cm->s);
 	CmFuncinfo ifi;
@@ -155,6 +162,7 @@ void CmCompile( MnState* s, const OvString& file )
 
 	try
 	{
+		CmScaning( cm, &fis );
 		cm_compile(funcbody);
 	}
 	catch ( CmCompileException& e )
@@ -225,7 +233,7 @@ void	statement::assign( CmCompiler* cm, const CmExprInfo& lexpr )
 	case et_local : cm_code << op_setstack << lexpr.i16 ; break;
 	case et_upval : cm_code << op_setupval << lexpr.ui8 ; break;
 	case et_field : cm_code << op_setfield ; break;
-	default: cm_error( "'=' : left operand must be l-value\n" );
+	default: cm_parse_error( "'=' : left operand must be l-value\n" );
 	}
 	cm_expr = lexpr;
 }
@@ -250,14 +258,14 @@ OvByte	statement::addconst( CmCompiler* cm, const MnValue& val )
 		const MnValue& cst = cm->fi->func->consts[idx];
 		if ( MnToObject(val) == MnToObject(cst) ) return idx+1;
 	}
-	if ( cm->fi->func->consts.size() > 255 ) cm_error( "there is too many constancies\n" );
+	if ( cm->fi->func->consts.size() > 255 ) cm_parse_error( "there is too many constancies\n" );
 	cm->fi->func->consts.push_back(val);
 	return cm->fi->func->consts.size();
 }
 
 OvInt	statement::jumping( CmCompiler* cm, OvByte op )
 {
-	if ( op!=op_jump && op!=op_fjump ) cm_error("invalid jump operation");
+	if ( op!=op_jump && op!=op_fjump ) cm_parse_error("invalid jump operation");
 	cm_code << op ;
 	OvUInt jump = cm_codesize();
 	cm_code << OvInt(0);
@@ -312,7 +320,7 @@ void statement::resolve_goto( CmCompiler* cm, CmFuncinfo* fi )
 				break;
 			}
 		}
-		if ( !solved ) cm_error( igoto.name->str() + " - undefined label\n" );
+		if ( !solved ) cm_parse_error( igoto.name->str() + " - undefined label\n" );
 	}
 }
 void statement::resolve_break( CmCompiler* cm, CmBreakInfo* bi )
@@ -625,8 +633,8 @@ void	statement::preexpr::compile( CmCompiler* cm )
 			break;
 		default:
 			{
-				if (op==op_inc) cm_error( "pre '++' operator needs l-value\n" );
-				else cm_error( "pre '--' operator needs l-value\n" );
+				if (op==op_inc) cm_parse_error( "pre '++' operator needs l-value\n" );
+				else cm_parse_error( "pre '--' operator needs l-value\n" );
 			}
 		}
 		cm_code << op ;
@@ -665,7 +673,7 @@ void	statement::postexpr::compile( CmCompiler* cm )
 			cm_toknext();
 			cm_rvalue();
 			cm_code << op_getstack << (OvShort)-1 ;
-			if ( !cm_tokmatch(tt_identifier) ) cm_error("'.' right must be field name\n");
+			if ( !cm_tokmatch(tt_identifier) ) cm_parse_error("'.' right must be field name\n");
 			cm_code << op_const << cm_addconst(cm_tok.val);
 			cm_toknext();
 			
@@ -700,15 +708,15 @@ void	statement::postexpr::compile( CmCompiler* cm )
 		{
 			cm_rvalue();
 			cm_toknext();
-			if ( !cm_tokmatch(tt_identifier) ) cm_error("'.' right must be field name\n");
+			if ( !cm_tokmatch(tt_identifier) ) cm_parse_error("'.' right must be field name\n");
 			cm_code << op_const << cm_addconst(cm_tok.val);
 			cm_toknext();
 			cm_expr.type = et_field;
 		}
 		else
 		{
-			if ( cm_tokmatch('+') && cm_lahmatch('+') ) cm_error("post '++' operator isn't supported\n");
-			if ( cm_tokmatch('-') && cm_lahmatch('-') ) cm_error("post '--' operator isn't supported\n");
+			if ( cm_tokmatch('+') && cm_lahmatch('+') ) cm_parse_error("post '++' operator isn't supported\n");
+			if ( cm_tokmatch('-') && cm_lahmatch('-') ) cm_parse_error("post '--' operator isn't supported\n");
 			break;
 		}
 	}
@@ -963,7 +971,7 @@ void	statement::whilestat::compile( CmCompiler* cm )
 
 void	statement::breakstat::compile( CmCompiler* cm )
 {
-	if (!cm->bi) cm_error("invalid break");
+	if (!cm->bi) cm_parse_error("invalid break");
 	cm_toknext();
 	cm->bi->breaks.push_back( cm_jumping() );
 	if ( cm_tokmust(';') ) cm_toknext();

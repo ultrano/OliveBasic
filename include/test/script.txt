@@ -1,10 +1,12 @@
 
-function ::outer()
+
+function test()
 {
-	print("hello");
+	local i = 1;
+	return function () { print( tostring('c') + "\n" ); ++i; };
 };
 
-outer();
-
-
-1++;
+local f1 = test();
+local f2 = test();
+f1();
+f2();

@@ -167,7 +167,6 @@
     <ClInclude Include="include\OvUtility_dataconvert.h" />
     <ClInclude Include="include\MnInternal.h" />
     <ClInclude Include="include\MnScript.h" />
-    <ClInclude Include="include\test\ScriptTest.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="include\OvArrayAutoPtr.inl" />

@@ -13,7 +13,7 @@
 
 #define VERSION_MAJOR	(1)
 #define VERSION_MINOR	(0)
-#define VERSION_PATCH	(3)
+#define VERSION_PATCH	(4)
 
 class MnCallInfo;
 class MnObject;
@@ -1150,9 +1150,17 @@ MnValue	ut_newupval( MnState* s, OvInt idx )
 {
 	if ( MnValue* link = ut_getstack_ptr( s, idx ) )
 	{
-		MnUpval* upval	= new(ut_alloc(sizeof(MnUpval))) MnUpval(s);
-		upval->link		= link;
-		s->openeduv.insert( upval );
+		MnUpval* upval = NULL;
+		for each ( MnUpval* itor in s->openeduv )
+		{
+			if ( itor->link == link ) { upval = itor; break; }
+		}
+		if (!upval)
+		{
+			upval = new(ut_alloc(sizeof(MnUpval))) MnUpval(s);
+			upval->link		= link;
+			s->openeduv.insert( upval );
+		}
 		return MnValue( MOT_UPVAL, upval );
 	}
 	return MnValue();
@@ -1344,7 +1352,6 @@ OvInt ex_collect_garbage( MnState* s )
 OvInt ex_print( MnState* s )
 {
 	printf( mn_tostring(s,1).c_str() );
-	printf( "\n" );
 	return 0;
 }
 

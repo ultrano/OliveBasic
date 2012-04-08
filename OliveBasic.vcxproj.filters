@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="OliveBasic">
-      <UniqueIdentifier>{b632117c-2444-4e4e-af47-e0a298d0df86}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Base">
       <UniqueIdentifier>{89b94a91-cd73-4e94-827f-e027c0b91f06}</UniqueIdentifier>
     </Filter>
@@ -148,40 +145,37 @@
     <Filter Include="Base\OvScreenDrawer">
       <UniqueIdentifier>{54d477f1-0ade-4a8b-92ec-51c50a95a6e2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Utility">
+    <Filter Include="Base\MnScript">
+      <UniqueIdentifier>{0346e0e1-4013-4737-b3a1-ed6ae00cdca6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\OliveBasic">
+      <UniqueIdentifier>{b632117c-2444-4e4e-af47-e0a298d0df86}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base\Utility">
       <UniqueIdentifier>{41d4ab0a-9d6b-4d88-8fd3-895096c72252}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Utility\OvUtility_container">
+    <Filter Include="Base\Utility\OvUtility_container">
       <UniqueIdentifier>{cb45e229-fb82-4978-8da7-f85023a23818}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Utility\OvUtility_string">
+    <Filter Include="Base\Utility\OvUtility_string">
       <UniqueIdentifier>{ed956f4d-966d-4020-9f67-ed7953a023c4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Utility\OvUtility_path">
+    <Filter Include="Base\Utility\OvUtility_path">
       <UniqueIdentifier>{50c58215-2c41-4244-9b06-7147385e5e68}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Utility\OvUtility_rtti">
+    <Filter Include="Base\Utility\OvUtility_rtti">
       <UniqueIdentifier>{7cd1b293-65a3-4401-a36d-33a7dac59bfb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Utility\OvUtility_thread">
+    <Filter Include="Base\Utility\OvUtility_thread">
       <UniqueIdentifier>{a6e1e06c-6048-497a-89bd-d47b230ff9e5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Utility\OvUtility_dataconvert">
+    <Filter Include="Base\Utility\OvUtility_dataconvert">
       <UniqueIdentifier>{651dd2bf-24b8-4f47-8931-4dd70c13934e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="InProgress">
-      <UniqueIdentifier>{9746ab72-bfb1-403d-83ea-faa7e1a9c59c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="InProgress\MnScript">
-      <UniqueIdentifier>{68b06eee-2584-4c34-a681-96843c9c4f87}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="InProgress\TestCases">
-      <UniqueIdentifier>{81c3f373-d1a1-4af3-a42a-f4acdda5011e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\OliveBasic.cpp">
-      <Filter>OliveBasic</Filter>
+      <Filter>Base\OliveBasic</Filter>
     </ClCompile>
     <ClCompile Include="source\OvGlobalFunc.cpp">
       <Filter>Base\OvGlobalFunc</Filter>
@@ -277,27 +271,27 @@
       <Filter>Base\OvScreenDrawer</Filter>
     </ClCompile>
     <ClCompile Include="source\OvUtility.cpp">
-      <Filter>Utility</Filter>
+      <Filter>Base\Utility</Filter>
     </ClCompile>
     <ClCompile Include="source\OvUtility_container.cpp">
-      <Filter>Utility\OvUtility_container</Filter>
+      <Filter>Base\Utility\OvUtility_container</Filter>
     </ClCompile>
     <ClCompile Include="source\OvUtility_string.cpp">
-      <Filter>Utility\OvUtility_string</Filter>
+      <Filter>Base\Utility\OvUtility_string</Filter>
     </ClCompile>
     <ClCompile Include="source\OvUtility_path.cpp">
-      <Filter>Utility\OvUtility_path</Filter>
+      <Filter>Base\Utility\OvUtility_path</Filter>
     </ClCompile>
     <ClCompile Include="source\OvUtility_dataconvert.cpp">
-      <Filter>Utility\OvUtility_dataconvert</Filter>
+      <Filter>Base\Utility\OvUtility_dataconvert</Filter>
     </ClCompile>
     <ClCompile Include="source\MnScript.cpp">
-      <Filter>InProgress\MnScript</Filter>
+      <Filter>Base\MnScript</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\OliveBasic.h">
-      <Filter>OliveBasic</Filter>
+      <Filter>Base\OliveBasic</Filter>
     </ClInclude>
     <ClInclude Include="include\OvSingleton.h">
       <Filter>Base\OvSingleton</Filter>
@@ -420,43 +414,40 @@
       <Filter>Base\OvScreenDrawer</Filter>
     </ClInclude>
     <ClInclude Include="include\OvUtility.h">
-      <Filter>Utility</Filter>
+      <Filter>Base\Utility</Filter>
     </ClInclude>
     <ClInclude Include="include\OvUtility_container.h">
-      <Filter>Utility\OvUtility_container</Filter>
+      <Filter>Base\Utility\OvUtility_container</Filter>
     </ClInclude>
     <ClInclude Include="include\OvUtility_string.h">
-      <Filter>Utility\OvUtility_string</Filter>
+      <Filter>Base\Utility\OvUtility_string</Filter>
     </ClInclude>
     <ClInclude Include="include\OvUtility_path.h">
-      <Filter>Utility\OvUtility_path</Filter>
+      <Filter>Base\Utility\OvUtility_path</Filter>
     </ClInclude>
     <ClInclude Include="include\OvUtility_rtti.h">
-      <Filter>Utility\OvUtility_rtti</Filter>
+      <Filter>Base\Utility\OvUtility_rtti</Filter>
     </ClInclude>
     <ClInclude Include="include\OvUtility_thread.h">
-      <Filter>Utility\OvUtility_thread</Filter>
+      <Filter>Base\Utility\OvUtility_thread</Filter>
     </ClInclude>
     <ClInclude Include="include\OvUtility_dataconvert.h">
-      <Filter>Utility\OvUtility_dataconvert</Filter>
-    </ClInclude>
-    <ClInclude Include="include\MnInternal.h">
-      <Filter>InProgress\MnScript</Filter>
+      <Filter>Base\Utility\OvUtility_dataconvert</Filter>
     </ClInclude>
     <ClInclude Include="include\MnScript.h">
-      <Filter>InProgress\MnScript</Filter>
-    </ClInclude>
-    <ClInclude Include="include\test\ScriptTest.h">
-      <Filter>InProgress\TestCases</Filter>
-    </ClInclude>
-    <ClInclude Include="include\MnCompiler.h">
-      <Filter>InProgress\MnScript</Filter>
-    </ClInclude>
-    <ClInclude Include="include\MnCompileUtil.h">
-      <Filter>InProgress\MnScript</Filter>
+      <Filter>Base\MnScript</Filter>
     </ClInclude>
     <ClInclude Include="include\MnCompileData.h">
-      <Filter>InProgress\MnScript</Filter>
+      <Filter>Base\MnScript</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MnCompiler.h">
+      <Filter>Base\MnScript</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MnCompileUtil.h">
+      <Filter>Base\MnScript</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MnInternal.h">
+      <Filter>Base\MnScript</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
