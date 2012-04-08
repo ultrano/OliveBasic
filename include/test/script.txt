@@ -1,10 +1,52 @@
 
-while (1)
+local key = 0;
+
+local hero = table();
+hero.face = "\\^_^/";
+hero.x = 0;
+hero.y = 0;
+hero.score = 0;
+function hero:update()
 {
-	local str = scan();
-	if ( str == "bye" ) break;
-	dostring( str );
+	if ( key=='w' ) --this.y;
+	if ( key=='s' ) ++this.y;
+	if ( key=='d' ) ++this.x;
+	if ( key=='a' ) --this.x;
 };
 
 
+local box = table();
+box.face = "бр";
+box.x = random() % 70;
+box.y = random() % 25;
+function box:update()
+{
+	if ( (this.y == hero.y) && (this.x == hero.x) )
+	{
+		++hero.score;
+		this.x = random() % 70;
+		this.y = random() % 25;
+	}
+};
 
+local objs = array();
+
+objs:push(hero);
+objs:push(box);
+
+while (1)
+{
+	key = getch();
+	if ( key=='x' ) break;
+	cls();
+	local sz = objs:size();
+	while (sz)
+	{
+		local obj = objs[sz];
+		obj:update();
+		gotoxy( obj.x, obj.y );
+		print(obj.face);
+		--sz;
+	}
+	gotoxy( 0, 0 );
+}

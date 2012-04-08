@@ -91,5 +91,5 @@ void			mn_dostream( MnState* s, OvInputStream* is );
 
 void			mn_lib_default( MnState* s );
 void			mn_lib_metascript( MnState* s );
-
+void            mn_lib_doscommand( MnState* s );
 //////////////////////////////////////////////////////////////////////////

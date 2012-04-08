@@ -7,6 +7,9 @@
 #include "OvSolidString.h"
 #include "OvFile.h"
 #include "OvByteInputStream.h"
+#include <conio.h>
+#include <iostream>
+#include <windows.h>
 
 #define	MOT_UPVAL		(10)
 #define	MOT_FUNCPROTO	(11)
@@ -1374,6 +1377,12 @@ OvInt ex_dostring( MnState* s )
 	return 0;
 }
 
+OvInt ex_dofile( MnState* s )
+{
+	mn_dofile( s, mn_tostring(s,1) );
+	return 0;
+}
+
 OvInt ex_dump_stack( MnState* s )
 {
 	MnValue* itor = s->end;
@@ -1432,12 +1441,61 @@ OvInt ex_array_size( MnState* s )
 	return 1;
 }
 
+OvInt ex_array_push( MnState* s )
+{
+	if ( MnArray* arr = MnToArray(ut_getstack(s,1)) )
+	{
+		arr->array.push_back( ut_getstack(s,2) );
+	}
+	return 0;
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 OvInt ex_setmeta( MnState* s )
 {
 	ut_setmeta( ut_getstack(s,1), ut_getstack(s,2) );
 	return 0;
+}
+//////////////////////////////////////////////////////////////////////////
+
+OvInt ex_gettick(MnState* s)
+{
+	mn_pushnumber(s,GetTickCount());
+	return 1;
+}
+
+OvInt ex_scan(MnState* s)
+{
+	OvChar str[256] = {0};
+	gets( str );
+	mn_pushstring(s,str);
+	return 1;
+}
+
+OvInt ex_getch(MnState* s)
+{
+	mn_pushnumber(s,getch());
+	return 1;
+}
+
+OvInt ex_cls(MnState* s)
+{
+	system("cls");
+	return 0;
+}
+
+OvInt ex_gotoxy(MnState* s)
+{
+	COORD coord = { (OvShort)mn_tonumber(s,1), (OvShort)mn_tonumber(s,2) };
+	SetConsoleCursorPosition( GetStdHandle(STD_OUTPUT_HANDLE), coord );
+	return 0;
+}
+
+OvInt ex_random(MnState* s)
+{
+	mn_pushnumber(s,rand());
+	return 1;
 }
 
 //////////////////////////////////////////////////////////////////////////

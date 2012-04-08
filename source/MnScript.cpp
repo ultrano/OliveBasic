@@ -64,6 +64,10 @@ void mn_lib_array( MnState* s )
 	mn_pushfunction(s,ex_array_size);
 	mn_setfield(s,-3);
 
+	mn_pushstring(s,"push");
+	mn_pushfunction(s,ex_array_push);
+	mn_setfield(s,-3);
+
 	mn_setglobal(s);
 
 }
@@ -109,6 +113,10 @@ void mn_lib_default( MnState* s )
 	mn_pushfunction( s, ex_dostring);
 	mn_setglobal( s );
 
+	mn_pushstring( s, "dofile" );
+	mn_pushfunction( s, ex_dofile);
+	mn_setglobal( s );
+
 	mn_pushstring( s, "dump_stack" );
 	mn_pushfunction( s, ex_dump_stack);
 	mn_setglobal( s );
@@ -116,6 +124,34 @@ void mn_lib_default( MnState* s )
 	mn_pushstring( s, "stack_size" );
 	mn_pushfunction( s, ex_stack_size);
 	mn_setglobal( s );
+}
+
+
+void mn_lib_doscommand( MnState* s )
+{
+	mn_pushstring(s,"gettick");
+	mn_pushfunction(s,ex_gettick);
+	mn_setglobal(s);
+
+	mn_pushstring(s,"scan");
+	mn_pushfunction(s,ex_scan);
+	mn_setglobal(s);
+
+	mn_pushstring(s,"getch");
+	mn_pushfunction(s,ex_getch);
+	mn_setglobal(s);
+
+	mn_pushstring(s,"cls");
+	mn_pushfunction(s,ex_cls);
+	mn_setglobal(s);
+
+	mn_pushstring(s,"gotoxy");
+	mn_pushfunction(s,ex_gotoxy);
+	mn_setglobal(s);
+
+	mn_pushstring(s,"random");
+	mn_pushfunction(s,ex_random);
+	mn_setglobal(s);
 }
 
 void mn_setstack( MnState* s, MnIndex idx )
