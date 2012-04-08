@@ -6,6 +6,7 @@
 #include "OvBuffer.h"
 #include "OvSolidString.h"
 #include "OvFile.h"
+#include "OvByteInputStream.h"
 
 #define	MOT_UPVAL		(10)
 #define	MOT_FUNCPROTO	(11)
@@ -1367,6 +1368,12 @@ OvInt ex_tonumber( MnState* s )
 	return 1;
 }
 
+OvInt ex_dostring( MnState* s )
+{
+	mn_dostring( s, mn_tostring(s,1) );
+	return 0;
+}
+
 OvInt ex_dump_stack( MnState* s )
 {
 	MnValue* itor = s->end;
@@ -1603,10 +1610,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				if (op==op_add)
 				{
 					if ( MnIsNumber(left) ) mn_pushnumber( s, MnToNumber(left) + MnToNumber(right) );
-					else if ( MnIsString(left) )
-					{
-						ut_pushvalue( s, ut_newstring( s, MnToString(left)->str() + ut_tostring(right) ) );
-					}
+					else if ( MnIsString(left) ) ut_pushvalue( s, ut_newstring( s, MnToString(left)->str() + ut_tostring(right) ) );
 				}
 				else if (op==op_sub) mn_pushnumber( s, MnToNumber(left) - MnToNumber(right) );
 				else if (op==op_mul) mn_pushnumber( s, MnToNumber(left) * MnToNumber(right) );
@@ -1639,8 +1643,16 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 
 				opcode addop;
 				code >> addop;
-				if (addop==op_eq) mn_pushboolean( s, MnToNumber(left) == MnToNumber(right) );
-				else if (addop==op_not) mn_pushboolean( s, MnToNumber(left) != MnToNumber(right) );
+				if (addop==op_eq)
+				{
+						if ( MnIsNumber(left) ) mn_pushboolean( s, MnToNumber(left) == MnToNumber(right) );
+						else if ( MnIsString(left) ) mn_pushboolean( s, MnToString(left)->str() == ut_tostring(right) );
+				}
+				else if (addop==op_not)
+				{
+					if ( MnIsNumber(left) ) mn_pushboolean( s, MnToNumber(left) != MnToNumber(right) );
+					else if ( MnIsString(left) ) mn_pushboolean( s, MnToString(left)->str() != ut_tostring(right) );
+				}
 				else if (addop==op_gt) mn_pushboolean( s, MnToNumber(left) >= MnToNumber(right) );
 				else if (addop==op_lt) mn_pushboolean( s, MnToNumber(left) <= MnToNumber(right) );
 			}

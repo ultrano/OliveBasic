@@ -1,6 +1,6 @@
 #pragma once
 #include "OvTypeDef.h"
-
+class OvInputStream;
 /* Mini Script version_lite */
 
 class MnState;
@@ -84,6 +84,8 @@ void			mn_call( MnState* s, OvInt nargs, OvInt nrets );
 OvInt			mn_collect_garbage( MnState* s );
 
 void			mn_dofile( MnState* s, const OvString& file );
+void			mn_dostring( MnState* s, const OvString& str );
+void			mn_dostream( MnState* s, OvInputStream* is );
 
 //////////////////////////////////////////////////////////////////////////
 

@@ -105,6 +105,10 @@ void mn_lib_default( MnState* s )
 	mn_pushfunction( s, ex_tonumber);
 	mn_setglobal( s );
 
+	mn_pushstring( s, "dostring" );
+	mn_pushfunction( s, ex_dostring);
+	mn_setglobal( s );
+
 	mn_pushstring( s, "dump_stack" );
 	mn_pushfunction( s, ex_dump_stack);
 	mn_setglobal( s );
@@ -477,7 +481,45 @@ void mn_call( MnState* s, OvInt nargs, OvInt nrets )
 
 }
 
+void mn_dostream( MnState* s, OvInputStream* is ) 
+{
+	CmCompiler icm(s);
+	CmCompiler* cm = &icm;
+
+	MnValue func = ut_newfunction(cm->s);
+	CmFuncinfo ifi;
+	ifi.func = MnToFunction(func);
+	ifi.codewriter.func = ifi.func;
+	cm->fi = &ifi;
+
+	try
+	{
+		CmScaning( cm, is );
+		cm_compile(funcbody);
+	}
+	catch ( CmCompileException& e )
+	{
+		printf( e.msg.c_str() );
+		return;
+	}
+
+	MnValue val = ut_newMclosure(cm->s);
+	MnToClosure(val)->u.m->func = func;
+	ut_pushvalue( cm->s, val );
+	mn_call(cm->s,0,0);
+}
+
 void mn_dofile( MnState* s, const OvString& file )
 {
-	CmCompile( s, file );
+	OvFileInputStream fis( file );
+	mn_dostream( s, &fis );
+}
+
+void mn_dostring( MnState* s, const OvString& str )
+{
+	if ( str.size() )
+	{
+		OvByteInputStream bis( (OvByte*)str.c_str(), str.size() );
+		mn_dostream( s, &bis );
+	}
 }

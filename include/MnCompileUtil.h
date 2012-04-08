@@ -50,15 +50,16 @@ OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 {
 	OvChar c;
 	is->Read(c);
+	OvBool eos = false;
 	OvUInt row = 1;
 	OvUInt col = 1;
 
-#define cm_read() {is->Read(c); ++col; if(c=='\n') { col=0; ++row; };}
+#define cm_read() { c = is->Read(c)? c:OvEOS; ++col; if(c=='\n') { col=0; ++row; };}
 #define cm_check_escape_char() (c = (c=='a')? '\a':(c=='b')? '\b':(c=='r')? '\r':(c=='"')? '\"':(c=='f')? '\f':(c=='t')? '\t':(c=='n')? '\n':(c=='0')? '\0':(c=='v')? '\v':(c=='\'')? '\'':(c=='\\')? '\\': c)
 
 	while ( true )
 	{
-		if ( c == EOF  )
+		if ( c == OvEOS )
 		{
 			cm->tokens.push_back( CmToken( tt_eos, row, col ) );
 			return 0;
@@ -143,42 +144,6 @@ OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 	}
 #undef cm_read
 	return 0;
-}
-
-void CmCompile( MnState* s, const OvString& file );
-void CmStatements( CmCompiler* cm );
-
-void CmCompile( MnState* s, const OvString& file )
-{
-	CmCompiler icm(s);
-	CmCompiler* cm = &icm;
-	OvFileInputStream fis( file );
-
-	MnValue func = ut_newfunction(cm->s);
-	CmFuncinfo ifi;
-	ifi.func = MnToFunction(func);
-	ifi.codewriter.func = ifi.func;
-	cm->fi = &ifi;
-
-	try
-	{
-		CmScaning( cm, &fis );
-		cm_compile(funcbody);
-	}
-	catch ( CmCompileException& e )
-	{
-		printf( e.msg.c_str() );
-		return;
-	}
-
-	MnValue val = ut_newMclosure(cm->s);
-	MnToClosure(val)->u.m->func = func;
-	ut_pushvalue( cm->s, val );
-	mn_call(cm->s,0,0);
-}
-
-void CmStatements( CmCompiler* cm )
-{
 }
 
 //////////////////////////////////////////////////////////////////////////

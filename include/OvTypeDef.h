@@ -59,5 +59,5 @@ typedef OvTPoint3<OvFloat>	OvFPoint3;
 
 /// override 예약어는 MS사의 규약이라 만일을 대비해 define 처리함.
 #define OVERRIDE			override
-
+#define OvEOS				(-1) //< end of stream
 //////////////////////////////////////////////////////////////////////////
