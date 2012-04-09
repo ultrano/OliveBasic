@@ -5,7 +5,7 @@ local snake = table();
 
 snake.head = table();
 snake.tails = array();
-snake.lasttail = 1;
+snake.lasttail = 0;
 snake.lastpos = table();
 
 snake.head.x = 0;
@@ -35,6 +35,7 @@ label continue:
 	local j = snake.tails:size();
 	while (j)
 	{
+		--j;
 		local tail = snake.tails[j];
 		if ( (tail.x==snake.head.x) && (tail.y==snake.head.y) ) 
 		{
@@ -44,7 +45,6 @@ label continue:
 			getch();
 			return;
 		}
-		--j;
 	}
 
 	if ( (food.x==snake.head.x) && (food.y==snake.head.y) )
@@ -59,16 +59,16 @@ label continue:
 	}
 	else if ( snake.tails:size() )
 	{
+		if ( snake.lasttail == snake.tails:size() ) snake.lasttail = 0;
 		local tail = snake.tails[snake.lasttail];
 		tail.x = snake.lastpos.x;
 		tail.y = snake.lastpos.y;
 		++snake.lasttail;
-		if ( snake.lasttail > snake.tails:size() ) snake.lasttail = 1;
 	}
 
 	cls();
 	gotoxy( 0, 0 );
-	print( snake.tails:size() );
+	print( snake.lasttail );
 	gotoxy( snake.head.x, snake.head.y );
 	print( snake.head.shape );
 	gotoxy( food.x, food.y );
@@ -77,10 +77,10 @@ label continue:
 	local i = snake.tails:size();
 	while (i)
 	{
+		--i;
 		local tail = snake.tails[i];
 		gotoxy( tail.x, tail.y );
 		print( tail.shape );
-		--i;
 	}
 
 }
