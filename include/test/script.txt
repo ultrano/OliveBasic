@@ -1,52 +1,86 @@
 
 local key = 0;
 
-local hero = table();
-hero.face = "\\^_^/";
-hero.x = 0;
-hero.y = 0;
-hero.score = 0;
-function hero:update()
-{
-	if ( key=='w' ) --this.y;
-	if ( key=='s' ) ++this.y;
-	if ( key=='d' ) ++this.x;
-	if ( key=='a' ) --this.x;
-};
+local snake = table();
 
+snake.head = table();
+snake.tails = array();
+snake.lasttail = 1;
+snake.lastpos = table();
 
-local box = table();
-box.face = "бр";
-box.x = random() % 70;
-box.y = random() % 25;
-function box:update()
-{
-	if ( (this.y == hero.y) && (this.x == hero.x) )
-	{
-		++hero.score;
-		this.x = random() % 70;
-		this.y = random() % 25;
-	}
-};
+snake.head.x = 0;
+snake.head.y = 0;
+snake.head.shape = "x";
 
-local objs = array();
-
-objs:push(hero);
-objs:push(box);
+local food = table();
+food.x = random()%70;
+food.y = random()%25;
+food.shape = "f";
 
 while (1)
 {
+label continue:
 	key = getch();
-	if ( key=='x' ) break;
-	cls();
-	local sz = objs:size();
-	while (sz)
+
+	snake.lastpos.x = snake.head.x;
+	snake.lastpos.y = snake.head.y;
+
+	if ( key == 'w' ) --snake.head.y;
+	else if ( key == 's' ) ++snake.head.y;
+	else if ( key == 'd' ) ++snake.head.x;
+	else if ( key == 'a' ) --snake.head.x;
+	else if ( key == 'x' ) break;
+	else goto continue;
+
+	local j = snake.tails:size();
+	while (j)
 	{
-		local obj = objs[sz];
-		obj:update();
-		gotoxy( obj.x, obj.y );
-		print(obj.face);
-		--sz;
+		local tail = snake.tails[j];
+		if ( (tail.x==snake.head.x) && (tail.y==snake.head.y) ) 
+		{
+			cls();
+			gotoxy( 35, 13 );
+			print("game over\n");
+			getch();
+			return;
+		}
+		--j;
 	}
+
+	if ( (food.x==snake.head.x) && (food.y==snake.head.y) )
+	{
+		local tail = table();
+		tail.x = snake.lastpos.x;
+		tail.y = snake.lastpos.y;
+		tail.shape = "0";
+		snake.tails:push(tail);
+		food.x = random()%70;
+		food.y = random()%25;
+	}
+	else if ( snake.tails:size() )
+	{
+		local tail = snake.tails[snake.lasttail];
+		tail.x = snake.lastpos.x;
+		tail.y = snake.lastpos.y;
+		++snake.lasttail;
+		if ( snake.lasttail > snake.tails:size() ) snake.lasttail = 1;
+	}
+
+	cls();
 	gotoxy( 0, 0 );
+	print( snake.tails:size() );
+	gotoxy( snake.head.x, snake.head.y );
+	print( snake.head.shape );
+	gotoxy( food.x, food.y );
+	print( food.shape );
+	
+	local i = snake.tails:size();
+	while (i)
+	{
+		local tail = snake.tails[i];
+		gotoxy( tail.x, tail.y );
+		print( tail.shape );
+		--i;
+	}
+
 }
