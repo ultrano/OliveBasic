@@ -71,7 +71,7 @@ enum CmExprType
 	et_boolean,	//< r-value
 	et_number,	//< r-value
 	et_call,	//< r-value
-	et_rvalue,	//< r-value
+	et_onstack,	//< r-value
 
 	et_global,	//< l-value
 	et_local,	//< l-value
@@ -125,7 +125,7 @@ namespace statement
 
 	OvBool	option( CmCompiler* cm, statfunc func );
 	OvBool	match( CmCompiler* cm, statfunc func );
-	void	rvalue( CmCompiler* cm );
+	void	tostack( CmCompiler* cm );
 	void	assign( CmCompiler* cm, const CmExprInfo& lexpr );
 	void	free_expr( CmCompiler* cm );
 	void	resolve_goto( CmCompiler* cm, CmFuncinfo* fi );

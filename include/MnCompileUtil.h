@@ -27,7 +27,7 @@
 #define cm_compile(stat)   ( statement::stat::compile(cm) )
 
 #define cm_expr				(cm->exprinfo)
-#define cm_rvalue()			(statement::rvalue(cm))
+#define cm_tostack()		(statement::tostack(cm))
 #define cm_assign(lexpr)	(statement::assign(cm,lexpr))
 #define cm_free_expr()		(statement::free_expr(cm))
 #define cm_resolve_goto(fi)	(statement::resolve_goto(cm,fi))
@@ -164,7 +164,7 @@ OvBool	statement::match( CmCompiler* cm, statfunc func )
 	return ret;
 }
 
-void	statement::rvalue( CmCompiler* cm )
+void	statement::tostack( CmCompiler* cm )
 {
 	switch ( cm_expr.type )
 	{
@@ -185,9 +185,9 @@ void	statement::rvalue( CmCompiler* cm )
 	case et_field : cm_code << op_getfield; break;
 
 	case et_call : cm_code << op_call << cm_expr.ui8 << (OvByte)1; break;
-	case et_rvalue : return ;
+	case et_onstack : return ;
 	}
-	cm_expr.type = et_rvalue;
+	cm_expr.type = et_onstack;
 }
 
 void	statement::assign( CmCompiler* cm, const CmExprInfo& lexpr )
@@ -209,7 +209,7 @@ void	statement::free_expr( CmCompiler* cm )
 	{
 	case et_closure : cm_code << op_popstack << (OvShort)1; break;
 	case et_field : cm_code << op_popstack << (OvShort)2; break;
-	case et_rvalue : cm_code << op_popstack << (OvShort)1; break;
+	case et_onstack : cm_code << op_popstack << (OvShort)1; break;
 	case et_call : cm_code << op_call << cm_expr.ui8 << (OvByte)0; break;
 	}
 	cm_expr.type = et_none;
@@ -363,7 +363,7 @@ void	statement::return_stat::compile( CmCompiler* cm )
 {
 	if ( cm_kwmust("return") ) cm_toknext();
 	cm_compile(expression);
-	cm_rvalue();
+	cm_tostack();
 	cm_code << op_return << (OvByte)1;
 	if ( cm_tokmust(';') ) cm_toknext();
 }
@@ -401,7 +401,7 @@ void	statement::expr10::compile( CmCompiler* cm )
 	while ( cm_tokoption('=') && !cm_lahmatch('=') )
 	{
 		cm_compile(expr9);
-		cm_rvalue();
+		cm_tostack();
 		cm_assign(lexpr);
 	}
 }
@@ -415,17 +415,17 @@ void	statement::expr9::compile( CmCompiler* cm )
 		if ( cm_tokmatch('=') && cm_lahmatch('=') )
 		{
 			cm_toknext();cm_toknext();
-			cm_rvalue();
+			cm_tostack();
 			cm_compile(expr8);
-			cm_rvalue();
+			cm_tostack();
 			cm_code << op_eq << op_eq;
 		}
 		else if ( cm_tokmatch('!') && cm_lahmatch('=') )
 		{
 			cm_toknext();cm_toknext();
-			cm_rvalue();
+			cm_tostack();
 			cm_compile(expr8);
-			cm_rvalue();
+			cm_tostack();
 			cm_code << op_eq << op_not;
 		}
 		else if ( (cm_tokmatch('>')||cm_tokmatch('<')) && !(cm_lahmatch('>')||cm_lahmatch('<')) )
@@ -434,17 +434,17 @@ void	statement::expr9::compile( CmCompiler* cm )
 			if ( cm_lahmatch('=') )
 			{
 				cm_toknext();cm_toknext();
-				cm_rvalue();
+				cm_tostack();
 				cm_compile(expr8);
-				cm_rvalue();
+				cm_tostack();
 				cm_code << op_eq << op;
 			}
 			else
 			{
 				cm_toknext();
-				cm_rvalue();
+				cm_tostack();
 				cm_compile(expr8);
-				cm_rvalue();
+				cm_tostack();
 				cm_code << op;				
 			}
 		}
@@ -458,10 +458,10 @@ void	statement::expr8::compile( CmCompiler* cm )
 	cm_compile(expr7);
 	while ( cm_tokmatch('|') && cm_lahmatch('|') )
 	{
-		cm_rvalue();
+		cm_tostack();
 		cm_toknext();cm_toknext();
 		cm_compile(expr7);
-		cm_rvalue();
+		cm_tostack();
 		cm_code << op_or;
 	}
 }
@@ -472,10 +472,10 @@ void	statement::expr7::compile( CmCompiler* cm )
 	cm_compile(expr6);
 	while ( cm_tokmatch('&') && cm_lahmatch('&') )
 	{
-		cm_rvalue();
+		cm_tostack();
 		cm_toknext();cm_toknext();
 		cm_compile(expr6);
-		cm_rvalue();
+		cm_tostack();
 		cm_code << op_and;
 	}
 }
@@ -486,10 +486,10 @@ void	statement::expr6::compile( CmCompiler* cm )
 	cm_compile(expr5);
 	while ( cm_tokmatch('|') && !cm_lahmatch('|') )
 	{
-		cm_rvalue();
+		cm_tostack();
 		cm_toknext();
 		cm_compile(expr5);
-		cm_rvalue();
+		cm_tostack();
 		cm_code << op_bit_or;
 	}
 }
@@ -500,10 +500,10 @@ void	statement::expr5::compile( CmCompiler* cm )
 	cm_compile(expr4);
 	while ( cm_tokmatch('^') )
 	{
-		cm_rvalue();
+		cm_tostack();
 		cm_toknext();
 		cm_compile(expr4);
-		cm_rvalue();
+		cm_tostack();
 		cm_code << op_bit_xor;
 	}
 }
@@ -514,10 +514,10 @@ void	statement::expr4::compile( CmCompiler* cm )
 	cm_compile(expr3);
 	while ( cm_tokmatch('&') && !cm_lahmatch('&') )
 	{
-		cm_rvalue();
+		cm_tostack();
 		cm_toknext();
 		cm_compile(expr3);
-		cm_rvalue();
+		cm_tostack();
 		cm_code << op_bit_and;
 	}
 }
@@ -528,11 +528,11 @@ void	statement::expr3::compile( CmCompiler* cm )
 	cm_compile(expr2);
 	while ( (cm_tokmatch('>') && cm_lahmatch('>')) || (cm_tokmatch('<') && cm_lahmatch('<')) )
 	{
-		cm_rvalue();
+		cm_tostack();
 		opcode op = cm_tokmatch('>')? op_pull : op_push;
 		cm_toknext();cm_toknext();
 		cm_compile(expr2);
-		cm_rvalue();
+		cm_tostack();
 		cm_code << op;
 	}
 }
@@ -543,11 +543,11 @@ void	statement::expr2::compile( CmCompiler* cm )
 	cm_compile(expr1);
 	while ( cm_tokmatch('+') || cm_tokmatch('-') )
 	{
-		cm_rvalue();
+		cm_tostack();
 		opcode op = cm_tokmatch('+')? op_add : op_sub;
 		cm_toknext();
 		cm_compile(expr1);
-		cm_rvalue();
+		cm_tostack();
 		cm_code << op;
 	}
 }
@@ -558,11 +558,11 @@ void	statement::expr1::compile( CmCompiler* cm )
 	cm_compile(term);
 	while ( (cm_tokmatch('*') || cm_tokmatch('/') || cm_tokmatch('%')) )
 	{
-		cm_rvalue();
+		cm_tostack();
 		opcode op = cm_tokmatch('*')? op_mul : cm_tokmatch('/')? op_div : op_mod;
 		cm_toknext();
 		cm_compile(term);
-		cm_rvalue();
+		cm_tostack();
 		cm_code << op;
 	}
 }
@@ -616,7 +616,7 @@ void	statement::postexpr::compile( CmCompiler* cm )
 	{
 		if ( cm_tokmatch('(') )
 		{
-			cm_rvalue();
+			cm_tostack();
 			cm_toknext();
 
 			OvByte nargs = 0;
@@ -624,7 +624,7 @@ void	statement::postexpr::compile( CmCompiler* cm )
 			{
 				++nargs;
 				cm_compile(expression);
-				cm_rvalue();
+				cm_tostack();
 				if ( cm_tokmatch(',') ) cm_toknext();
 				else if ( cm_tokmatch(')') ) break;
 				else cm_tokerror();
@@ -636,7 +636,7 @@ void	statement::postexpr::compile( CmCompiler* cm )
 		else if ( cm_tokmatch(':') )
 		{
 			cm_toknext();
-			cm_rvalue();
+			cm_tostack();
 			cm_code << op_getstack << (OvShort)-1 ;
 			if ( !cm_tokmatch(tt_identifier) ) cm_parse_error("'.' right must be field name\n");
 			cm_code << op_const << cm_addconst(cm_tok.val);
@@ -650,7 +650,7 @@ void	statement::postexpr::compile( CmCompiler* cm )
 			{
 				++nargs;
 				cm_compile(expression);
-				cm_rvalue();
+				cm_tostack();
 				if ( cm_tokmatch(',') ) cm_toknext();
 				else if ( cm_tokmatch(')') ) break;
 				else cm_tokerror();
@@ -662,16 +662,16 @@ void	statement::postexpr::compile( CmCompiler* cm )
 		}
 		else if ( cm_tokmatch('[') )
 		{
-			cm_rvalue();
+			cm_tostack();
 			cm_toknext();
 			cm_compile(expression);
-			cm_rvalue();
+			cm_tostack();
 			if (cm_tokmust(']')) cm_toknext();
 			cm_expr.type = et_field;
 		}
 		else if ( cm_tokmatch('.') )
 		{
-			cm_rvalue();
+			cm_tostack();
 			cm_toknext();
 			if ( !cm_tokmatch(tt_identifier) ) cm_parse_error("'.' right must be field name\n");
 			cm_code << op_const << cm_addconst(cm_tok.val);
@@ -764,7 +764,7 @@ void	statement::funcdesc::compile( CmCompiler* cm )
 	{
 		cm_toknext();
 		cm_tokmust(tt_identifier);
-		cm_rvalue();
+		cm_tostack();
 		cm_code << op_const << cm_addconst(cm_tok.val);
 		cm_toknext();
 		needthis = true;
@@ -868,7 +868,7 @@ void	statement::if_stat::compile( CmCompiler* cm )
 {
 	cm_toknext();
 	if ( cm_tokmust('(') ) cm_toknext();
-	cm_compile(expression); cm_rvalue();
+	cm_compile(expression); cm_tostack();
 	if ( cm_tokmust(')') ) cm_toknext();
 
 	OvInt  jump1 = cm_fjumping();
@@ -909,7 +909,7 @@ void	statement::whilestat::compile( CmCompiler* cm )
 
 	if (cm_tokmust('(')) cm_toknext();
 	cm_compile(expression);
-	cm_rvalue();
+	cm_tostack();
 	if (cm_tokmust(')')) cm_toknext();
 
 	CmBreakInfo bi;
