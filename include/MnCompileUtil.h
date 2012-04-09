@@ -136,9 +136,11 @@ OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 		}
 		else
 		{
-			OvChar ret = c;
-			CmToken tok( (CmTokenType)ret, row, col );
+			OvChar d = c;
+			CmToken tok( (CmTokenType)d, row, col );
 			cm_read();
+			if ( d=='+' && c=='+' ) {tok.val = ut_newstring(cm->s,"++"); tok.type = tt_identifier; cm_read(); }
+			else if ( d=='-' && c=='-' ) {tok.val = ut_newstring(cm->s,"--"); tok.type = tt_identifier; cm_read(); }
 			cm->tokens.push_back( tok );
 		}
 	}
@@ -578,10 +580,9 @@ void	statement::term::compile( CmCompiler* cm )
 
 void	statement::preexpr::compile( CmCompiler* cm )
 {
-	opcode op = op_none;
-	if ( cm_tokmatch('+') && cm_lahmatch('+') ) { op = op_inc; cm_toknext();cm_toknext(); }
-	else if ( cm_tokmatch('-') && cm_lahmatch('-') ) { op = op_dec; cm_toknext();cm_toknext(); }
-	cm_compile(postexpr);
+	opcode op = cm_kwmatch("++")? op_inc:cm_kwmatch("--")? op_dec:op_none;
+	if ( op != op_none ) cm_toknext();
+	if ( op ==op_none ) cm_compile(postexpr); else cm_compile(preexpr);
 	if ( op != op_none )
 	{
 		switch ( cm_expr.type )
