@@ -1,0 +1,14 @@
+
+local obj = newobj();
+obj.x = 10;
+obj.y = 10;
+function obj:update()
+{
+	this.x = this.x + 1/100;
+	this.y = this.y + 1/100;
+};
+function obj:draw()
+{
+	print("0");
+};
+

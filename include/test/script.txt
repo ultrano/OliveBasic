@@ -1,2 +1,33 @@
 
-dofile( "../OliveBasic/include/test/snake.txt" );
+objs = array();
+
+function newobj()
+{
+	local obj = table();
+	objs:push(obj);
+	return obj;
+};
+
+dofile( "../OliveBasic/include/test/object.txt" );
+
+while (1)
+{
+	local i = 0;
+	i = objs:size();
+	while (i)
+	{
+		--i;
+		local obj = objs[i];
+		obj:update();
+	}
+	cls();
+	gotoxy(0,0);
+	i = objs:size();
+	while (i)
+	{
+		--i;
+		local obj = objs[i];
+		gotoxy( obj.x, obj.y );
+		obj:draw();
+	}
+}
