@@ -1,6 +1,6 @@
 #pragma once
 
-#define cm_throw(msg)		(throw CmCompileException(msg))
+#define cm_throw(msg)		(throw MnException(msg))
 #define cm_scan_error(msg)		(cm_throw( OU::string::format("scan error -> [row:%d,col:%d] %s",row,col,OvString(msg).c_str()) ) )
 #define cm_parse_error(msg)		(cm_throw( OU::string::format("parse error -> [row:%d,col:%d] %s",cm_tok.row,cm_tok.col,OvString(msg).c_str()) ) )
 

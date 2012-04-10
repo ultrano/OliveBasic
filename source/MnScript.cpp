@@ -441,8 +441,8 @@ OvInt mn_collect_garbage( MnState* s )
 	{
 		MnMarking(itor->second);
 	}
-	MnValue* itor = s->top;
-	while ( itor && --itor >= s->begin ) MnMarking((*itor));
+	MnValue* stk = s->top;
+	while ( stk && --stk >= s->begin ) MnMarking((*stk));
 
 	MnObject* dead = NULL;
 	MnObject* heap = s->heap;
@@ -532,17 +532,18 @@ void mn_dostream( MnState* s, OvInputStream* is )
 	{
 		CmScaning( cm, is );
 		cm_compile(funcbody);
+		cm->clear();
+
+		MnValue val = ut_newMclosure(cm->s);
+		MnToClosure(val)->u.m->func = func;
+		ut_pushvalue( cm->s, val );
+		mn_call(cm->s,0,0);
 	}
-	catch ( CmCompileException& e )
+	catch ( MnException& e )
 	{
 		printf( e.msg.c_str() );
-		return;
 	}
 
-	MnValue val = ut_newMclosure(cm->s);
-	MnToClosure(val)->u.m->func = func;
-	ut_pushvalue( cm->s, val );
-	mn_call(cm->s,0,0);
 }
 
 void mn_dofile( MnState* s, const OvString& file )

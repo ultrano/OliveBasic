@@ -18,6 +18,7 @@ public:
 	MnValue val;
 	CmToken() : type(tt_unknown) , row(0), col(0) {};
 	CmToken( OvInt t, OvUInt r, OvUInt c ) : type(t) , row(r), col(c) {};
+	~CmToken() { val = MnValue(); };
 };
 
 struct CmLabelInfo
@@ -101,10 +102,10 @@ public:
 	CmExprInfo() : type(et_none), num(0) {};
 };
 
-class CmCompileException
+class MnException
 {
 public:
-	CmCompileException( const OvString& _msg ) : msg(_msg) {};
+	MnException( const OvString& _msg ) : msg(_msg) {};
 	OvString msg;
 };
 
@@ -124,6 +125,12 @@ public:
 	CmExprInfo			exprinfo;
 
 	CmCompiler( MnState* _s ) : s(_s), tokpos(0), bi(NULL), ci(NULL) {};
+	~CmCompiler() { clear(); }
+
+	void	clear()
+	{
+		tokens.clear();
+	}
 };
 
 namespace statement
