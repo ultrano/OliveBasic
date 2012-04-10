@@ -32,6 +32,7 @@
 #define cm_free_expr()		(statement::free_expr(cm))
 #define cm_resolve_goto(fi)	(statement::resolve_goto(cm,fi))
 #define cm_resolve_break(bi) (statement::resolve_break(cm,bi))
+#define cm_resolve_continue(ci) (statement::resolve_continue(cm,ci))
 
 #define cm_code				(cm->fi->codewriter)
 #define cm_codesize()		(cm->fi->func->code.size())
@@ -296,6 +297,14 @@ void statement::resolve_break( CmCompiler* cm, CmBreakInfo* bi )
 	for each ( OvInt brk in bi->breaks ) cm_fixjump(brk,bi->out);
 	bi->breaks.clear();
 }
+
+void	statement::resolve_continue( CmCompiler* cm, CmContinueInfo* ci )
+{
+	if ( !ci ) return;
+	for each ( OvInt ctn in ci->continues ) cm_fixjump(ctn,ci->ret);
+	ci->continues.clear();
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 void	statement::multi_stat::compile( CmCompiler* cm )
@@ -320,6 +329,7 @@ void	statement::single_stat::compile( CmCompiler* cm )
 	else if ( cm_kwmatch("if") ) { cm_compile(if_stat); }
 	else if ( cm_kwmatch("while") ) { cm_compile(whilestat); }
 	else if ( cm_kwmatch("break") ) { cm_compile(breakstat); }
+	else if ( cm_kwmatch("continue") ) { cm_compile(continuestat); }
 	else if ( cm_kwmatch("label") ) { cm_compile(label_stat); }
 	else if ( cm_kwmatch("goto") ) { cm_compile(goto_stat); }
 	else if ( cm_kwmatch("return") ) { cm_compile(return_stat); }
@@ -906,7 +916,10 @@ void	statement::whilestat::compile( CmCompiler* cm )
 {
 	cm_toknext();
 
-	OvInt tpos1 = cm_codesize();
+	CmContinueInfo ci;
+	CmContinueInfo* lastci = cm->ci;
+	cm->ci = &ci;
+	ci.ret = cm_codesize();
 
 	if (cm_tokmust('(')) cm_toknext();
 	cm_compile(expression);
@@ -914,7 +927,7 @@ void	statement::whilestat::compile( CmCompiler* cm )
 	if (cm_tokmust(')')) cm_toknext();
 
 	CmBreakInfo bi;
-	CmBreakInfo* last = cm->bi;
+	CmBreakInfo* lastbi = cm->bi;
 	cm->bi = &bi;
 
 	OvInt cond = cm_fjumping();
@@ -926,21 +939,36 @@ void	statement::whilestat::compile( CmCompiler* cm )
 	cm_code << op_settop << nlocals;
 	OvInt tpos2 = cm_codesize();
 
-	cm_fixjump(repeat,tpos1);
+	cm_fixjump(repeat,ci.ret);
 	cm_fixjump(cond,tpos2);
 	cm_resolve_break(cm->bi);
+	cm_resolve_continue(cm->ci);
 
-	cm->bi = last;
+	cm->bi = lastbi;
+	cm->ci = lastci;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void	statement::breakstat::compile( CmCompiler* cm )
 {
-	if (!cm->bi) cm_parse_error("invalid break");
+	if (!cm->bi) cm_parse_error("invalid break\n");
 	cm_toknext();
 	cm->bi->breaks.push_back( cm_jumping() );
-	if ( cm_tokmust(';') ) cm_toknext();
+	cm_tokmust(';');
+	cm_toknext();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void	statement::continuestat::compile( CmCompiler* cm )
+{
+	if (!cm->ci) cm_parse_error("invalid continue\n");
+	cm_kwmust("continue");
+	cm_toknext();
+	cm->ci->continues.push_back( cm_jumping() );
+	cm_tokmust(';');
+	cm_toknext();
 }
 
 //////////////////////////////////////////////////////////////////////////

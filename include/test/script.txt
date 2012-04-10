@@ -19,7 +19,6 @@ food.shape = "f";
 
 while (1)
 {
-label continue:
 	key = getch();
 
 	snake.lastpos.x = snake.head.x;
@@ -30,7 +29,7 @@ label continue:
 	else if ( key == 'd' ) ++snake.head.x;
 	else if ( key == 'a' ) --snake.head.x;
 	else if ( key == 'x' ) break;
-	else goto continue;
+	else continue;
 
 	local j = snake.tails:size();
 	while (j)

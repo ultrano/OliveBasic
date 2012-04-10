@@ -41,6 +41,12 @@ struct CmBreakInfo
 	OvVector<OvInt>			breaks;
 };
 
+struct CmContinueInfo
+{
+	OvInt	ret;
+	OvVector<OvInt>			continues;
+};
+
 struct CmUpvalInfo
 {
 	OvBool isupval;
@@ -114,9 +120,10 @@ public:
 
 	CmFuncinfo*			fi;
 	CmBreakInfo*		bi;
+	CmContinueInfo*		ci;
 	CmExprInfo			exprinfo;
 
-	CmCompiler( MnState* _s ) : s(_s), tokpos(0), bi(NULL) {};
+	CmCompiler( MnState* _s ) : s(_s), tokpos(0), bi(NULL), ci(NULL) {};
 };
 
 namespace statement
@@ -130,6 +137,7 @@ namespace statement
 	void	free_expr( CmCompiler* cm );
 	void	resolve_goto( CmCompiler* cm, CmFuncinfo* fi );
 	void	resolve_break( CmCompiler* cm, CmBreakInfo* bi );
+	void	resolve_continue( CmCompiler* cm, CmContinueInfo* ci );
 	OvByte	addconst( CmCompiler* cm, const MnValue& val );
 	OvInt	jumping( CmCompiler* cm, OvByte op );
 	void	var_search( CmCompiler* cm, CmFuncinfo* fi, const MnValue& name );
@@ -280,6 +288,11 @@ namespace statement
 	}
 
 	namespace breakstat
+	{
+		void	compile( CmCompiler* cm );
+	}
+
+	namespace continuestat
 	{
 		void	compile( CmCompiler* cm );
 	}
