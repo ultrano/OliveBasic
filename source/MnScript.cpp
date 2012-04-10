@@ -399,15 +399,12 @@ OvBool mn_isminidata( MnState* s, MnIndex idx )
 OvBool mn_toboolean( MnState* s, MnIndex idx )
 {
 	return ut_toboolean( ut_getstack( s, idx ) );
-
 }
 
 MnNumber mn_tonumber( MnState* s, MnIndex idx )
 {
 	return ut_tonumber( ut_getstack( s, idx ) );
-
 }
-
 
 OvString mn_tostring( MnState* s, MnIndex idx )
 {
