@@ -3,7 +3,7 @@
 class OvInputStream;
 /* Mini Script version_lite */
 
-class MnState;
+struct MnState;
 
 typedef OvReal	MnNumber;
 typedef OvInt	MnIndex;

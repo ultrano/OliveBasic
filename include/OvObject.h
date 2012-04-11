@@ -7,7 +7,7 @@
 #include "OvObjectOutputStream.h"
 #include "OvObjectInputStream.h"
 
-class MnState;
+struct MnState;
 class OvStorage;
 
 OvDescSPtr(class,OvObject);

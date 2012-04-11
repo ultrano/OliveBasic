@@ -153,9 +153,19 @@ OvBool ut_num2str( const MnNumber& num, OvString& str )
 
 //////////////////////////////////////////////////////////////////////////
 
-class MnState : public OvMemObject
+struct MnGlobal : OvMemObject
 {
-public:
+	typedef OvMap<OvHash32,MnValue>		map_hash_val;
+	typedef OvMap<OvHash32,MnString*>	map_hash_str;
+
+	MnObject*	 heap;
+	map_hash_val global;
+	map_hash_str strtable;
+	OvUInt		 accumid;
+};
+
+struct MnState : OvMemObject
+{
 	typedef OvMap<OvHash32,MnValue>		map_hash_val;
 	typedef OvMap<OvHash32,MnString*>	map_hash_str;
 	typedef OvSet<MnUpval*>				set_upval;
@@ -164,6 +174,9 @@ public:
 	MnObject*	 heap;
 	map_hash_val global;
 	map_hash_str strtable;
+	OvUInt		 accumid;
+
+	MnGlobal*	 global;
 
 	vec_value	 stack;
 	MnValue*	 begin;
@@ -178,7 +191,6 @@ public:
 	OvByte*			pc;
 	MnClosure*		cls;
 	MnMFunction*	func;
-	OvUInt			accumid;
 };
 
 //////////////////////////////////////////////////////////////////////////
