@@ -16,6 +16,17 @@ void mn_version( OvByte& major, OvByte& minor, OvByte& patch )
 MnState* mn_openstate()
 {
 	MnState* s = new(ut_alloc(sizeof(MnState))) MnState;
+	MnGlobal* g = new(ut_alloc(sizeof(MnGlobal))) MnGlobal;
+
+	g->end  = NULL;
+	g->main = s;
+	g->end  = s;
+	g->heap = NULL;
+	g->accumid = 0;
+
+	s->g	= g;
+	s->next = NULL;
+	s->prev = NULL;
 	s->begin = s->end = NULL;
 	s->base = (MnValue*)-1;
 	s->top  = (MnValue*)+0;
@@ -23,24 +34,42 @@ MnState* mn_openstate()
 	s->pc	= NULL;
 	s->cls	= NULL;
 	s->func	= NULL;
-	s->accumid = 0;
 	ut_ensure_stack(s,1);
 	return s;
+}
+
+void ut_freestate( MnState* s )
+{
+	ut_close_upval( s, NULL );
+	while ( s->ci ) { MnCallInfo* ci = s->ci; s->ci = ci->prev; ut_free(ci); }
+	s->openeduv.clear();
+	s->stack.clear();
+	s->begin = s->end = s->base = s->top = NULL;
+	if (s->prev) s->prev->next = s->next;
+	if (s->next) s->next->prev = s->prev;
+	else s->g->end = s->prev;
+	ut_free(s);
 }
 
 void mn_closestate( MnState* s )
 {
 	if ( s )
 	{
-		while ( s->ci ) { MnCallInfo* ci = s->ci; s->ci = ci->prev; ut_free(ci); }
-		s->global.clear();
-		s->openeduv.clear();
-		s->upvals.clear();
-		s->strtable.clear();
-		s->stack.clear();
-		s->begin = s->end = s->base = s->top = NULL;
-		mn_collect_garbage(s);
-		ut_free(s);
+		MnGlobal* g = s->g;
+		if ( s != g->main )
+		{
+			ut_freestate(s);
+		}
+		else
+		{
+			while ( g->end ) ut_freestate(g->end);
+			g->gvals.clear();
+			ut_collect_garbage(g);
+			g->strtable.clear();
+			g->main = NULL;
+			g->end  = NULL;
+			ut_free(g);
+		}
 	}
 }
 
@@ -432,45 +461,7 @@ OvString mn_typename( MnState* s, MnIndex idx )
 
 OvInt mn_collect_garbage( MnState* s )
 {
-	for ( MnState::map_hash_val::iterator itor = s->global.begin()
-		; itor != s->global.end()
-		; ++itor )
-	{
-		MnMarking(itor->second);
-	}
-	MnValue* stk = s->top;
-	while ( stk && --stk >= s->begin ) MnMarking((*stk));
-
-	MnObject* dead = NULL;
-	MnObject* heap = s->heap;
-	while ( heap )
-	{
-		MnObject* next = heap->next;
-		heap->mark = (heap->mark == MARKED)? UNMARKED : DEAD;
-		if ( heap->mark == DEAD )
-		{
-			if (heap->prev) heap->prev->next = heap->next;
-			if (heap->next) heap->next->prev = heap->prev;
-
-			heap->prev = NULL;
-			heap->next = dead;
-			dead = heap;
-		}
-		heap = next;
-	}
-
-	OvInt num = 0;
-	while ( dead )
-	{
-		++num;
-
-		MnObject* next = dead->next;
-
-		ut_delete_garbage(dead);
-
-		dead = next;
-	}
-	return num;
+	return ut_collect_garbage( s->g );
 }
 
 void mn_call( MnState* s, OvInt nargs, OvInt nrets )

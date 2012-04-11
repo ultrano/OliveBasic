@@ -10,7 +10,8 @@ function newobj()
 
 dofile( "../OliveBasic/include/test/object.txt" );
 
-while (1)
+local count = 10;
+while (--count)
 {
 	local i = 0;
 	i = objs:size();
@@ -29,5 +30,6 @@ while (1)
 		local obj = objs[i];
 		gotoxy( obj.x, obj.y );
 		obj:draw();
+		print(count);
 	}
 }

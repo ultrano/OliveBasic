@@ -981,7 +981,7 @@ void	statement::block::compile( CmCompiler* cm )
 	cm_compile(multi_stat);
 	if ( nlocals < cm->fi->locals.size() )
 	{
-		cm_code << op_close_upval << OvShort(nlocals+1) ;
+		cm_code << op_close_upval << OvShort(nlocals) ;
 		cm_code << op_settop << nlocals;
 		cm->fi->locals.resize(nlocals);
 	}
@@ -996,7 +996,7 @@ void	statement::bodystat::compile( CmCompiler* cm )
 	cm_compile(single_stat);
 	if ( nlocals < cm->fi->locals.size() )
 	{
-		cm_code << op_close_upval << OvShort(nlocals+1) ;
+		cm_code << op_close_upval << OvShort(nlocals) ;
 		cm_code << op_settop << nlocals;
 		cm->fi->locals.resize(nlocals);
 	}

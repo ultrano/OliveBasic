@@ -159,9 +159,12 @@ struct MnGlobal : OvMemObject
 	typedef OvMap<OvHash32,MnString*>	map_hash_str;
 
 	MnObject*	 heap;
-	map_hash_val global;
+	map_hash_val gvals;
 	map_hash_str strtable;
 	OvUInt		 accumid;
+
+	MnState*	 main;
+	MnState*	 end;
 };
 
 struct MnState : OvMemObject
@@ -170,13 +173,11 @@ struct MnState : OvMemObject
 	typedef OvMap<OvHash32,MnString*>	map_hash_str;
 	typedef OvSet<MnUpval*>				set_upval;
 	typedef OvVector<MnValue>			vec_value;
+	
+	MnGlobal*	 g;
 
-	MnObject*	 heap;
-	map_hash_val global;
-	map_hash_str strtable;
-	OvUInt		 accumid;
-
-	MnGlobal*	 global;
+	MnState*	 prev;
+	MnState*	 next;
 
 	vec_value	 stack;
 	MnValue*	 begin;
@@ -184,7 +185,6 @@ struct MnState : OvMemObject
 	MnValue*	 base;
 	MnValue*	 top;
 
-	set_upval	 upvals;
 	set_upval	 openeduv;
 
 	MnCallInfo*		ci;
@@ -211,6 +211,7 @@ void*			ut_alloc( OvSize sz ) { return sz>0? OvMemAlloc(sz) : NULL ; };
 void			ut_free( void* p ) { OvMemFree(p); };
 
 void			ut_ensure_stack( MnState* s, OvInt sz );
+OvInt			ut_collect_garbage( MnGlobal* g );
 
 MnValue			ut_newstring( MnState* s, const OvString& str );
 MnValue			ut_newtable( MnState* s );
@@ -224,8 +225,6 @@ MnValue			ut_newupval( MnState* s, OvInt idx );
 
 void			ut_delete_object( MnObject* o );
 void			ut_delete_garbage( MnObject* o );
-
-OvBool			ut_isglobal( MnState* s, OvHash32 hash );
 
 void			ut_setglobal( MnState* s, MnValue& n, const MnValue& val );
 MnValue			ut_getglobal( MnState* s, MnValue& n );
@@ -310,11 +309,11 @@ class MnObject : public OvMemObject
 {
 public:
 
-	MnObject( MnState* s );
+	MnObject( MnGlobal* g );
 	virtual ~MnObject();
 
 	/* field */
-	MnState*const 	state;
+	MnGlobal*const 	global;
 	const OvUInt	id;
 	MnRefCounter*	refcnt;
 
@@ -327,19 +326,19 @@ public:
 	virtual void marking() = 0;
 };
 
-MnObject::MnObject( MnState* s ) 
-: state(s)
-, id(++s->accumid)
-, next(NULL)
-, prev(NULL)
-, mark(UNMARKED)
-, refcnt(new(ut_alloc(sizeof(MnRefCounter))) MnRefCounter)
+MnObject::MnObject( MnGlobal* g ) 
+	: global(g)
+	, id(++g->accumid)
+	, next(NULL)
+	, prev(NULL)
+	, mark(UNMARKED)
+	, refcnt(new(ut_alloc(sizeof(MnRefCounter))) MnRefCounter)
 {
 
-	if ( state->heap ) state->heap->prev = this;
+	if ( global->heap ) global->heap->prev = this;
 
-	next = state->heap;
-	state->heap = this;
+	next = global->heap;
+	global->heap = this;
 
 	++refcnt->wcnt;
 	refcnt->u.obj = this;
@@ -358,7 +357,7 @@ class MnString : public MnObject
 {
 public:
 
-	MnString( MnState* s, OvHash32 hash, const OvString& sstr );
+	MnString( MnGlobal* g, OvHash32 hash, const OvString& sstr );
 	~MnString();
 
 	OvHash32		hash() { return m_hash; };
@@ -382,7 +381,7 @@ public:
 	MnValue		  metatable;
 	map_hash_pair table;
 
-	MnTable( MnState* s );
+	MnTable( MnGlobal* g );
 	~MnTable();
 
 	virtual void marking();
@@ -400,7 +399,7 @@ public:
 	MnValue	metatable;
 	vec_val array;
 
-	MnArray( MnState* s );
+	MnArray( MnGlobal* g );
 	~MnArray();
 
 	virtual void marking();
@@ -415,7 +414,7 @@ public:
 	typedef OvVector<MnValue> vec_value;
 	typedef OvVector<OvByte>  vec_byte;
 
-	MnMFunction( MnState* s );
+	MnMFunction( MnGlobal* g );
 	~MnMFunction();
 
 	vec_value		consts;
@@ -431,13 +430,11 @@ public:
 class MnUpval : public MnObject
 {
 public:
-	MnUpval( MnState* s ) : MnObject(s), link(NULL)
+	MnUpval( MnGlobal* g ) : MnObject(g), link(NULL)
 	{
-		state->upvals.insert( this );
 	};
 	~MnUpval()
 	{ 
-		state->upvals.erase( this );
 		if ( link == &hold ) hold = MnValue(); 
 	}
 	MnValue  hold;
@@ -472,7 +469,7 @@ public:
 		MClosure* m;
 	} u;
 
-	MnClosure( MnState* s, MnCLType t );
+	MnClosure( MnGlobal* g, MnCLType t );
 	~MnClosure();
 
 	virtual void marking();
@@ -485,7 +482,7 @@ class MnUserData : public MnObject
 {
 public:
 
-	MnUserData( MnState* s, void* p );
+	MnUserData( MnGlobal* g, void* p );
 	~MnUserData();
 
 	void* ptr;
@@ -500,7 +497,7 @@ class MnMiniData : public MnObject
 {
 public:
 
-	MnMiniData( MnState* s, OvInt sz );
+	MnMiniData( MnGlobal* g, OvInt sz );
 	~MnMiniData();
 
 	void* ptr;
@@ -590,8 +587,8 @@ const MnValue& MnValue::operator=( const MnValue& v )
 
 //////////////////////////////////////////////////////////////////////////
 
-MnString::MnString( MnState* s, OvHash32 hash,const OvString& sstr )
-: MnObject(s)
+MnString::MnString( MnGlobal* g, OvHash32 hash,const OvString& sstr )
+: MnObject(g)
 , m_hash( hash )
 , m_str( sstr )
 {
@@ -599,7 +596,7 @@ MnString::MnString( MnState* s, OvHash32 hash,const OvString& sstr )
 
 MnString::~MnString()
 {
-	state->strtable.erase( m_hash );
+	global->strtable.erase( m_hash );
 }
 
 void MnString::marking()
@@ -609,8 +606,8 @@ void MnString::marking()
 
 //////////////////////////////////////////////////////////////////////////
 
-MnTable::MnTable( MnState* s )
-: MnObject(s)
+MnTable::MnTable( MnGlobal* g )
+: MnObject(g)
 {
 
 }
@@ -637,8 +634,8 @@ void MnTable::marking()
 
 //////////////////////////////////////////////////////////////////////////
 
-MnArray::MnArray( MnState* s )
-: MnObject(s)
+MnArray::MnArray( MnGlobal* g )
+: MnObject(g)
 {
 
 }
@@ -661,8 +658,8 @@ void MnArray::marking()
 
 //////////////////////////////////////////////////////////////////////////
 
-MnMFunction::MnMFunction( MnState* s )
-: MnObject(s)
+MnMFunction::MnMFunction( MnGlobal* g )
+: MnObject(g)
 , nargs(0)
 {
 }
@@ -684,8 +681,8 @@ void MnMFunction::marking()
 
 //////////////////////////////////////////////////////////////////////////
 
-MnClosure::MnClosure( MnState* s, MnCLType t )
-: MnObject(s)
+MnClosure::MnClosure( MnGlobal* g, MnCLType t )
+: MnObject(g)
 , type(t)
 {
 	u.c = (CClosure*)ut_alloc( (type==MCL)? sizeof(MClosure) : sizeof(CClosure) );
@@ -709,7 +706,7 @@ void MnClosure::marking()
 
 //////////////////////////////////////////////////////////////////////////
 
-MnUserData::MnUserData( MnState* s, void* p ) : MnObject(s), ptr(p)
+MnUserData::MnUserData( MnGlobal* g, void* p ) : MnObject(g), ptr(p)
 {
 
 }
@@ -728,8 +725,8 @@ void MnUserData::marking()
 
 //////////////////////////////////////////////////////////////////////////
 
-MnMiniData::MnMiniData( MnState* s, OvInt sz )
-: MnObject(s)
+MnMiniData::MnMiniData( MnGlobal* g, OvInt sz )
+: MnObject(g)
 , ptr( ut_alloc( sz ) )
 {
 
@@ -784,7 +781,7 @@ void ut_correct_upval( MnState* s, MnValue* oldstack )
 	MnValue* newstack = s->begin;
 	if ( oldstack && newstack )
 	{
-		for each ( MnUpval* upval in s->upvals )
+		for each ( MnUpval* upval in s->openeduv )
 		{
 			if ( upval->link != &upval->hold )
 			{
@@ -800,7 +797,7 @@ void ut_close_upval( MnState* s, MnValue* level )
 	while ( itor != s->openeduv.end() )
 	{
 		MnUpval* upval = *itor;
-		if ( (upval->link != &upval->hold) && (upval->link >= level) )
+		if ( (upval->link != &upval->hold) && (upval->link > level) )
 		{
 			upval->hold = *(upval->link);
 			upval->link = &(upval->hold);
@@ -817,14 +814,15 @@ void ut_setglobal( MnState* s, MnValue& n, const MnValue& val )
 {
 	if ( MnIsString(n) )
 	{
+		MnGlobal* g = s->g;
 		OvHash32 hash = MnToString(n)->hash();
 		if ( MnIsNil(val) )
 		{
-			s->global.erase( hash );
+			g->gvals.erase( hash );
 		}
 		else
 		{
-			s->global[hash] = val;
+			g->gvals[hash] = val;
 		}
 	}
 }
@@ -833,9 +831,10 @@ MnValue ut_getglobal( MnState* s, MnValue& n )
 {
 	if ( MnIsString(n) )
 	{
+		MnGlobal* g = s->g;
 		OvHash32 hash = MnToString(n)->hash();
-		MnState::map_hash_val::iterator itor = s->global.find( hash );
-		if ( itor != s->global.end() )
+		MnState::map_hash_val::iterator itor = g->gvals.find( hash );
+		if ( itor != g->gvals.end() )
 		{
 			return itor->second;
 		}
@@ -1057,11 +1056,6 @@ MnValue ut_getupval( MnState* s, MnIndex upvalidx )
 	return MnValue();
 }
 
-OvBool ut_isglobal( MnState* s, OvHash32 hash )
-{
-	return ( s->global.find( hash ) != s->global.end() );
-}
-
 void ut_insertstack(MnState* s, MnIndex idx, MnValue& val )
 {
 	MnValue* itor = ut_getstack_ptr( s, idx );
@@ -1117,11 +1111,12 @@ MnValue ut_newstring( MnState* s, const OvString& str )
 	MnString* ret;
 	OvHash32 hash = OU::string::rs_hash(str);
 
-	MnState::map_hash_str::iterator itor = s->strtable.find( hash );
-	if ( itor == s->strtable.end() )
+	MnGlobal* g = s->g;
+	MnState::map_hash_str::iterator itor = g->strtable.find( hash );
+	if ( itor == g->strtable.end() )
 	{
-		ret = new(ut_alloc(sizeof(MnString))) MnString(s, hash, str);
-		itor = s->strtable.insert( make_pair( hash, ret ) ).first;
+		ret = new(ut_alloc(sizeof(MnString))) MnString(s->g, hash, str);
+		itor = g->strtable.insert( make_pair( hash, ret ) ).first;
 	}
 	ret = itor->second;
 	return MnValue( MOT_STRING, ret );
@@ -1129,37 +1124,37 @@ MnValue ut_newstring( MnState* s, const OvString& str )
 
 MnValue ut_newuserdata( MnState* s, void* p )
 {
-	return MnValue( MOT_USERDATA, new(ut_alloc(sizeof(MnUserData))) MnUserData(s,p) ) ;
+	return MnValue( MOT_USERDATA, new(ut_alloc(sizeof(MnUserData))) MnUserData(s->g,p) ) ;
 }
 
 MnValue ut_newminidata( MnState* s, OvInt sz )
 {
-	return MnValue( MOT_MINIDATA, new(ut_alloc(sizeof(MnMiniData))) MnMiniData(s,sz) );
+	return MnValue( MOT_MINIDATA, new(ut_alloc(sizeof(MnMiniData))) MnMiniData(s->g,sz) );
 }
 
 MnValue ut_newtable( MnState* s )
 {
-	return MnValue( MOT_TABLE, new(ut_alloc(sizeof(MnTable))) MnTable(s) );
+	return MnValue( MOT_TABLE, new(ut_alloc(sizeof(MnTable))) MnTable(s->g) );
 }
 
 MnValue ut_newarray( MnState* s )
 {
-	return MnValue( MOT_ARRAY, new(ut_alloc(sizeof(MnArray))) MnArray(s) );
+	return MnValue( MOT_ARRAY, new(ut_alloc(sizeof(MnArray))) MnArray(s->g) );
 }
 
 MnValue ut_newCclosure( MnState* s )
 {
-	return MnValue( MOT_CLOSURE, new(ut_alloc(sizeof(MnClosure))) MnClosure(s,CCL) );
+	return MnValue( MOT_CLOSURE, new(ut_alloc(sizeof(MnClosure))) MnClosure(s->g,CCL) );
 }
 
 MnValue ut_newMclosure( MnState* s )
 {
-	return MnValue( MOT_CLOSURE, new(ut_alloc(sizeof(MnClosure))) MnClosure(s,MCL) );
+	return MnValue( MOT_CLOSURE, new(ut_alloc(sizeof(MnClosure))) MnClosure(s->g,MCL) );
 }
 
 MnValue ut_newfunction( MnState* s )
 {
-	return MnValue( MOT_FUNCPROTO, new(ut_alloc(sizeof(MnMFunction))) MnMFunction(s) );
+	return MnValue( MOT_FUNCPROTO, new(ut_alloc(sizeof(MnMFunction))) MnMFunction(s->g) );
 }
 
 MnValue	ut_newupval( MnState* s, OvInt idx )
@@ -1173,7 +1168,7 @@ MnValue	ut_newupval( MnState* s, OvInt idx )
 		}
 		if (!upval)
 		{
-			upval = new(ut_alloc(sizeof(MnUpval))) MnUpval(s);
+			upval = new(ut_alloc(sizeof(MnUpval))) MnUpval(s->g);
 			upval->link		= link;
 			s->openeduv.insert( upval );
 		}
@@ -1190,7 +1185,7 @@ void ut_delete_object( MnObject* o )
 
 		if (o->next) o->next->prev = o->prev;
 		if (o->prev) o->prev->next = o->next;
-		else o->state->heap = o->next;
+		else o->global->heap = o->next;
 
 		ut_free((void*)o);
 	}
@@ -1221,6 +1216,56 @@ void ut_ensure_stack( MnState* s, OvInt idx )
 		ut_correct_upval( s, oldstack );
 	}
 }
+
+//////////////////////////////////////////////////////////////////////////
+
+OvInt ut_collect_garbage( MnGlobal* g )
+{
+	for ( MnState::map_hash_val::iterator itor = g->gvals.begin()
+		; itor != g->gvals.end()
+		; ++itor )
+	{
+		MnMarking(itor->second);
+	}
+
+	for ( MnState* s = g->main ; s != NULL ; s = s->next )
+	{
+		MnValue* stk = s->top;
+		while ( stk && --stk >= s->begin ) MnMarking((*stk));
+	}
+
+	MnObject* dead = NULL;
+	MnObject* heap = g->heap;
+	while ( heap )
+	{
+		MnObject* next = heap->next;
+		heap->mark = (heap->mark == MARKED)? UNMARKED : DEAD;
+		if ( heap->mark == DEAD )
+		{
+			if (heap->prev) heap->prev->next = heap->next;
+			if (heap->next) heap->next->prev = heap->prev;
+
+			heap->prev = NULL;
+			heap->next = dead;
+			dead = heap;
+		}
+		heap = next;
+	}
+
+	OvInt num = 0;
+	while ( dead )
+	{
+		++num;
+
+		MnObject* next = dead->next;
+
+		ut_delete_garbage(dead);
+
+		dead = next;
+	}
+	return num;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 
