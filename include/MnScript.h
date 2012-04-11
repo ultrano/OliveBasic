@@ -23,6 +23,7 @@ typedef OvInt (*MnCFunction)(MnState*);
 void			mn_version( OvByte& major, OvByte& minor, OvByte& patch );
 
 MnState*		mn_openstate();
+MnState*		mn_substate( MnState* s );
 void			mn_closestate( MnState* s );
 
 void			mn_setstack( MnState* s, MnIndex idx );
