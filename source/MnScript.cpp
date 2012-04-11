@@ -13,17 +13,9 @@ void mn_version( OvByte& major, OvByte& minor, OvByte& patch )
 
 ////////////////////*    open and close    *///////////////////
 
-MnState* mn_openstate()
+MnState* ut_allocstate( MnGlobal* g )
 {
 	MnState* s = new(ut_alloc(sizeof(MnState))) MnState;
-	MnGlobal* g = new(ut_alloc(sizeof(MnGlobal))) MnGlobal;
-
-	g->end  = NULL;
-	g->main = s;
-	g->end  = s;
-	g->heap = NULL;
-	g->accumid = 0;
-
 	s->g	= g;
 	s->next = NULL;
 	s->prev = NULL;
@@ -36,6 +28,30 @@ MnState* mn_openstate()
 	s->func	= NULL;
 	ut_ensure_stack(s,1);
 	return s;
+}
+
+MnState* mn_openstate()
+{
+	MnGlobal* g = new(ut_alloc(sizeof(MnGlobal))) MnGlobal;
+	MnState* s  = ut_allocstate( g );
+	g->end      = NULL;
+	g->main     = s;
+	g->end      = s;
+	g->heap     = NULL;
+	g->accumid  = 0;
+	return s;
+}
+
+MnState* mn_substate( MnState* s )
+{
+	if (!s) return NULL;
+	MnGlobal* g = s->g;
+	MnState* sub  = ut_allocstate( g );
+	MnState* end  = g->end;
+	sub->prev = end;
+	end->next = sub;
+	g->end  = sub;
+	return sub;
 }
 
 void ut_freestate( MnState* s )

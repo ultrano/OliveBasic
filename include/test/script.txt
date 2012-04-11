@@ -19,6 +19,7 @@ while (--count)
 	{
 		--i;
 		local obj = objs[i];
+		gotoxy( obj.x, obj.y );
 		obj:update();
 	}
 	cls();
