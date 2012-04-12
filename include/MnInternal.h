@@ -1208,7 +1208,6 @@ void ut_ensure_stack( MnState* s, OvInt idx )
 
 OvInt ut_collect_garbage( MnGlobal* g )
 {
-	MnMarking(g->gtable);
 	for ( MnState* s = g->main ; s != NULL ; s = s->next )
 	{
 		MnMarking(s->gtable);

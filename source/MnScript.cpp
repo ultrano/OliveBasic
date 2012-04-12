@@ -35,12 +35,12 @@ MnState* mn_openstate()
 {
 	MnGlobal* g = new(ut_alloc(sizeof(MnGlobal))) MnGlobal;
 	MnState* s  = ut_allocstate( g );
+	g->gtable   = s->gtable;
 	g->end      = NULL;
 	g->main     = s;
 	g->end      = s;
 	g->heap     = NULL;
 	g->accumid  = 0;
-	s->gtable = g->gtable = ut_newtable( s );
 	return s;
 }
 
@@ -83,7 +83,6 @@ void mn_closestate( MnState* s )
 		else
 		{
 			while ( g->end ) ut_freestate(g->end);
-			g->gtable = MnValue();
 			ut_collect_garbage(g);
 			g->strtable.clear();
 			g->main = NULL;
