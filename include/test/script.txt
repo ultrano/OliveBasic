@@ -34,3 +34,5 @@ while (--count)
 		print(count);
 	}
 }
+
+print( "G : " + collect_garbage() + "\n" );

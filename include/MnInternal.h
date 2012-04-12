@@ -986,32 +986,32 @@ MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 	MnValue val;
 	if ( MnIsTable(c) )		 val = ut_gettable( c, n );
 	else if ( MnIsArray(c) ) val = ut_getarray( c, n );
-	if ( MnIsNil(val) )
+
+	if ( !MnIsNil(val) ) return val;
+
+	MnValue meta = ut_getmeta(c);
+	if ( MnIsTable(meta) )
 	{
-		MnValue meta = ut_getmeta(c);
-		if ( MnIsTable(meta) )
+		MnValue index = ut_gettable( meta, ut_newstring(s,METHOD_INDEX) );
+		if ( MnIsFunction(index) )
 		{
-			MnValue index = ut_gettable( meta, ut_newstring(s,METHOD_INDEX) );
-			if ( MnIsFunction(index) )
-			{
-				ut_pushvalue(s,index);
-				ut_pushvalue(s,c);
-				ut_pushvalue(s,n);
-				mn_call(s,2,1);
-				MnValue ret = ut_getstack(s,-1);
-				mn_pop(s,1);
-				return ret;
-			}
-			else if ( !MnIsNil(index) )
-			{
-				return ut_getfield(s,index,n);
-			}
+			ut_pushvalue(s,index);
+			ut_pushvalue(s,c);
+			ut_pushvalue(s,n);
+			mn_call(s,2,1);
+			MnValue ret = ut_getstack(s,-1);
+			mn_pop(s,1);
+			return ret;
+		}
+		else if ( !MnIsNil(index) )
+		{
+			return ut_getfield(s,index,n);
 		}
 	}
 	return MnValue();
 }
 
-void ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v )
+void ut_setfield( MnState* s, MnValue& c, MnValue& n, const MnValue& v )
 {
 	MnValue* val = NULL;
 	if ( MnIsTable(c) )		 val = ut_findtable( c, n );
@@ -1471,9 +1471,12 @@ OvInt ex_table( MnState* s )
 
 OvInt ex_array_new( MnState* s )
 {
-	ut_pushvalue( s, ut_newarray(s) );
+	mn_newarray(s);
+	mn_newtable(s);
+	mn_pushstring(s,METHOD_INDEX);
 	mn_pushstring(s,"array");
 	mn_getglobal(s);
+	mn_setfield(s,-3);
 	mn_setmeta(s,-2);
 	return 1;
 }
