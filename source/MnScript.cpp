@@ -66,6 +66,7 @@ void ut_freestate( MnState* s )
 	s->stack.clear();
 	s->begin = s->end = s->base = s->top = NULL;
 	if (s->prev) s->prev->next = s->next;
+	else s->g->main = NULL;
 	if (s->next) s->next->prev = s->prev;
 	else s->g->end = s->prev;
 	ut_free(s);
@@ -83,11 +84,11 @@ void mn_closestate( MnState* s )
 		else
 		{
 			while ( g->end ) ut_freestate(g->end);
+			g->main   = NULL;
+			g->end    = NULL;
 			g->gtable = MnValue();
 			ut_collect_garbage(g);
 			g->strtable.clear();
-			g->main = NULL;
-			g->end  = NULL;
 			ut_free(g);
 		}
 	}
