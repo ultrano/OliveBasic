@@ -83,6 +83,7 @@ void mn_closestate( MnState* s )
 		else
 		{
 			while ( g->end ) ut_freestate(g->end);
+			g->gtable = MnValue();
 			ut_collect_garbage(g);
 			g->strtable.clear();
 			g->main = NULL;

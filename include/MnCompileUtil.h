@@ -142,6 +142,7 @@ OvInt CmScaning( CmCompiler* cm, OvInputStream* is )
 			cm_read();
 			if ( d=='+' && c=='+' ) {tok.val = ut_newstring(cm->s,"++"); tok.type = tt_identifier; cm_read(); }
 			else if ( d=='-' && c=='-' ) {tok.val = ut_newstring(cm->s,"--"); tok.type = tt_identifier; cm_read(); }
+			else if ( d==':' && c==':' ) {tok.val = ut_newstring(cm->s,"::"); tok.type = tt_identifier; cm_read(); }
 			cm->tokens.push_back( tok );
 		}
 	}
@@ -172,7 +173,7 @@ void	statement::tostack( CmCompiler* cm )
 	switch ( cm_expr.type )
 	{
 	case et_nil : cm_code << op_const_nil ; break;
-	case et_const : cm_code << op_const << cm_expr.ui8 ; break;
+	case et_const : cm_code << op_const << cm_expr.byte1 ; break;
 	case et_boolean : cm_code << (cm_expr.blr? op_const_true : op_const_false); break;
 	case et_number : 
 		{
@@ -182,12 +183,12 @@ void	statement::tostack( CmCompiler* cm )
 		}
 		break;
 
-	case et_global : cm_code << op_getglobal << cm_expr.ui8; break;
-	case et_local : cm_code << op_getstack << cm_expr.i16; break;
-	case et_upval : cm_code << op_getupval << cm_expr.ui8; break;
+	case et_global : cm_code << op_getglobal << cm_expr.short1; break;
+	case et_local : cm_code << op_getstack << cm_expr.short1; break;
+	case et_upval : cm_code << op_getupval << cm_expr.byte1; break;
 	case et_field : cm_code << op_getfield; break;
 
-	case et_call : cm_code << op_call << cm_expr.ui8 << (OvByte)1; break;
+	case et_call : cm_code << op_call << cm_expr.byte1 << (OvByte)1; break;
 	case et_onstack : return ;
 	}
 	cm_expr.type = et_onstack;
@@ -197,9 +198,9 @@ void	statement::assign( CmCompiler* cm, const CmExprInfo& lexpr )
 {
 	switch ( lexpr.type )
 	{
-	case et_global : cm_code << op_setglobal << lexpr.ui8 ; break;
-	case et_local : cm_code << op_setstack << lexpr.i16 ; break;
-	case et_upval : cm_code << op_setupval << lexpr.ui8 ; break;
+	case et_global : cm_code << op_setglobal << lexpr.short1; break;
+	case et_local : cm_code << op_setstack << lexpr.short1 ; break;
+	case et_upval : cm_code << op_setupval << lexpr.byte1 ; break;
 	case et_field : cm_code << op_setfield ; break;
 	default: cm_parse_error( "'=' : left operand must be l-value\n" );
 	}
@@ -213,7 +214,7 @@ void	statement::free_expr( CmCompiler* cm )
 	case et_closure : cm_code << op_popstack << (OvShort)1; break;
 	case et_field : cm_code << op_popstack << (OvShort)2; break;
 	case et_onstack : cm_code << op_popstack << (OvShort)1; break;
-	case et_call : cm_code << op_call << cm_expr.ui8 << (OvByte)0; break;
+	case et_call : cm_code << op_call << cm_expr.byte1 << (OvByte)0; break;
 	}
 	cm_expr.type = et_none;
 }
@@ -251,7 +252,7 @@ void	statement::var_search( CmCompiler* cm, CmFuncinfo* fi, const MnValue& name 
 		if ( idx >= 0 )
 		{
 			cm_expr.type = et_local;
-			cm_expr.i16	 = idx + 1;
+			cm_expr.short1	 = idx + 1;
 			return;
 		}
 		else
@@ -261,17 +262,19 @@ void	statement::var_search( CmCompiler* cm, CmFuncinfo* fi, const MnValue& name 
 			{
 				CmUpvalInfo info;
 				info.isupval = (cm_expr.type == et_upval);
-				info.idx	 = info.isupval? cm_expr.ui8:cm_expr.i16;
+				info.idx	 = info.isupval? cm_expr.byte1:cm_expr.short1;
 
 				fi->upvals.push_back( info );
-				cm_expr.type = et_upval;
-				cm_expr.ui8  = fi->upvals.size();
+				cm_expr.type  = et_upval;
+				cm_expr.byte1 = fi->upvals.size();
+				cm_expr.byte2 = 0;
 			}
 			return;
 		}
 	}
-	cm_expr.type = et_global;
-	cm_expr.ui8	 = cm_addconst(name);
+	cm_expr.type  = et_global;
+	cm_expr.byte1 = cm_addconst(name);
+	cm_expr.byte2 = 0;
 }
 
 void statement::resolve_goto( CmCompiler* cm, CmFuncinfo* fi ) 
@@ -597,9 +600,9 @@ void	statement::preexpr::compile( CmCompiler* cm )
 	{
 		switch ( cm_expr.type )
 		{
-		case et_local : cm_code << op_getstack << cm_expr.i16; break;
-		case et_global : cm_code << op_getglobal << cm_expr.ui8; break;
-		case et_upval : cm_code << op_getupval << cm_expr.ui8; break;
+		case et_local : cm_code << op_getstack << cm_expr.short1; break;
+		case et_global : cm_code << op_getglobal << cm_expr.short1; break;
+		case et_upval : cm_code << op_getupval << cm_expr.byte1; break;
 		case et_field :
 			{
 				cm_code << op_getstack << (OvShort)-2;
@@ -642,7 +645,7 @@ void	statement::postexpr::compile( CmCompiler* cm )
 			}
 			cm_toknext(); 
 			cm_expr.type = et_call;
-			cm_expr.ui8  = nargs;
+			cm_expr.byte1  = nargs;
 		}
 		else if ( cm_tokmatch(':') )
 		{
@@ -669,7 +672,7 @@ void	statement::postexpr::compile( CmCompiler* cm )
 			cm_toknext(); 
 
 			cm_expr.type = et_call;
-			cm_expr.ui8  = nargs + 1;
+			cm_expr.byte1  = nargs + 1;
 		}
 		else if ( cm_tokmatch('[') )
 		{
@@ -711,7 +714,7 @@ void	statement::primary::compile( CmCompiler* cm )
 	else if ( cm_tokmatch(tt_string) )
 	{
 		cm_expr.type = et_const;
-		cm_expr.ui8	 = cm_addconst(cm_tok.val);
+		cm_expr.byte1	 = cm_addconst(cm_tok.val);
 		cm_toknext();
 	}
 	else if ( cm_kwmatch("function") )
@@ -724,7 +727,7 @@ void	statement::primary::compile( CmCompiler* cm )
 		cm_expr.blr  = cm_kwmatch("true");
 		cm_toknext();
 	}
-	else if ( cm_tokmatch(tt_identifier) || (cm_tokmatch(':') && cm_lahmatch(':')) )
+	else if ( cm_tokmatch(tt_identifier) || (cm_kwmatch("::")) )
 	{
 		cm_compile(variable);
 	}
@@ -738,12 +741,17 @@ void	statement::primary::compile( CmCompiler* cm )
 
 void	statement::variable::compile( CmCompiler* cm )
 {
-	if (cm_tokmatch(':') && cm_lahmatch(':'))
+	if (cm_kwmatch("::"))
 	{
-		cm_toknext();cm_toknext();
+		cm_expr.byte2 = 0;
+		while ( cm_kwmatch("::") )
+		{
+			++cm_expr.byte2;
+			cm_toknext();
+		}
+		cm_expr.type  = et_global;
 		cm_tokmust(tt_identifier);
-		cm_expr.type = et_global;
-		cm_expr.ui8	 = cm_addconst(cm_tok.val);
+		cm_expr.byte1 = cm_addconst(cm_tok.val);
 		cm_toknext();
 	}
 	else if ( cm_tokmatch(tt_identifier) )

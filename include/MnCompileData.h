@@ -93,8 +93,8 @@ public:
 	
 	union
 	{
-		OvShort		  i16; //< integer 16
-		OvByte		  ui8; //< unsigned integer 8
+		OvShort		  short1; //< integer 16
+		struct { OvByte byte1; OvByte byte2; };
 		MnNumber	  num;
 		OvBool		  blr;
 	};

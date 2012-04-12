@@ -1775,17 +1775,18 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 		case op_setglobal :
 		case op_getglobal :
 			{
-				OvByte idx;
-				code >> idx;
+				OvByte idx, scope;
+				code >> idx >> scope;
+				MnValue gtable = s->gtable;
+				while ( scope-- ) gtable = ut_getmeta(gtable);
 				if (op==op_setglobal)
 				{
-					ut_insertstack( s, -1, ut_getconst(s->func,idx) );
-					mn_setglobal(s);
+					ut_settable( gtable, ut_getconst(s->func,idx), ut_getstack(s,-1) );
+					mn_pop(s,1);
 				}
 				else
 				{
-					ut_pushvalue( s, ut_getconst(s->func,idx) );
-					mn_getglobal(s);
+					ut_pushvalue( s, ut_gettable( gtable, ut_getconst(s->func,idx) ) );
 				}
 			}
 			break;
