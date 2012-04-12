@@ -54,18 +54,41 @@ const MnTypeStr g_type_str[] =
 	{ MOT_FUNCPROTO, "[funcproto]" },
 };
 
-#define METHOD_EQ ("__eq")
-#define METHOD_NEQ ("__neq")
-#define METHOD_LT ("__lt")
-#define METHOD_GT ("__gt")
-#define METHOD_NEWINDEX ("__newindex")
-#define METHOD_INDEX ("__index")
-#define METHOD_CALL ("__call")
-#define METHOD_ADD ("__add")
-#define METHOD_SUB ("__sub")
-#define METHOD_MUL ("__mul")
-#define METHOD_DIV ("__div")
-#define METHOD_MOD ("__mod")
+const OvChar* g_meta_method[] = 
+{
+	"__eq",
+	"__neq",
+	"__lt",
+	"__gt",
+	"__newindex",
+	"__index",
+	"__call",
+	"__add",
+	"__sub",
+	"__mul",
+	"__div",
+	"__mod",
+	"__push",
+	"__pull",
+	"__and",
+	"__or",
+};
+#define METHOD_EQ       (g_meta_method[0])
+#define METHOD_NEQ      (g_meta_method[1])
+#define METHOD_LT       (g_meta_method[2])
+#define METHOD_GT       (g_meta_method[3])
+#define METHOD_NEWINDEX (g_meta_method[4])
+#define METHOD_INDEX    (g_meta_method[5])
+#define METHOD_CALL     (g_meta_method[6])
+#define METHOD_ADD      (g_meta_method[7])
+#define METHOD_SUB      (g_meta_method[8])
+#define METHOD_MUL      (g_meta_method[9])
+#define METHOD_DIV      (g_meta_method[10])
+#define METHOD_MOD      (g_meta_method[11])
+#define METHOD_PUSH     (g_meta_method[12])
+#define METHOD_PULL     (g_meta_method[13])
+#define METHOD_AND      (g_meta_method[14])
+#define METHOD_OR       (g_meta_method[15])
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -993,7 +1016,7 @@ MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 	if ( MnIsTable(meta) )
 	{
 		MnValue index = ut_gettable( meta, ut_newstring(s,METHOD_INDEX) );
-		if ( MnIsFunction(index) )
+		if ( MnIsClosure(index) )
 		{
 			ut_pushvalue(s,index);
 			ut_pushvalue(s,c);
@@ -1020,7 +1043,7 @@ void ut_setfield( MnState* s, MnValue& c, MnValue& n, const MnValue& v )
 	if ( !val )
 	{
 		MnValue newindex = ut_gettable( ut_getmeta(c), ut_newstring(s,METHOD_NEWINDEX) );
-		if ( MnIsFunction(newindex) )
+		if ( MnIsClosure(newindex) )
 		{
 			ut_pushvalue( s, newindex );
 			ut_pushvalue( s, c );
@@ -1577,7 +1600,6 @@ MnValue ut_meta_call( MnState* s, MnValue& c )
 	}
 	return MnValue();
 }
-
 //////////////////////////////////////////////////////////////////////////
 void ut_restore_ci( MnState* s, OvInt nret ) 
 {
@@ -1678,6 +1700,51 @@ enum opcode : OvByte
 	op_return,		//< + byte
 };
 
+MnValue ut_meta_arith( MnState*s, opcode op, MnValue& left, MnValue& right )
+{
+	switch ( left.type )
+	{
+	case MOT_NUMBER : case MOT_BOOLEAN :
+		{
+			if ( op == op_add ) return MnValue( ut_tonumber(left) + ut_tonumber(right) );
+			else if ( op == op_sub ) return MnValue( ut_tonumber(left) - ut_tonumber(right) );
+			else if ( op == op_mul ) return MnValue( ut_tonumber(left) * ut_tonumber(right) );
+			else if ( op == op_div ) return MnValue( ut_tonumber(left) / ut_tonumber(right) );
+			else if ( op == op_mod ) return MnValue( (MnNumber)((OvInt)ut_tonumber(left) % (OvInt)ut_tonumber(right)) );
+			else if ( op == op_push ) return MnValue( (MnNumber)((OvInt)ut_tonumber(left) << (OvInt)ut_tonumber(right)) );
+			else if ( op == op_pull ) return MnValue( (MnNumber)((OvInt)ut_tonumber(left) >> (OvInt)ut_tonumber(right)) );
+			else if ( op == op_and ) return MnValue( ut_toboolean(left) && ut_toboolean(right) );
+			else if ( op == op_or ) return MnValue( ut_toboolean(left) || ut_toboolean(right) );
+			else if ( op == op_bit_or) return MnValue( (MnNumber)((OvInt)MnToNumber(left) | (OvInt)MnToNumber(right)) );
+			else if ( op == op_bit_xor) return MnValue( (MnNumber)((OvInt)MnToNumber(left) ^ (OvInt)MnToNumber(right)) );
+			else if ( op == op_bit_and) return MnValue( (MnNumber)((OvInt)MnToNumber(left) & (OvInt)MnToNumber(right)) );
+		}
+		break;
+	case MOT_STRING : if ( op == op_add ) return ut_newstring( s, MnToString(left)->str() + ut_tostring(right) );
+	default:
+		{
+			MnValue meta = ut_getmeta(left);
+			const OvChar* method = (op==op_add)? METHOD_ADD : (op==op_sub)? METHOD_SUB : (op==op_div)? METHOD_DIV : (op==op_mul)? METHOD_MUL : (op==op_mod)? METHOD_MOD :
+							 (op==op_push)? METHOD_PUSH : (op==op_pull)? METHOD_PULL : (op==op_and)? METHOD_AND : (op==op_or)? METHOD_OR : NULL;
+			
+			if ( MnIsTable(meta) && method )
+			{
+				MnValue tm = ut_gettable(meta,ut_newstring(s,method));
+				if ( MnIsClosure(tm) )
+				{
+					ut_pushvalue(s,tm);
+					ut_pushvalue(s,left);
+					ut_pushvalue(s,right);
+					mn_call(s,2,1);
+					tm = ut_getstack(s,-1);
+					mn_pop(s,1);
+					return tm;
+				}
+			}		
+		}
+	}
+	return MnValue();
+}
 
 struct MnCodeWriter
 {
@@ -1711,7 +1778,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 	MnCodeReader code(s);
 	while ( true )
 	{
-		OvByte op;
+		opcode op;
 		code >> op;
 		switch ( op )
 		{
@@ -1724,22 +1791,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				MnValue right = ut_getstack(s,-1);
 				mn_pop(s,2);
 				
-				if (op==op_add)
-				{
-					if ( MnIsNumber(left) ) mn_pushnumber( s, MnToNumber(left) + MnToNumber(right) );
-					else if ( MnIsString(left) ) ut_pushvalue( s, ut_newstring( s, MnToString(left)->str() + ut_tostring(right) ) );
-				}
-				else if (op==op_sub) mn_pushnumber( s, MnToNumber(left) - MnToNumber(right) );
-				else if (op==op_mul) mn_pushnumber( s, MnToNumber(left) * MnToNumber(right) );
-				else if (op==op_div) mn_pushnumber( s, MnToNumber(left) / MnToNumber(right) );
-				else if (op==op_mod) mn_pushnumber( s, (OvInt)MnToNumber(left) % (OvInt)MnToNumber(right) );
-				else if (op==op_push) mn_pushnumber( s, (OvInt)MnToNumber(left) << (OvInt)MnToNumber(right) );
-				else if (op==op_pull) mn_pushnumber( s, (OvInt)MnToNumber(left) >> (OvInt)MnToNumber(right) );
-				else if (op==op_bit_or) mn_pushnumber( s, (OvInt)MnToNumber(left) | (OvInt)MnToNumber(right) );
-				else if (op==op_bit_xor) mn_pushnumber( s, (OvInt)MnToNumber(left) ^ (OvInt)MnToNumber(right) );
-				else if (op==op_bit_and) mn_pushnumber( s, (OvInt)MnToNumber(left) & (OvInt)MnToNumber(right) );
-				else if (op==op_and) mn_pushboolean( s, ut_toboolean(left) && ut_toboolean(right) );
-				else if (op==op_or) mn_pushboolean( s, ut_toboolean(left) || ut_toboolean(right) );
+				ut_pushvalue(s,ut_meta_arith(s,op,left,right));
 			}
 			break;
 

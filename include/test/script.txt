@@ -1,38 +1,25 @@
 
-objs = array();
 
-function newobj()
-{
-	local obj = table();
-	objs:push(obj);
-	return obj;
-};
+local meta = table();
+function meta:__add (r) { print( "left +  " + tostring(r) + "\n" ); };
+function meta:__sub (r) { print( "left -  " + tostring(r) + "\n" ); };
+function meta:__mul (r) { print( "left *  " + tostring(r) + "\n" ); };
+function meta:__div (r) { print( "left /  " + tostring(r) + "\n" ); };
+function meta:__mod (r) { print( "left %%  " + tostring(r) + "\n" ); };
+function meta:__push(r) { print( "left << " + tostring(r) + "\n" ); };
+function meta:__pull(r) { print( "left >> " + tostring(r) + "\n" ); };
+function meta:__and (r) { print( "left && " + tostring(r) + "\n" ); };
+function meta:__or  (r) { print( "left || " + tostring(r) + "\n" ); };
 
-dofile( "../OliveBasic/include/test/snake.txt" );
+local t = table();
+setmeta(t,meta);
 
-local count = 10;
-while (--count)
-{
-	local i = 0;
-	i = objs:size();
-	while (i)
-	{
-		--i;
-		local obj = objs[i];
-		gotoxy( obj.x, obj.y );
-		obj:update();
-	}
-	cls();
-	gotoxy(0,0);
-	i = objs:size();
-	while (i)
-	{
-		--i;
-		local obj = objs[i];
-		gotoxy( obj.x, obj.y );
-		obj:draw();
-		print(count);
-	}
-}
-
-print( "G : " + collect_garbage() + "\n" );
+t +  1;
+t -  1;
+t *  1;
+t /  1;
+t %  1;
+t << 1;
+t >> 1;
+t && 1;
+t || 1;
