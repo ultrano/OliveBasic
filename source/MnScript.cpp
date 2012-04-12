@@ -26,6 +26,7 @@ MnState* ut_allocstate( MnGlobal* g )
 	s->pc	= NULL;
 	s->cls	= NULL;
 	s->func	= NULL;
+	s->gtable = ut_newtable(s);
 	ut_ensure_stack(s,1);
 	return s;
 }
@@ -39,6 +40,7 @@ MnState* mn_openstate()
 	g->end      = s;
 	g->heap     = NULL;
 	g->accumid  = 0;
+	s->gtable = g->gtable = ut_newtable( s );
 	return s;
 }
 
@@ -51,6 +53,7 @@ MnState* mn_substate( MnState* s )
 	sub->prev = end;
 	end->next = sub;
 	g->end  = sub;
+	ut_setmeta( sub->gtable, s->gtable );
 	return sub;
 }
 
@@ -58,6 +61,7 @@ void ut_freestate( MnState* s )
 {
 	ut_close_upval( s, NULL );
 	while ( s->ci ) { MnCallInfo* ci = s->ci; s->ci = ci->prev; ut_free(ci); }
+	s->gtable = MnValue();
 	s->openeduv.clear();
 	s->stack.clear();
 	s->begin = s->end = s->base = s->top = NULL;
@@ -79,7 +83,7 @@ void mn_closestate( MnState* s )
 		else
 		{
 			while ( g->end ) ut_freestate(g->end);
-			g->gvals.clear();
+			g->gtable = MnValue();
 			ut_collect_garbage(g);
 			g->strtable.clear();
 			g->main = NULL;

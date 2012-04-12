@@ -8,7 +8,7 @@ function newobj()
 	return obj;
 };
 
-dofile( "../OliveBasic/include/test/object.txt" );
+dofile( "../OliveBasic/include/test/snake.txt" );
 
 local count = 10;
 while (--count)
