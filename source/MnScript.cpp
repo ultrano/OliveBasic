@@ -53,7 +53,9 @@ MnState* mn_substate( MnState* s )
 	sub->prev = end;
 	end->next = sub;
 	g->end  = sub;
-	ut_setmeta( sub->gtable, s->gtable );
+	MnValue meta = ut_newtable(s);
+	ut_settable( meta, ut_newstring(sub,METHOD_INDEX), s->gtable );
+	ut_setmeta( sub->gtable, meta );
 	return sub;
 }
 

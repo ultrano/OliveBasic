@@ -252,21 +252,22 @@ MnValue			ut_newupval( MnState* s, OvInt idx );
 void			ut_delete_object( MnObject* o );
 void			ut_delete_garbage( MnObject* o );
 
-void			ut_setglobal( MnState* s, MnValue& n, const MnValue& val );
 MnValue			ut_getglobal( MnState* s, MnValue& n );
-
+void			ut_setglobal( MnState* s, MnValue& n, const MnValue& val );
 
 void			ut_setstack( MnState* s, MnIndex idx, const MnValue& val );
 MnValue			ut_getstack( MnState* s, MnIndex idx );
 
-void			ut_settable( MnValue& t, MnValue& n, const MnValue& v );
+MnValue*		ut_findtable( MnValue& t, MnValue& n );
 MnValue			ut_gettable( MnValue& t, MnValue& n );
+void			ut_settable( MnValue& t, MnValue& n, const MnValue& v );
 
-void			ut_setarray( MnValue& t, MnValue& n, const MnValue& v );
-MnValue			ut_getarray( MnValue& t, MnValue& n );
+MnValue*		ut_findarray( MnValue& a, MnValue& n );
+MnValue			ut_getarray( MnValue& a, MnValue& n );
+void			ut_setarray( MnValue& a, MnValue& n, const MnValue& v );
 
-void			ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v );
 MnValue			ut_getfield( MnState* s, MnValue& c, MnValue& n );
+void			ut_setfield( MnState* s, MnValue& c, MnValue& n, const MnValue& v );
 
 MnValue			ut_getmeta( const MnValue& c );
 void			ut_setmeta( MnValue& c, const MnValue& m );
@@ -816,7 +817,7 @@ void ut_setglobal( MnState* s, MnValue& n, const MnValue& val )
 {
 	if ( MnIsString(n) )
 	{
-		ut_settable( s->gtable, n, val );
+		ut_setfield( s, s->gtable, n, val );
 	}
 }
 
@@ -824,7 +825,7 @@ MnValue ut_getglobal( MnState* s, MnValue& n )
 {
 	if ( MnIsString(n) )
 	{
-		return ut_gettable( s->gtable, n );
+		return ut_getfield( s, s->gtable, n );
 	}
 	return MnValue();
 }
@@ -905,6 +906,31 @@ OvBool ut_meta_newindex( MnState* s, MnValue& c, MnValue& n, MnValue& v )
 	return false;
 }
 
+MnValue* ut_findtable( MnValue& t, MnValue& n )
+{
+	if ( MnIsTable(t) )
+	{
+		MnTable* tbl = MnToTable(t);
+		if ( MnIsString(n) )
+		{
+			OvHash32 hash = MnToString(n)->hash();
+			MnTable::map_hash_pair::iterator itor = tbl->table.find( hash );
+
+			if ( itor !=  tbl->table.end() )
+			{
+				return &(itor->second.second);
+			}
+		}
+	}
+	return NULL;
+}
+
+MnValue ut_gettable( MnValue& t, MnValue& n )
+{
+	if ( MnValue* val = ut_findtable(t,n) ) return *val;
+	return MnValue();
+}
+
 void ut_settable( MnValue& t, MnValue& n, const MnValue& v )
 {
 	if ( MnIsTable(t) )
@@ -919,7 +945,7 @@ void ut_settable( MnValue& t, MnValue& n, const MnValue& v )
 				if ( MnIsNil(v) )	tbl->table.erase( itor );
 				else				itor->second = make_pair(n,v);
 			}
-			else // if ( !ut_meta_newindex(s, t, n, v) )
+			else
 			{
 				tbl->table.insert( make_pair(hash,make_pair(n,v)) );
 			}
@@ -927,87 +953,94 @@ void ut_settable( MnValue& t, MnValue& n, const MnValue& v )
 	}
 }
 
-MnValue ut_meta_index( MnState* s, MnValue& c, MnValue& n ) 
+MnValue* ut_findarray( MnValue& a, MnValue& n )
 {
-	MnValue meta = ut_getmeta( c );
-	if ( !MnIsNil(meta) )
+	if ( MnIsArray(a) )
 	{
-		ut_pushvalue( s, meta );
-		mn_pushstring( s, METHOD_INDEX );
-		mn_getfield( s, -2 );
-		if ( mn_isfunction( s, -1 ) )
+		MnArray* arr = MnToArray(a);
+		if ( MnIsNumber(n) )
 		{
-			ut_pushvalue( s, c );
-			ut_pushvalue( s, n );
-			mn_call( s, 2, 1 );
-
-			MnValue ret = ut_getstack( s, -1 );
-			mn_pop( s, 2 );
-			return ret;
-		}
-		else
-		{
-			mn_pop(s,2);
-			ut_pushvalue( s, ut_gettable( meta, n ) );
+			MnIndex idx = (MnIndex)MnToNumber(n);
+			if ( idx >= 0 && idx < arr->array.size() )
+			{
+				return &(arr->array.at(idx));
+			}
 		}
 	}
-	return MnValue();
+	return NULL;
 }
 
-MnValue ut_gettable( MnValue& t, MnValue& n )
+MnValue ut_getarray( MnValue& a, MnValue& n )
 {
-	if ( MnIsTable(t) )
-	{
-		MnTable* tbl = MnToTable(t);
-		if ( MnIsString(n) )
-		{
-			OvHash32 hash = MnToString(n)->hash();
-			MnTable::map_hash_pair::iterator itor = tbl->table.find( hash );
-
-			if ( itor !=  tbl->table.end() )
-			{
-				return itor->second.second;
-			}
-			else
-			{
-				return ut_gettable( ut_getmeta(t), n );
-			}
-		}
-	}
+	if ( MnValue* val = ut_findarray(a,n) ) return *val;
 	return MnValue();
 }
 
 void ut_setarray( MnValue& a, MnValue& n, const MnValue& v )
 {
-	if ( MnIsArray(a) )
-	{
-		MnArray* arr = MnToArray(a);
-		if ( MnIsNumber(n) )
-		{
-			MnIndex idx = (MnIndex)MnToNumber(n);
-			if ( idx >= 0 && idx < arr->array.size() )
-			{
-				arr->array[idx] = v;
-			}
-		}
-	}
+	if ( MnValue* val = ut_findarray(a,n) ) *val = v;
 }
 
-MnValue ut_getarray( MnValue& a, MnValue& n )
+MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 {
-	if ( MnIsArray(a) )
+	MnValue val;
+	if ( MnIsTable(c) )		 val = ut_gettable( c, n );
+	else if ( MnIsArray(c) ) val = ut_getarray( c, n );
+	if ( MnIsNil(val) )
 	{
-		MnArray* arr = MnToArray(a);
-		if ( MnIsNumber(n) )
+		MnValue meta = ut_getmeta(c);
+		if ( MnIsTable(meta) )
 		{
-			MnIndex idx = (MnIndex)MnToNumber(n);
-			if ( idx >= 0 && idx < arr->array.size() )
+			MnValue index = ut_gettable( meta, ut_newstring(s,METHOD_INDEX) );
+			if ( MnIsFunction(index) )
 			{
-				return arr->array.at(idx);
+				ut_pushvalue(s,index);
+				ut_pushvalue(s,c);
+				ut_pushvalue(s,n);
+				mn_call(s,2,1);
+				MnValue ret = ut_getstack(s,-1);
+				mn_pop(s,1);
+				return ret;
+			}
+			else if ( !MnIsNil(index) )
+			{
+				return ut_getfield(s,index,n);
 			}
 		}
 	}
-	return ut_gettable( ut_getmeta(a), n );
+	return MnValue();
+}
+
+void ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v )
+{
+	MnValue* val = NULL;
+	if ( MnIsTable(c) )		 val = ut_findtable( c, n );
+	else if ( MnIsArray(c) ) val = ut_findarray( c, n );
+
+	if ( !val )
+	{
+		MnValue newindex = ut_gettable( ut_getmeta(c), ut_newstring(s,METHOD_NEWINDEX) );
+		if ( MnIsFunction(newindex) )
+		{
+			ut_pushvalue( s, newindex );
+			ut_pushvalue( s, c );
+			ut_pushvalue( s, n );
+			ut_pushvalue( s, v );
+			mn_call( s, 3, 0 );
+		}
+		else if ( MnIsTable(newindex) )
+		{
+			ut_setfield( s, newindex, n, v );
+		}
+		else if ( MnIsTable(c) )
+		{
+			ut_settable( c, n, v );
+		}
+	}
+	else
+	{
+		*val = v;
+	}
 }
 
 void ut_setupvallink( MnState* s, MnIndex upvalidx, MnValue& v )
@@ -1059,21 +1092,6 @@ void ut_insertstack(MnState* s, MnIndex idx, MnValue& val )
 			temp = next;
 		}
 	}
-}
-
-void ut_setfield( MnState* s, MnValue& c, MnValue& n, MnValue& v )
-{
-	if ( MnIsTable(c) )		 ut_settable( c, n, v);
-	else if ( MnIsArray(c) ) ut_setarray( c, n, v);
-	else if ( MnIsUserData(c) || MnIsMiniData(c) )  ut_meta_newindex( s, c, n, v );
-}
-
-MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
-{
-	if ( MnIsTable(c) )		return ut_gettable( c, n);
-	else if ( MnIsArray(c) )return ut_getarray( c, n);
-	else if ( MnIsUserData(c) || MnIsMiniData(c) ) return ut_meta_index( s, c, n );
-	return MnValue();
 }
 
 void ut_setmeta( MnValue& c, MnValue& m )
@@ -1781,12 +1799,12 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				while ( scope-- ) gtable = ut_getmeta(gtable);
 				if (op==op_setglobal)
 				{
-					ut_settable( gtable, ut_getconst(s->func,idx), ut_getstack(s,-1) );
+					ut_setfield( s, gtable, ut_getconst(s->func,idx), ut_getstack(s,-1) );
 					mn_pop(s,1);
 				}
 				else
 				{
-					ut_pushvalue( s, ut_gettable( gtable, ut_getconst(s->func,idx) ) );
+					ut_pushvalue( s, ut_getfield( s, gtable, ut_getconst(s->func,idx) ) );
 				}
 			}
 			break;
