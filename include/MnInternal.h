@@ -993,7 +993,7 @@ MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 	if ( MnIsTable(meta) )
 	{
 		MnValue index = ut_gettable( meta, ut_newstring(s,METHOD_INDEX) );
-		if ( MnIsFunction(index) )
+		if ( MnIsClosure(index) )
 		{
 			ut_pushvalue(s,index);
 			ut_pushvalue(s,c);
@@ -1020,7 +1020,7 @@ void ut_setfield( MnState* s, MnValue& c, MnValue& n, const MnValue& v )
 	if ( !val )
 	{
 		MnValue newindex = ut_gettable( ut_getmeta(c), ut_newstring(s,METHOD_NEWINDEX) );
-		if ( MnIsFunction(newindex) )
+		if ( MnIsClosure(newindex) )
 		{
 			ut_pushvalue( s, newindex );
 			ut_pushvalue( s, c );
