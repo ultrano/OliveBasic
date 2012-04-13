@@ -354,11 +354,11 @@ void mn_newarray( MnState* s )
 	ut_pushvalue( s, ut_newarray(s) );
 }
 
-void* mn_newminidata( MnState* s, OvInt sz )
+void* mn_newuserdata( MnState* s, OvInt sz )
 {
-	MnValue val = ut_newminidata(s,sz);
+	MnValue val = ut_newuserdata(s,ut_alloc(sz),true);
 	ut_pushvalue( s, val );
-	return MnToMiniData(val)->ptr;
+	return MnToUserData(val)->ptr;
 }
 
 void mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals )
@@ -402,7 +402,7 @@ void mn_pushstring( MnState* s, const OvString& v )
 
 void mn_pushuserdata( MnState* s, void* v )
 {
-	ut_pushvalue( s, ut_newuserdata(s,v) );
+	ut_pushvalue( s, ut_newuserdata(s,v,false) );
 }
 
 void mn_pushstack( MnState* s, MnIndex idx )
@@ -442,11 +442,6 @@ OvBool mn_isuserdata( MnState* s, MnIndex idx )
 	return MnIsUserData( ut_getstack( s, idx ) );
 }
 
-OvBool mn_isminidata( MnState* s, MnIndex idx )
-{
-	return MnIsMiniData( ut_getstack( s, idx ) );
-}
-
 /////////////////////*  all kinds of "to"    *///////////////////////////
 
 OvBool mn_toboolean( MnState* s, MnIndex idx )
@@ -469,10 +464,6 @@ void* mn_touserdata( MnState* s, MnIndex idx )
 	return ut_touserdata( ut_getstack( s, idx ) );
 }
 
-void* mn_tominidata( MnState* s, MnIndex idx )
-{
-	return ut_tominidata( ut_getstack( s, idx ) );
-}
 OvInt mn_type( MnState* s, MnIndex idx )
 {
 	return ut_type(ut_getstack( s, idx ));
