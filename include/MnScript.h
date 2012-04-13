@@ -1,5 +1,6 @@
 #pragma once
 #include "OvTypeDef.h"
+#include "OvSolidString.h"
 class OvInputStream;
 /* Mini Script version_lite */
 
@@ -73,12 +74,12 @@ OvBool			mn_isminidata( MnState* s, MnIndex idx );
 
 OvBool			mn_toboolean( MnState* s, MnIndex idx );
 MnNumber		mn_tonumber( MnState* s, MnIndex idx );
-OvString		mn_tostring( MnState* s, MnIndex idx );
+OvSolidString	mn_tostring( MnState* s, MnIndex idx );
 void*			mn_touserdata( MnState* s, MnIndex idx );
 void*			mn_tominidata( MnState* s, MnIndex idx );
 
 OvInt			mn_type( MnState* s, MnIndex idx );
-OvString		mn_typename( MnState* s, MnIndex idx );
+const OvChar*	mn_typename( MnState* s, MnIndex idx );
 
 void			mn_call( MnState* s, OvInt nargs, OvInt nrets );
 

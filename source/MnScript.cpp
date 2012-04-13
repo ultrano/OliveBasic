@@ -459,7 +459,7 @@ MnNumber mn_tonumber( MnState* s, MnIndex idx )
 	return ut_tonumber( ut_getstack( s, idx ) );
 }
 
-OvString mn_tostring( MnState* s, MnIndex idx )
+OvSolidString mn_tostring( MnState* s, MnIndex idx )
 {
 	return ut_tostring( ut_getstack( s, idx ) );
 }
@@ -478,7 +478,7 @@ OvInt mn_type( MnState* s, MnIndex idx )
 	return ut_type(ut_getstack( s, idx ));
 }
 
-OvString mn_typename( MnState* s, MnIndex idx )
+const OvChar* mn_typename( MnState* s, MnIndex idx )
 {
 	return ut_typename( ut_getstack( s, idx ) );
 }

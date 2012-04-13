@@ -26,13 +26,17 @@ public:
 	// operator ==
 	OvBool operator == ( const OvSolidString &other ) const;
 	OvBool operator == ( const OvString &other ) const;
+	OvBool operator == ( const OvChar* other ) const;
 
 	// operator !=
 	OvBool operator != ( const OvSolidString &other ) const;
 	OvBool operator != ( const OvString &other ) const;
+	OvBool operator != ( const OvChar* other ) const;
 
 	// to string
 	const OvString& str() const;
+	const OvChar*   c_str() const;
+	OvSize			size() const;
 	void clear();
 
 private:
@@ -41,3 +45,6 @@ private:
 
 OvBool operator == ( const OvString &arg1, const OvSolidString &arg2 ) ;
 OvBool operator != ( const OvString &arg1, const OvSolidString &arg2 ) ;
+
+OvBool operator == ( const OvChar* arg1, const OvSolidString &arg2 ) ;
+OvBool operator != ( const OvChar* arg1, const OvSolidString &arg2 ) ;

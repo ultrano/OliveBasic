@@ -364,12 +364,13 @@ public:
 	~MnString();
 
 	OvHash32		hash() { return m_hash; };
-	const OvString& str() { return m_str; };
+	const OvString& str() { return m_str.str(); };
+	OvSolidString	solid() { return m_str;};
 
 	virtual void marking();
 private:
 	OvHash32 m_hash;
-	OvString m_str;
+	OvSolidString m_str;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1315,23 +1316,23 @@ MnNumber ut_tonumber( const MnValue& val )
 	return 0;
 }
 
-OvString ut_tostring( const MnValue& val ) 
+OvSolidString ut_tostring( const MnValue& val ) 
 {
 	if ( MnIsString(val) )
 	{
-		return MnToString(val)->str();
+		return MnToString(val)->solid();
 	}
 	else if ( MnIsNumber(val) )
 	{
 		OvStringStream strm;
 		strm << MnToNumber(val);
-		return strm.str();
+		return OvSolidString(strm.str());
 	}
 	else if ( MnIsBoolean(val) )
 	{
-		return (MnToBoolean(val)? "true":"false");
+		return OvSolidString(MnToBoolean(val)? "true":"false");
 	}
-	static OvString empty;
+	static OvSolidString empty("");
 	return empty;
 }
 
@@ -1417,7 +1418,7 @@ OvInt ex_print( MnState* s )
 
 OvInt ex_tostring( MnState* s )
 {
-	mn_pushstring( s, ut_tostring( ut_getstack( s, 1 ) ) );
+	mn_pushstring( s, ut_tostring( ut_getstack( s, 1 ) ).str() );
 	return 1;
 }
 
@@ -1429,13 +1430,13 @@ OvInt ex_tonumber( MnState* s )
 
 OvInt ex_dostring( MnState* s )
 {
-	mn_dostring( s, mn_tostring(s,1) );
+	mn_dostring( s, mn_tostring(s,1).str() );
 	return 0;
 }
 
 OvInt ex_dofile( MnState* s )
 {
-	mn_dofile( s, mn_tostring(s,1) );
+	mn_dofile( s, mn_tostring(s,1).str() );
 	return 0;
 }
 
@@ -1727,7 +1728,7 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				if (op==op_add)
 				{
 					if ( MnIsNumber(left) ) mn_pushnumber( s, MnToNumber(left) + MnToNumber(right) );
-					else if ( MnIsString(left) ) ut_pushvalue( s, ut_newstring( s, MnToString(left)->str() + ut_tostring(right) ) );
+					else if ( MnIsString(left) ) ut_pushvalue( s, ut_newstring( s, MnToString(left)->str() + ut_tostring(right).str() ) );
 				}
 				else if (op==op_sub) mn_pushnumber( s, MnToNumber(left) - MnToNumber(right) );
 				else if (op==op_mul) mn_pushnumber( s, MnToNumber(left) * MnToNumber(right) );
@@ -1763,12 +1764,12 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				if (addop==op_eq)
 				{
 						if ( MnIsNumber(left) ) mn_pushboolean( s, MnToNumber(left) == MnToNumber(right) );
-						else if ( MnIsString(left) ) mn_pushboolean( s, MnToString(left)->str() == ut_tostring(right) );
+						else if ( MnIsString(left) ) mn_pushboolean( s, MnToString(left)->str() == ut_tostring(right).str() );
 				}
 				else if (addop==op_not)
 				{
 					if ( MnIsNumber(left) ) mn_pushboolean( s, MnToNumber(left) != MnToNumber(right) );
-					else if ( MnIsString(left) ) mn_pushboolean( s, MnToString(left)->str() != ut_tostring(right) );
+					else if ( MnIsString(left) ) mn_pushboolean( s, MnToString(left)->str() != ut_tostring(right).str() );
 				}
 				else if (addop==op_gt) mn_pushboolean( s, MnToNumber(left) >= MnToNumber(right) );
 				else if (addop==op_lt) mn_pushboolean( s, MnToNumber(left) <= MnToNumber(right) );
