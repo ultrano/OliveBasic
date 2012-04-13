@@ -34,6 +34,9 @@ void			mn_remove( MnState* s, MnIndex idx );
 void			mn_swap( MnState* s, MnIndex idx1, MnIndex idx2 );
 void			mn_replace( MnState* s, MnIndex dst, MnIndex src );
 
+void			mn_setraw( MnState* s, MnIndex idx );
+void			mn_getraw( MnState* s, MnIndex idx );
+
 void			mn_setfield( MnState* s, MnIndex idx );
 void			mn_getfield( MnState* s, MnIndex idx );
 

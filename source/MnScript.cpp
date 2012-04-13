@@ -254,11 +254,31 @@ void mn_replace( MnState* s, MnIndex dst, MnIndex src )
 	if ( val ) ut_setstack( s, dst, *val );
 }
 
+void mn_setraw( MnState* s, MnIndex idx )
+{
+	if ( idx && mn_gettop(s) >= 2 )
+	{
+		ut_setraw( ut_getstack(s,idx), ut_getstack(s,-2), ut_getstack(s,-1) );
+		mn_pop(s,2);
+	}
+}
+
+void mn_getraw( MnState* s, MnIndex idx )
+{
+	if ( idx && mn_gettop(s) >= 1 )
+	{
+		MnValue val;
+		val = ut_getraw( ut_getstack(s,idx), ut_getstack(s,-1) );
+		mn_pop(s,1);
+		ut_pushvalue( s, val );
+	}
+}
+
 void mn_setfield( MnState* s, MnIndex idx )
 {
 	if ( idx && mn_gettop(s) >= 2 )
 	{
-		if ( idx )	ut_setfield( s, ut_getstack(s,idx), ut_getstack(s,-2), ut_getstack(s,-1) );
+		ut_setfield( s, ut_getstack(s,idx), ut_getstack(s,-2), ut_getstack(s,-1) );
 		mn_pop(s,2);
 	}
 }
@@ -268,7 +288,7 @@ void mn_getfield( MnState* s, MnIndex idx )
 	if ( idx && mn_gettop(s) >= 1 )
 	{
 		MnValue val;
-		if ( idx )	val = ut_getfield( s, ut_getstack(s,idx), ut_getstack(s,-1) );
+		val = ut_getfield( s, ut_getstack(s,idx), ut_getstack(s,-1) );
 		mn_pop(s,1);
 		ut_pushvalue( s, val );
 	}
@@ -544,9 +564,12 @@ void mn_dostream( MnState* s, OvInputStream* is )
 	}
 	catch ( MnException& e )
 	{
+		mn_pushstring(s,"print");
+		mn_getglobal(s);
+		mn_pushstring(s,e.msg);
+		mn_call(s,1,0);
 		printf( e.msg.c_str() );
 	}
-
 }
 
 void mn_dofile( MnState* s, const OvString& file )
