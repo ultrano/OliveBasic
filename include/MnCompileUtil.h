@@ -779,14 +779,14 @@ void	statement::funcdesc::compile( CmCompiler* cm )
 
 	OvBool needthis = false;
 	cm_compile(variable);
-	if ( cm_expr.type != et_none && cm_tokmatch(':') )
+	if ( cm_expr.type != et_none && (cm_tokmatch(':') || cm_tokmatch('.')) )
 	{
+		needthis = cm_tokmatch(':');
 		cm_toknext();
 		cm_tokmust(tt_identifier);
 		cm_tostack();
 		cm_code << op_const << cm_addconst(cm_tok.val);
 		cm_toknext();
-		needthis = true;
 		cm_expr.type = et_field;
 	}
 	CmExprInfo name = cm_expr;

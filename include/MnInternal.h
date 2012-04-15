@@ -1622,7 +1622,7 @@ MnValue ut_meta_arith( MnState*s, opcode op, MnValue& left, MnValue& right )
 			else if ( op == op_bit_and) return MnValue( (MnNumber)((OvInt)MnToNumber(left) & (OvInt)MnToNumber(right)) );
 		}
 		break;
-	case MOT_STRING : if ( op == op_add ) return ut_newstring( s, MnToString(left)->str() + ut_tostring(right) );
+	case MOT_STRING : if ( op == op_add ) return ut_newstring( s, MnToString(left)->str() + ut_tostring(right).str() );
 	default:
 		{
 			MnValue meta = ut_getmeta(left);
@@ -1631,7 +1631,7 @@ MnValue ut_meta_arith( MnState*s, opcode op, MnValue& left, MnValue& right )
 			
 			if ( MnIsTable(meta) && method )
 			{
-				MnValue tm = ut_gettable(meta,ut_newstring(s,method));
+				MnValue tm = ut_getfield( s, meta, ut_newstring(s,method) );
 				if ( MnIsClosure(tm) )
 				{
 					ut_pushvalue(s,tm);
