@@ -29,7 +29,6 @@ class MnMFunction;
 class MnClosure;
 class MnUpval;
 class MnUserData;
-class MnMiniData;
 class MnRefCounter;
 typedef OvUInt MnInstruction;
 
@@ -49,7 +48,6 @@ const MnTypeStr g_type_str[] =
 	{ MOT_ARRAY, "[array]" },
 	{ MOT_CLOSURE, "[closure]" },
 	{ MOT_USERDATA, "[userdata]" },
-	{ MOT_MINIDATA, "[minidata]" },
 	{ MOT_UPVAL, "[upval]" },
 	{ MOT_FUNCPROTO, "[funcproto]" },
 };
@@ -110,7 +108,6 @@ const OvChar* g_meta_method[] =
 #define MnIsClosure( v ) ((v).type == MOT_CLOSURE)
 #define MnIsUpval( v ) ((v).type == MOT_UPVAL)
 #define MnIsUserData( v ) ((v).type == MOT_USERDATA)
-#define MnIsMiniData( v ) ((v).type == MOT_MINIDATA)
 #define MnIsObj( v ) \
 	( \
 	MnIsString((v)) ||  \
@@ -118,7 +115,6 @@ const OvChar* g_meta_method[] =
 	MnIsClosure((v)) ||  \
 	MnIsTable((v)) ||  \
 	MnIsUserData((v)) ||  \
-	MnIsMiniData((v)) ||  \
 	MnIsUpval((v)) ||  \
 	MnIsFunction((v))   \
 	)
@@ -132,7 +128,6 @@ const OvChar* g_meta_method[] =
 #define MnToArray( v ) (MnIsArray(v)? (v).u.cnt->u.arr : MnBadConvert())
 #define MnToClosure( v ) (MnIsClosure(v)? (v).u.cnt->u.cls: MnBadConvert())
 #define MnToUserData( v ) (MnIsUserData(v)? (v).u.cnt->u.user: MnBadConvert())
-#define MnToMiniData( v ) (MnIsMiniData(v)? (v).u.cnt->u.mini: MnBadConvert())
 #define MnToUpval( v ) (MnIsUpval(v)? (v).u.cnt->u.upv: MnBadConvert())
 #define MnToFunction( v ) (MnIsFunction(v)? (v).u.cnt->u.func: MnBadConvert())
 //////////////////////////////////////////////////////////////////////////
@@ -268,8 +263,7 @@ MnValue			ut_newarray( MnState* s );
 MnValue			ut_newCclosure( MnState* s, MnCLType t );
 MnValue			ut_newMclosure( MnState* s );
 MnValue			ut_newfunction( MnState* s );
-MnValue			ut_newuserdata( MnState* s, void* p );
-MnValue			ut_newminidata( MnState* s, OvInt sz );
+MnValue			ut_newuserdata( MnState* s, void* p, OvByte b );
 MnValue			ut_newupval( MnState* s, OvInt idx );
 
 void			ut_delete_object( MnObject* o );
@@ -281,13 +275,8 @@ void			ut_setglobal( MnState* s, MnValue& n, const MnValue& val );
 void			ut_setstack( MnState* s, MnIndex idx, const MnValue& val );
 MnValue			ut_getstack( MnState* s, MnIndex idx );
 
-MnValue*		ut_findtable( MnValue& t, MnValue& n );
-MnValue			ut_gettable( MnValue& t, MnValue& n );
-void			ut_settable( MnValue& t, MnValue& n, const MnValue& v );
-
-MnValue*		ut_findarray( MnValue& a, MnValue& n );
-MnValue			ut_getarray( MnValue& a, MnValue& n );
-void			ut_setarray( MnValue& a, MnValue& n, const MnValue& v );
+MnValue			ut_getraw( MnValue& c, MnValue& n );
+void			ut_setraw( MnValue& c, MnValue& n, const MnValue& v );
 
 MnValue			ut_getfield( MnState* s, MnValue& c, MnValue& n );
 void			ut_setfield( MnState* s, MnValue& c, MnValue& n, const MnValue& v );
@@ -325,7 +314,6 @@ public:
 		MnClosure*		cls;
 		MnUpval*		upv;
 		MnUserData*		user;
-		MnMiniData*		mini;
 	} u;
 };
 
@@ -387,12 +375,13 @@ public:
 	~MnString();
 
 	OvHash32		hash() { return m_hash; };
-	const OvString& str() { return m_str; };
+	const OvString& str() { return m_str.str(); };
+	OvSolidString	solid() { return m_str;};
 
 	virtual void marking();
 private:
 	OvHash32 m_hash;
-	OvString m_str;
+	OvSolidString m_str;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -508,25 +497,11 @@ class MnUserData : public MnObject
 {
 public:
 
-	MnUserData( MnGlobal* g, void* p );
+	MnUserData( MnGlobal* g, void* p, OvBool b );
 	~MnUserData();
 
 	void* ptr;
-	MnValue	metatable;
-
-	virtual void marking();
-};
-
-//////////////////////////////////////////////////////////////////////////
-
-class MnMiniData : public MnObject
-{
-public:
-
-	MnMiniData( MnGlobal* g, OvInt sz );
-	~MnMiniData();
-
-	void* ptr;
+	OvBool	ismanaged;
 	MnValue	metatable;
 
 	virtual void marking();
@@ -732,14 +707,17 @@ void MnClosure::marking()
 
 //////////////////////////////////////////////////////////////////////////
 
-MnUserData::MnUserData( MnGlobal* g, void* p ) : MnObject(g), ptr(p)
+MnUserData::MnUserData( MnGlobal* g, void* p, OvBool b ) 
+	: MnObject(g)
+	, ptr(p)
+	, ismanaged(b)
 {
 
 }
 
 MnUserData::~MnUserData()
 {
-	ptr = NULL; 
+	if ( ptr && ismanaged ) ut_free( ptr );
 	metatable = MnValue();
 }
 
@@ -747,25 +725,6 @@ void MnUserData::marking()
 {
 	mark = MARKED;
 	MnMarking( metatable );
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-MnMiniData::MnMiniData( MnGlobal* g, OvInt sz )
-: MnObject(g)
-, ptr( ut_alloc( sz ) )
-{
-
-}
-
-MnMiniData::~MnMiniData()
-{
-	if ( ptr ) ut_free( ptr );
-}
-
-void MnMiniData::marking()
-{
-	mark = MARKED;
 }
 
 /////////////////////// type-string convert ////////////////////////////////
@@ -903,166 +862,125 @@ MnValue ut_getconst( MnMFunction* f, MnIndex idx )
 	return MnValue();
 }
 
-OvBool ut_meta_newindex( MnState* s, MnValue& c, MnValue& n, MnValue& v ) 
+MnValue ut_getraw( MnValue& c, MnValue& n )
 {
-	if ( !MnIsNil(ut_getmeta( c )) )
+	switch ( c.type )
 	{
-		ut_pushvalue( s, ut_getmeta( c ) );
-		mn_pushstring( s, METHOD_NEWINDEX );
-		mn_getfield( s, -2 );
-
-		if ( mn_isfunction( s, -1 ) )
+	case MOT_TABLE :
 		{
-			ut_pushvalue( s, c );
-			ut_pushvalue( s, n );
-			ut_pushvalue( s, v );
-			mn_call( s, 3, 0 );
-			mn_pop( s, 1 );
-			return true;
-		}
-		else
-		{
-			mn_pop( s, 2 );
-			return false;
-		}
-	}
-	return false;
-}
-
-MnValue* ut_findtable( MnValue& t, MnValue& n )
-{
-	if ( MnIsTable(t) )
-	{
-		MnTable* tbl = MnToTable(t);
-		if ( MnIsString(n) )
-		{
-			OvHash32 hash = MnToString(n)->hash();
-			MnTable::map_hash_pair::iterator itor = tbl->table.find( hash );
-
-			if ( itor !=  tbl->table.end() )
+			MnTable* tbl = MnToTable(c);
+			if ( MnIsString(n) )
 			{
-				return &(itor->second.second);
+				OvHash32 hash = MnToString(n)->hash();
+				MnTable::map_hash_pair::iterator itor = tbl->table.find( hash );
+
+				if ( itor !=  tbl->table.end() )
+				{
+					return (itor->second.second);
+				}
 			}
 		}
+		break;
+	case MOT_ARRAY :
+		{
+			MnArray* arr = MnToArray(c);
+			if ( MnIsNumber(n) )
+			{
+				MnIndex idx = (MnIndex)MnToNumber(n);
+				if ( idx >= 0 && idx < arr->array.size() )
+				{
+					return arr->array.at(idx);
+				}
+			}
+		}
+		break;
 	}
-	return NULL;
-}
-
-MnValue ut_gettable( MnValue& t, MnValue& n )
-{
-	if ( MnValue* val = ut_findtable(t,n) ) return *val;
 	return MnValue();
 }
 
-void ut_settable( MnValue& t, MnValue& n, const MnValue& v )
+void ut_setraw( MnValue& c, MnValue& n, const MnValue& v )
 {
-	if ( MnIsTable(t) )
+	switch ( c.type )
 	{
-		MnTable* tbl = MnToTable(t);
-		if ( MnIsString(n) )
+	case MOT_TABLE :
 		{
-			OvHash32 hash = MnToString(n)->hash();
-			MnTable::map_hash_pair::iterator itor = tbl->table.find( hash );
-			if ( itor !=  tbl->table.end() )
+			MnTable* tbl = MnToTable(c);
+			if ( MnIsString(n) )
 			{
-				if ( MnIsNil(v) )	tbl->table.erase( itor );
-				else				itor->second = make_pair(n,v);
-			}
-			else
-			{
-				tbl->table.insert( make_pair(hash,make_pair(n,v)) );
+				OvHash32 hash = MnToString(n)->hash();
+				MnTable::map_hash_pair::iterator itor = tbl->table.find( hash );
+				if ( itor !=  tbl->table.end() )
+				{
+					if ( MnIsNil(v) )	tbl->table.erase( itor );
+					else				itor->second = make_pair(n,v);
+				}
+				else
+				{
+					tbl->table.insert( make_pair(hash,make_pair(n,v)) );
+				}
 			}
 		}
-	}
-}
-
-MnValue* ut_findarray( MnValue& a, MnValue& n )
-{
-	if ( MnIsArray(a) )
-	{
-		MnArray* arr = MnToArray(a);
-		if ( MnIsNumber(n) )
+		break;
+	case MOT_ARRAY :
 		{
-			MnIndex idx = (MnIndex)MnToNumber(n);
-			if ( idx >= 0 && idx < arr->array.size() )
+			MnArray* arr = MnToArray(c);
+			if ( MnIsNumber(n) )
 			{
-				return &(arr->array.at(idx));
+				MnIndex idx = (MnIndex)MnToNumber(n);
+				if ( idx >= 0 && idx < arr->array.size() )
+				{
+					arr->array[idx] = v;
+				}
 			}
 		}
+		break;
 	}
-	return NULL;
-}
-
-MnValue ut_getarray( MnValue& a, MnValue& n )
-{
-	if ( MnValue* val = ut_findarray(a,n) ) return *val;
-	return MnValue();
-}
-
-void ut_setarray( MnValue& a, MnValue& n, const MnValue& v )
-{
-	if ( MnValue* val = ut_findarray(a,n) ) *val = v;
 }
 
 MnValue ut_getfield( MnState* s, MnValue& c, MnValue& n )
 {
-	MnValue val;
-	if ( MnIsTable(c) )		 val = ut_gettable( c, n );
-	else if ( MnIsArray(c) ) val = ut_getarray( c, n );
-
+	MnValue val = ut_getraw(c,n);
 	if ( !MnIsNil(val) ) return val;
 
-	MnValue meta = ut_getmeta(c);
-	if ( MnIsTable(meta) )
+	val = ut_getraw( ut_getmeta(c), ut_newstring(s,METHOD_INDEX) );
+	if ( MnIsClosure(val) )
 	{
-		MnValue index = ut_gettable( meta, ut_newstring(s,METHOD_INDEX) );
-		if ( MnIsClosure(index) )
-		{
-			ut_pushvalue(s,index);
-			ut_pushvalue(s,c);
-			ut_pushvalue(s,n);
-			mn_call(s,2,1);
-			MnValue ret = ut_getstack(s,-1);
-			mn_pop(s,1);
-			return ret;
-		}
-		else if ( !MnIsNil(index) )
-		{
-			return ut_getfield(s,index,n);
-		}
+		ut_pushvalue(s,val);
+		ut_pushvalue(s,c);
+		ut_pushvalue(s,n);
+		mn_call(s,2,1);
+		val = ut_getstack(s,-1);
+		mn_pop(s,1);
+		return val;
+	}
+	else if ( !MnIsNil(val) )
+	{
+		return ut_getfield(s,val,n);
 	}
 	return MnValue();
 }
 
 void ut_setfield( MnState* s, MnValue& c, MnValue& n, const MnValue& v )
 {
-	MnValue* val = NULL;
-	if ( MnIsTable(c) )		 val = ut_findtable( c, n );
-	else if ( MnIsArray(c) ) val = ut_findarray( c, n );
+	MnValue val = ut_getraw(c,n);
+	if ( !MnIsNil(val) ) ut_setraw( c, n, v );
 
-	if ( !val )
+	val = ut_getraw( ut_getmeta(c), ut_newstring(s,METHOD_NEWINDEX) );
+	if ( MnIsClosure(val) )
 	{
-		MnValue newindex = ut_gettable( ut_getmeta(c), ut_newstring(s,METHOD_NEWINDEX) );
-		if ( MnIsClosure(newindex) )
-		{
-			ut_pushvalue( s, newindex );
-			ut_pushvalue( s, c );
-			ut_pushvalue( s, n );
-			ut_pushvalue( s, v );
-			mn_call( s, 3, 0 );
-		}
-		else if ( MnIsTable(newindex) )
-		{
-			ut_setfield( s, newindex, n, v );
-		}
-		else if ( MnIsTable(c) )
-		{
-			ut_settable( c, n, v );
-		}
+		ut_pushvalue( s, val );
+		ut_pushvalue( s, c );
+		ut_pushvalue( s, n );
+		ut_pushvalue( s, v );
+		mn_call( s, 3, 0 );
+	}
+	else if ( MnIsTable(val) )
+	{
+		ut_setfield( s, val, n, v );
 	}
 	else
 	{
-		*val = v;
+		ut_setraw( c, n, v );
 	}
 }
 
@@ -1122,7 +1040,6 @@ void ut_setmeta( MnValue& c, MnValue& m )
 	if ( MnIsTable(c) )			MnToTable(c)->metatable = m;
 	else if ( MnIsArray(c) )	MnToArray(c)->metatable = m;
 	else if ( MnIsUserData(c) ) MnToUserData(c)->metatable = m;
-	else if ( MnIsMiniData(c) ) MnToMiniData(c)->metatable = m;
 }
 
 MnValue ut_getmeta( const MnValue& c )
@@ -1130,7 +1047,6 @@ MnValue ut_getmeta( const MnValue& c )
 	if ( MnIsTable(c) )			return MnToTable(c)->metatable;
 	else if ( MnIsArray(c) )	return MnToArray(c)->metatable;
 	else if ( MnIsUserData(c) ) return MnToUserData(c)->metatable;
-	else if ( MnIsMiniData(c) ) return MnToMiniData(c)->metatable;
 	return MnValue();
 }
 
@@ -1150,14 +1066,9 @@ MnValue ut_newstring( MnState* s, const OvString& str )
 	return MnValue( MOT_STRING, ret );
 }
 
-MnValue ut_newuserdata( MnState* s, void* p )
+MnValue ut_newuserdata( MnState* s, void* p, OvBool b )
 {
-	return MnValue( MOT_USERDATA, new(ut_alloc(sizeof(MnUserData))) MnUserData(s->g,p) ) ;
-}
-
-MnValue ut_newminidata( MnState* s, OvInt sz )
-{
-	return MnValue( MOT_MINIDATA, new(ut_alloc(sizeof(MnMiniData))) MnMiniData(s->g,sz) );
+	return MnValue( MOT_USERDATA, new(ut_alloc(sizeof(MnUserData))) MnUserData(s->g,p,b) ) ;
 }
 
 MnValue ut_newtable( MnState* s )
@@ -1338,23 +1249,23 @@ MnNumber ut_tonumber( const MnValue& val )
 	return 0;
 }
 
-OvString ut_tostring( const MnValue& val ) 
+OvSolidString ut_tostring( const MnValue& val ) 
 {
 	if ( MnIsString(val) )
 	{
-		return MnToString(val)->str();
+		return MnToString(val)->solid();
 	}
 	else if ( MnIsNumber(val) )
 	{
 		OvStringStream strm;
 		strm << MnToNumber(val);
-		return strm.str();
+		return OvSolidString(strm.str());
 	}
 	else if ( MnIsBoolean(val) )
 	{
-		return (MnToBoolean(val)? "true":"false");
+		return OvSolidString(MnToBoolean(val)? "true":"false");
 	}
-	static OvString empty;
+	static OvSolidString empty("");
 	return empty;
 }
 
@@ -1363,15 +1274,6 @@ void* ut_touserdata( MnValue& val )
 	if ( MnIsUserData(val) )
 	{
 		return MnToUserData(val)->ptr;
-	}
-	return NULL;
-}
-
-void* ut_tominidata( MnValue& val )
-{
-	if ( MnIsMiniData(val) )
-	{
-		return MnToMiniData(val)->ptr;
 	}
 	return NULL;
 }
@@ -1440,7 +1342,7 @@ OvInt ex_print( MnState* s )
 
 OvInt ex_tostring( MnState* s )
 {
-	mn_pushstring( s, ut_tostring( ut_getstack( s, 1 ) ) );
+	mn_pushstring( s, ut_tostring( ut_getstack( s, 1 ) ).str() );
 	return 1;
 }
 
@@ -1452,13 +1354,13 @@ OvInt ex_tonumber( MnState* s )
 
 OvInt ex_dostring( MnState* s )
 {
-	mn_dostring( s, mn_tostring(s,1) );
+	mn_dostring( s, mn_tostring(s,1).str() );
 	return 0;
 }
 
 OvInt ex_dofile( MnState* s )
 {
-	mn_dofile( s, mn_tostring(s,1) );
+	mn_dofile( s, mn_tostring(s,1).str() );
 	return 0;
 }
 
@@ -1815,12 +1717,12 @@ void ut_excute_func( MnState* s, MnMFunction* func )
 				if (addop==op_eq)
 				{
 						if ( MnIsNumber(left) ) mn_pushboolean( s, MnToNumber(left) == MnToNumber(right) );
-						else if ( MnIsString(left) ) mn_pushboolean( s, MnToString(left)->str() == ut_tostring(right) );
+						else if ( MnIsString(left) ) mn_pushboolean( s, MnToString(left)->str() == ut_tostring(right).str() );
 				}
 				else if (addop==op_not)
 				{
 					if ( MnIsNumber(left) ) mn_pushboolean( s, MnToNumber(left) != MnToNumber(right) );
-					else if ( MnIsString(left) ) mn_pushboolean( s, MnToString(left)->str() != ut_tostring(right) );
+					else if ( MnIsString(left) ) mn_pushboolean( s, MnToString(left)->str() != ut_tostring(right).str() );
 				}
 				else if (addop==op_gt) mn_pushboolean( s, MnToNumber(left) >= MnToNumber(right) );
 				else if (addop==op_lt) mn_pushboolean( s, MnToNumber(left) <= MnToNumber(right) );

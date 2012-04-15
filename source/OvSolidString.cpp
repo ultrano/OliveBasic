@@ -38,6 +38,10 @@ OvBool OvSolidString::operator == ( const OvString &other ) const
 {
 	return (str() == other);
 }
+OvBool OvSolidString::operator == ( const OvChar* other ) const
+{
+	return (str() == other);
+}
 
 OvBool OvSolidString::operator != ( const OvSolidString &other ) const
 {
@@ -47,11 +51,25 @@ OvBool OvSolidString::operator != ( const OvString &other ) const
 {
 	return (str() != other);
 }
+OvBool OvSolidString::operator != ( const OvChar* other ) const
+{
+	return (str() != other);
+}
 
 const OvString& OvSolidString::str() const
 {
 	static OvString empty;
 	return m_data?m_data->str:empty;
+}
+
+const OvChar* OvSolidString::c_str() const
+{
+	return str().c_str();
+}
+
+OvSize OvSolidString::size() const
+{
+	return str().size();
 }
 
 void OvSolidString::clear()
@@ -64,6 +82,15 @@ OvBool operator == ( const OvString &arg1, const OvSolidString &arg2 )
 	return (arg1 == arg2.str());
 }
 OvBool operator != ( const OvString &arg1, const OvSolidString &arg2 ) 
+{
+	return (arg1 != arg2.str());
+}
+
+OvBool operator == ( const OvChar* arg1, const OvSolidString &arg2 ) 
+{
+	return (arg1 == arg2.str());
+}
+OvBool operator != ( const OvChar* arg1, const OvSolidString &arg2 ) 
 {
 	return (arg1 != arg2.str());
 }

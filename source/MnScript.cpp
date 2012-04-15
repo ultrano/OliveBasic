@@ -54,8 +54,8 @@ MnState* mn_substate( MnState* s )
 	end->next = sub;
 	g->end  = sub;
 	MnValue meta = ut_newtable(s);
-	ut_settable( meta, ut_newstring(sub,METHOD_INDEX), s->gtable );
-	ut_settable( meta, ut_newstring(sub,METHOD_NEWINDEX), s->gtable );
+	ut_setraw( meta, ut_newstring(sub,METHOD_INDEX), s->gtable );
+	ut_setraw( meta, ut_newstring(sub,METHOD_NEWINDEX), s->gtable );
 	ut_setmeta( sub->gtable, meta );
 	return sub;
 }
@@ -254,11 +254,31 @@ void mn_replace( MnState* s, MnIndex dst, MnIndex src )
 	if ( val ) ut_setstack( s, dst, *val );
 }
 
+void mn_setraw( MnState* s, MnIndex idx )
+{
+	if ( idx && mn_gettop(s) >= 2 )
+	{
+		ut_setraw( ut_getstack(s,idx), ut_getstack(s,-2), ut_getstack(s,-1) );
+		mn_pop(s,2);
+	}
+}
+
+void mn_getraw( MnState* s, MnIndex idx )
+{
+	if ( idx && mn_gettop(s) >= 1 )
+	{
+		MnValue val;
+		val = ut_getraw( ut_getstack(s,idx), ut_getstack(s,-1) );
+		mn_pop(s,1);
+		ut_pushvalue( s, val );
+	}
+}
+
 void mn_setfield( MnState* s, MnIndex idx )
 {
 	if ( idx && mn_gettop(s) >= 2 )
 	{
-		if ( idx )	ut_setfield( s, ut_getstack(s,idx), ut_getstack(s,-2), ut_getstack(s,-1) );
+		ut_setfield( s, ut_getstack(s,idx), ut_getstack(s,-2), ut_getstack(s,-1) );
 		mn_pop(s,2);
 	}
 }
@@ -268,7 +288,7 @@ void mn_getfield( MnState* s, MnIndex idx )
 	if ( idx && mn_gettop(s) >= 1 )
 	{
 		MnValue val;
-		if ( idx )	val = ut_getfield( s, ut_getstack(s,idx), ut_getstack(s,-1) );
+		val = ut_getfield( s, ut_getstack(s,idx), ut_getstack(s,-1) );
 		mn_pop(s,1);
 		ut_pushvalue( s, val );
 	}
@@ -354,11 +374,11 @@ void mn_newarray( MnState* s )
 	ut_pushvalue( s, ut_newarray(s) );
 }
 
-void* mn_newminidata( MnState* s, OvInt sz )
+void* mn_newuserdata( MnState* s, OvInt sz )
 {
-	MnValue val = ut_newminidata(s,sz);
+	MnValue val = ut_newuserdata(s,ut_alloc(sz),true);
 	ut_pushvalue( s, val );
-	return MnToMiniData(val)->ptr;
+	return MnToUserData(val)->ptr;
 }
 
 void mn_newclosure( MnState* s, MnCFunction proto, OvInt nupvals )
@@ -402,7 +422,7 @@ void mn_pushstring( MnState* s, const OvString& v )
 
 void mn_pushuserdata( MnState* s, void* v )
 {
-	ut_pushvalue( s, ut_newuserdata(s,v) );
+	ut_pushvalue( s, ut_newuserdata(s,v,false) );
 }
 
 void mn_pushstack( MnState* s, MnIndex idx )
@@ -442,11 +462,6 @@ OvBool mn_isuserdata( MnState* s, MnIndex idx )
 	return MnIsUserData( ut_getstack( s, idx ) );
 }
 
-OvBool mn_isminidata( MnState* s, MnIndex idx )
-{
-	return MnIsMiniData( ut_getstack( s, idx ) );
-}
-
 /////////////////////*  all kinds of "to"    *///////////////////////////
 
 OvBool mn_toboolean( MnState* s, MnIndex idx )
@@ -459,7 +474,7 @@ MnNumber mn_tonumber( MnState* s, MnIndex idx )
 	return ut_tonumber( ut_getstack( s, idx ) );
 }
 
-OvString mn_tostring( MnState* s, MnIndex idx )
+OvSolidString mn_tostring( MnState* s, MnIndex idx )
 {
 	return ut_tostring( ut_getstack( s, idx ) );
 }
@@ -469,16 +484,12 @@ void* mn_touserdata( MnState* s, MnIndex idx )
 	return ut_touserdata( ut_getstack( s, idx ) );
 }
 
-void* mn_tominidata( MnState* s, MnIndex idx )
-{
-	return ut_tominidata( ut_getstack( s, idx ) );
-}
 OvInt mn_type( MnState* s, MnIndex idx )
 {
 	return ut_type(ut_getstack( s, idx ));
 }
 
-OvString mn_typename( MnState* s, MnIndex idx )
+const OvChar* mn_typename( MnState* s, MnIndex idx )
 {
 	return ut_typename( ut_getstack( s, idx ) );
 }
@@ -553,9 +564,12 @@ void mn_dostream( MnState* s, OvInputStream* is )
 	}
 	catch ( MnException& e )
 	{
+		mn_pushstring(s,"print");
+		mn_getglobal(s);
+		mn_pushstring(s,e.msg);
+		mn_call(s,1,0);
 		printf( e.msg.c_str() );
 	}
-
 }
 
 void mn_dofile( MnState* s, const OvString& file )
